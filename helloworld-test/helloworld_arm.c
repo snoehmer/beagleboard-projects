@@ -32,7 +32,6 @@
 static unsigned long input_buffer_size = 0x1000;
 static unsigned long output_buffer_size = 0x1000;
 static bool done;
-static int ntimes;
 
 static int dsp_handle;
 static void *proc;
@@ -92,9 +91,14 @@ static inline void configure_dsp_node(void *node, struct dmm_buffer *input_buffe
 	dsp_node_put_message(dsp_handle, node, &msg, -1);
 }
 
-static bool run_task(struct dsp_node *node, unsigned long times)
+static bool run_task(struct dsp_node *node)
 {
-	unsigned long exit_status;
+  char text_send[] = "Hello";
+  char text_receive[31];
+  
+  unsigned long exit_status;
+  
+  struct dsp_msg msg;
 
 	struct dmm_buffer *input_buffer;
 	struct dmm_buffer *output_buffer;
@@ -106,6 +110,7 @@ static bool run_task(struct dsp_node *node, unsigned long times)
 
 	pr_info("dsp node running");
 
+  // init memory
 	input_buffer = dmm_buffer_new(dsp_handle, proc, DMA_TO_DEVICE);
 	output_buffer = dmm_buffer_new(dsp_handle, proc, DMA_FROM_DEVICE);
 
@@ -117,33 +122,32 @@ static bool run_task(struct dsp_node *node, unsigned long times)
 
 	configure_dsp_node(node, input_buffer, output_buffer);
 
-	pr_info("running %lu times", times);
+	pr_info("now sending string \"%s\" to DSP", text_send);
 
-	while (!done) {
-		struct dsp_msg msg;
+  // copy data into input buffer
+  memcpy(input_buffer->data, text_send, strlen(text_send) + 1);
 
-#ifdef FILL_DATA
-		{
-			static unsigned char foo;
-			unsigned int i;
-			for (i = 0; i < input_buffer->size; i++)
-				((char *) input_buffer->data)[i] = foo;
-			foo++;
-		}
-#endif
-		dmm_buffer_begin(input_buffer, input_buffer->size);
-		dmm_buffer_begin(output_buffer, output_buffer->size);
-		
-		msg.cmd = 1;
-		msg.arg_1 = input_buffer->size;
-		dsp_node_put_message(dsp_handle, node, &msg, -1);
-		dsp_node_get_message(dsp_handle, node, &msg, -1);
-		
-		dmm_buffer_end(output_buffer, output_buffer->size);
-
-		if (--times == 0)
-			break;
+	dmm_buffer_begin(input_buffer, input_buffer->size);
+	dmm_buffer_begin(output_buffer, output_buffer->size);
+	
+	// tell DSP to do some work
+	msg.cmd = 1;
+	msg.arg_1 = input_buffer->size;
+	dsp_node_put_message(dsp_handle, node, &msg, -1);
+	dsp_node_get_message(dsp_handle, node, &msg, -1);
+	
+	if(msg.cmd != 2)
+	  pr_err("returned message has wrong command!");
+	else
+	{
+	  memcpy(text_receive, output_buffer->data, 31);
+	  pr_info("received string \"%s\" from DSP", text_receive);
+	  
+	  printf("%s\n", text_receive);
 	}
+	  
+	dmm_buffer_end(input_buffer, input_buffer->size);
+	dmm_buffer_end(output_buffer, output_buffer->size);
 
 	dmm_buffer_unmap(output_buffer);
 	dmm_buffer_unmap(input_buffer);
@@ -161,32 +165,6 @@ static bool run_task(struct dsp_node *node, unsigned long times)
 	return true;
 }
 
-static void handle_options(int *argc, const char ***argv)
-{
-	while (*argc > 0) {
-		const char *cmd = (*argv)[0];
-		if (cmd[0] != '-')
-			break;
-
-#ifdef DEBUG
-		if (!strcmp(cmd, "-d") || !strcmp(cmd, "--debug"))
-			debug_level = 3;
-#endif
-
-		if (!strcmp(cmd, "-n") || !strcmp(cmd, "--ntimes")) {
-			if (*argc < 2) {
-				pr_err("bad option");
-				exit(-1);
-			}
-			ntimes = atoi((*argv)[1]);
-			(*argv)++;
-			(*argc)--;
-		}
-
-		(*argv)++;
-		(*argc)--;
-	}
-}
 
 int main(int argc, const char **argv)
 {
@@ -198,10 +176,6 @@ int main(int argc, const char **argv)
 #ifdef DEBUG
 	debug_level = 3;
 #endif
-	ntimes = 1000;
-
-	argc--; argv++;
-	handle_options(&argc, &argv);
 
 	dsp_handle = dsp_open();
 
@@ -223,7 +197,7 @@ int main(int argc, const char **argv)
 		goto leave;
 	}
 
-	run_task(node, ntimes);
+	run_task(node);
 	
 	destroy_node(node);
 

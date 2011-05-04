@@ -36,19 +36,20 @@ unsigned int dsp_helloworld_delete(void)
 unsigned int dsp_helloworld_execute(void *env)
 {
 	dsp_msg_t msg;
-	dsp_mem_stat_t mem;
-	void *input;
-	void *output;
+	char *input;
+	char *output;
 	unsigned char done = 0;
-	unsigned int c = 0;
+	unsigned int i, j;
+	
+	char text[] = " World!";
 
 	while (!done) {
 		NODE_getMsg(env, &msg, (unsigned) -1);
 
 		switch (msg.cmd) {
 		case 0:
-			input = (void *) (msg.arg_1);
-			output = (void *) (msg.arg_2);
+			input = (char *) (msg.arg_1);
+			output = (char *) (msg.arg_2);
 			break;
 		case 1:
 			{
@@ -56,21 +57,23 @@ unsigned int dsp_helloworld_execute(void *env)
 
 				size = (unsigned int) (msg.arg_1);
 
-				BCACHE_inv(input, size, 1);
-				memcpy(output, input, size);
-				BCACHE_wbInv(output, size, 1);
+				BCACHE_inv((void*) input, size, 1);
+				
+				for(i = 0; input[i]; i++)
+				  output[i] = input[i];
+				  
+				for(j = 0; text[j]; j++)
+				  output[i + j] = text[j];
+				  
+				output[i + j] = 0;
+				
+				BCACHE_wbInv((void*) output, size, 1);
+
+        msg.cmd = 2;
 
 				NODE_putMsg(env, NULL, &msg, 0);
 				break;
 			}
-		case 2:
-			MEM_stat(0, &mem);
-			msg.cmd = 1;
-			msg.arg_1 = c++;
-			msg.arg_2 = mem.size - mem.used;
-
-			NODE_putMsg(env, 0, &msg, 0);
-			break;
 		case 0x80000000:
 			done = 1;
 			break;
