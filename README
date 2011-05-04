@@ -1,0 +1,5 @@
+Various projects on the BeagleBoard:
+
+helloworld-test: sends "Hello" to the DSP, which adds "World" and replies the result
+
+helloworld-test-old: essentially the test tool from the dsp-samples, for reference
