@@ -12,7 +12,7 @@ info: bin-info
 #                                                        Configuration
 # --------------------------------------------------------------------
 
-BIN_CFLAGS = $(CFLAGS)
+BIN_CFLAGS = $(filter-out -std=c99,$(CFLAGS))
 BIN_LDFLAGS = $(LDFLAGS) -L$(BINDIR) -lvl
 
 # --------------------------------------------------------------------
@@ -24,9 +24,13 @@ BIN_LDFLAGS = $(LDFLAGS) -L$(BINDIR) -lvl
 # library for any binary which is linked against it. The install_name
 # can be modified later by install_name_tool.
 
-bin_src := $(wildcard $(VLDIR)/src/*.c)
-bin_tgt := $(addprefix $(BINDIR)/, $(patsubst %.c,%,$(notdir $(bin_src))))
+bin_src := $(wildcard $(VLDIR)/src/*.cpp)
+bin_tgt := $(addprefix $(BINDIR)/, $(patsubst %.cpp,%,$(notdir $(bin_src))))
 bin_dep := $(addsuffix .d, $(bin_tgt))
+
+lib_src := $(wildcard $(VLDIR)/src/lib/*.cpp)
+lib_tgt := $(addprefix $(BINDIR)/objs/lib/, $(patsubst %.cpp,%.o,$(notdir $(lib_src))))
+
 
 deps += $(bin_dep)
 arch_bins += $(bin_tgt)
@@ -39,14 +43,17 @@ no_dep_targets += bin-info
 
 bin-all: $(bin_tgt)
 
-$(BINDIR)/% : $(VLDIR)/src/%.c $(dll-dir)
+$(BINDIR)/% : $(VLDIR)/src/%.cpp $(dll-dir) $(lib_tgt)
 	@make -s $(dll_tgt)
-	$(call C,CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) "$<" -o "$@"
+	$(call C,CPP) $(BIN_CFLAGS) $(BIN_LDFLAGS) $(lib_tgt) "$<" -o "$@"
 
-$(BINDIR)/%.d : $(VLDIR)/src/%.c $(dll-dir)
-	$(call C,CC) $(BIN_CFLAGS) -M -MT  \
+$(BINDIR)/%.d : $(VLDIR)/src/%.cpp $(dll-dir)
+	$(call C,CPP) $(BIN_CFLAGS) -M -MT  \
 	       '$(BINDIR)/$* $(BINDIR)/$*.d' \
 	       "$<" -MF "$@"
+	       
+$(BINDIR)/objs/lib/%.o : $(lib_src) $(dll-dir) $(BINDIR)/objs/lib/.dirstamp
+	$(call C,CPP) $(BIN_CFLAGS) $(BIN_LDFLAGS) -c "$(VLDIR)/src/lib/$(patsubst %.o,%.cpp,$(notdir $@))" -o $@
 
 bin-clean:
 	rm -f $(bin_dep)

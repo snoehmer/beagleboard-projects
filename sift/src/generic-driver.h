@@ -16,8 +16,16 @@ General Public License version 2.
 #ifndef VL_GENERIC_DRIVER
 #define VL_GENERIC_DRIVER
 
+#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
+extern "C" {
+#endif
+
 #include <vl/generic.h>
 #include <vl/stringop.h>
+
+#ifdef __cplusplus /* If this is a C++ compiler, end C linkage */
+}
+#endif
 
 #include <stdio.h>
 #include <assert.h>

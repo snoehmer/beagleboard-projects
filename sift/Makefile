@@ -125,6 +125,7 @@ endif
 
 VLDIR ?= .
 CC ?= cc
+CPP := g++
 
 FEATUREFLAGS += $(ifeq ($(DISABLE_THREADS),yes),-DVL_DISABLE_THREADS)
 FEATUREFLAGS += $(ifeq ($(DISABLE_SSE2),yes),-DVL_DISABLE_SSE2)
@@ -169,10 +170,10 @@ endif
 # ARM (BeagleBoard)
 ifeq ($(ARCH),ARM)
 LDFLAGS += -lm -Wl,--rpath,\$$ORIGIN/
-#LDFLAGS += -lm
 DISABLE_SSE2=yes
 CROSS_COMPILE := /usr/local/sourcery-arm-linux/bin/arm-none-linux-gnueabi-
 CC := $(CROSS_COMPILE)gcc
+CPP := $(CROSS_COMPILE)g++
 endif
 
 # --------------------------------------------------------------------

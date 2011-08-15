@@ -15,15 +15,26 @@ General Public License version 2.
 
 #include "generic-driver.h"
 
+//TODO: ADD TO VL?
+
+#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
+extern "C" {
+#endif
+
 #include <vl/generic.h>
 #include <vl/stringop.h>
 #include <vl/pgm.h>
 #include <vl/sift.h>
 #include <vl/getopt_long.h>
 
+#ifdef __cplusplus /* If this is a C++ compiler, end C linkage */
+}
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
 
 /* ----------------------------------------------------------------- */
 /* help message */
@@ -116,7 +127,7 @@ save_gss (VlSiftFilt * filt, VlFileMeta * fm, const char * basename,
   pim.max_value = 255 ;
   pim.is_raw    = 1 ;
 
-  buffer = malloc (sizeof(vl_uint8) * w * h) ;
+  buffer = (vl_uint8*)malloc (sizeof(vl_uint8) * w * h) ;
   if (! buffer) {
     err = VL_ERR_ALLOC ;
     goto save_gss_quit ;
@@ -489,9 +500,9 @@ main(int argc, char **argv)
               pim. height) ;
 
     /* allocate buffer */
-    data  = malloc(vl_pgm_get_npixels (&pim) *
+    data  = (vl_uint8*)malloc(vl_pgm_get_npixels (&pim) *
                    vl_pgm_get_bpp       (&pim) * sizeof (vl_uint8)   ) ;
-    fdata = malloc(vl_pgm_get_npixels (&pim) *
+    fdata = (vl_sift_pix*)malloc(vl_pgm_get_npixels (&pim) *
                    vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix)) ;
 
     if (!data || !fdata) {
@@ -560,7 +571,7 @@ main(int argc, char **argv)
         /* make enough space */
         if (ikeys_size < nikeys + 1) {
           ikeys_size += 10000 ;
-          ikeys       = realloc (ikeys, 4 * sizeof(double) * ikeys_size) ;
+          ikeys       = (double*)realloc (ikeys, 4 * sizeof(double) * ikeys_size) ;
         }
 
         /* add the guy to the buffer */
