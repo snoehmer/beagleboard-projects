@@ -16,6 +16,11 @@
 std::vector<Logger*> Logger::loggers;
 
 
+void Logger::init()
+{
+  loggers.push_back(new ConsoleLogger(DEBUG));
+}
+
 
 void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen)
 {
@@ -48,6 +53,9 @@ void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen
     case SIFTTEST:
       snprintf(prefix, maxlen, "[SIFTTEST    ] %s: ", lvl);
       break;
+    case TIMEMEASURE:
+      snprintf(prefix, maxlen, "[TIMEMEASURE ] %s: ", lvl);
+      break;
     default:
       snprintf(prefix, maxlen, "[UNKNOWN     ] %s: ", lvl);
       break;
@@ -55,11 +63,6 @@ void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen
 
 }
 
-
-void Logger::init()
-{
-  loggers.push_back(new ConsoleLogger(DEBUG));
-}
 
 void Logger::addToAllLoggers(const int type, const int level, const char* fmt, va_list ap)
 {

@@ -45,6 +45,7 @@ public:
 
   static const int SIFT        = 0x00001 | outputEna;
   static const int SIFTTEST    = 0x00002 | outputEna;
+  static const int TIMEMEASURE = 0x00004;
 
   static void debug(const int type, const char* fmt, ...);
   static void info(const int type, const char* fmt, ...);

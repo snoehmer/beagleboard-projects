@@ -71,6 +71,10 @@ bin-info:
 	$(call echo-var,BIN_LDFLAGS)
 	@echo
 
+deploy: all
+	@echo deploying files to beagleboard ...
+	scp -r $(arch_bins)  ubuntu@beagleboard:/home/ubuntu/tom/
+
 # Local variables:
 # mode: Makefile
 # End:

@@ -35,6 +35,7 @@ extern "C" {
 
 #include "sift.h"
 #include "logger.h"
+#include "SystemTimeMeasure.h"
 
 void Sift::ReadImageFromFile(char* filename)
 {
@@ -140,9 +141,6 @@ int Sift::Detect()
   int      O = -1, S = 3, omin = -1 ;
 
   vl_bool  err    = VL_ERR_OK ;
-  char     err_msg [1024] ;
-  int      exit_code          = 0 ;
-  int      verbose            = 0 ;
   vl_bool  force_orientations = 0 ;
 
 
@@ -151,6 +149,10 @@ int Sift::Detect()
   int              i ;
   vl_bool          first ;
 
+  SystemTimeMeasure tempTime;
+  TimeMeasureBase& measure = tempTime;
+
+  measure.startTimer("Sift::Detect()");
 
 #define WERR(name,op)                                           \
   if (err == VL_ERR_OVERFLOW) {                               \
@@ -207,14 +209,17 @@ int Sift::Detect()
     int                   nkeys ;
 
     /* calculate the GSS for the next octave .................... */
+    measure.startTimer("process_octave");
     if (first)
     {
       first = 0 ;
       err = vl_sift_process_first_octave(filt, fdata) ;
-    } else
+    }
+    else
     {
       err = vl_sift_process_next_octave(filt) ;
     }
+    measure.stopTimer("process_octave");
 
     if (err)
     {
@@ -227,7 +232,9 @@ int Sift::Detect()
 
 
     /* run detector ............................................. */
+    measure.startTimer("sift_detect");
     vl_sift_detect (filt) ;
+    measure.stopTimer("sift_detect");
 
     keys  = vl_sift_get_keypoints(filt) ;
     nkeys = vl_sift_get_nkeypoints(filt) ;
@@ -240,9 +247,10 @@ int Sift::Detect()
     /* for each keypoint ........................................ */
     for (; i < nkeys ; ++i)
     {
+      measure.startTimer("per_kpoint");
       double                angles [4] ;
       int                   nangles ;
-      VlSiftKeypoint        ik ;
+      //VlSiftKeypoint        ik ;
       VlSiftKeypoint const *k ;
 
       /* obtain keypoint orientations ........................... */
@@ -264,38 +272,9 @@ int Sift::Detect()
         newKeyPoint.angle = angles[q];
 
         detected_keypoints.push_back(newKeyPoint);
-
-        /*if (out.active) {
-          int l ;
-          vl_file_meta_put_double (&out, k -> x     ) ;
-          vl_file_meta_put_double (&out, k -> y     ) ;
-          vl_file_meta_put_double (&out, k -> sigma ) ;
-          vl_file_meta_put_double (&out, angles [q] ) ;
-          for (l = 0 ; l < 128 ; ++l) {
-            vl_file_meta_put_uint8 (&out, (vl_uint8) (512.0 * descr [l])) ;
-          }
-          if (out.protocol == VL_PROT_ASCII) fprintf(out.file, "\n") ;
-        }
-
-        if (frm.active) {
-          vl_file_meta_put_double (&frm, k -> x     ) ;
-          vl_file_meta_put_double (&frm, k -> y     ) ;
-          vl_file_meta_put_double (&frm, k -> sigma ) ;
-          vl_file_meta_put_double (&frm, angles [q] ) ;
-          if (frm.protocol == VL_PROT_ASCII) fprintf(frm.file, "\n") ;
-        }
-
-        if (dsc.active) {
-          int l ;
-          for (l = 0 ; l < 128 ; ++l) {
-            double x = 512.0 * descr[l] ;
-            x = (x < 255.0) ? x : 255.0 ;
-            vl_file_meta_put_uint8 (&dsc, (vl_uint8) (x)) ;
-          }
-          if (dsc.protocol == VL_PROT_ASCII) fprintf(dsc.file, "\n") ;
-        }
-        */
       }
+
+      measure.stopTimer("per_kpoint");
     }
   }
 
@@ -311,6 +290,10 @@ int Sift::Detect()
     filt = 0 ;
   }
 
+
+  measure.stopTimer("Sift::Detect()");
+
+  measure.printStatistic();
 
   /* quit */
   return 0;

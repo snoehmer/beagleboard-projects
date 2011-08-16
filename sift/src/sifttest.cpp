@@ -69,7 +69,7 @@ int main(int argc, char** argv)
   }
   catch(SiftException &ex)
   {
-    printf("Error Reading file: %d, aborting\n", ex.getMessage());
+    printf("Error Reading file: %s, aborting\n", ex.getMessage());
     return -1;
   }
 
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   }
   catch(SiftException &ex)
   {
-    printf("Error detecting keypoints: %d, aborting\n", ex.getMessage());
+    printf("Error detecting keypoints: %s, aborting\n", ex.getMessage());
     return -1;
   }
 

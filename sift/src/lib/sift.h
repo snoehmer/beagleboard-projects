@@ -68,13 +68,13 @@ public:
 
 class SiftException
 {
-  char* msg;
+  const char* msg;
 public:
-  SiftException(char* msg)
+  SiftException(const char* msg)
   {
     this->msg = msg;
   }
-  char* getMessage()
+  const char* getMessage()
   {
     return msg;
   }
