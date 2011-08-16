@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-
+#include <ctime>
 
 #include "generic-driver.h"
 
@@ -23,11 +23,13 @@ int main(int argc, char** argv)
   vl_size          q;
   char basename[21];
 
+
   if(argc != 2)
   {
     printf("usage: sifttest <image.pgm>\n");
     return -1;
   }
+
 
   Logger::init();
 
@@ -61,11 +63,27 @@ int main(int argc, char** argv)
 
   Logger::info(Logger::SIFTTEST, "reading Image %s from file", argv[1]);
 
-  sift.ReadImageFromFile(argv[1]);
-
+  try
+  {
+    sift.ReadImageFromFile(argv[1]);
+  }
+  catch(SiftException &ex)
+  {
+    printf("Error Reading file: %d, aborting\n", ex.getMessage());
+    return -1;
+  }
 
   Logger::info(Logger::SIFTTEST, "detecting keypoints");
-  sift.Detect();
+
+  try
+  {
+    sift.Detect();
+  }
+  catch(SiftException &ex)
+  {
+    printf("Error detecting keypoints: %d, aborting\n", ex.getMessage());
+    return -1;
+  }
 
   std::vector<KeyPointDescriptor>& keypoints = sift.GetDetectedKeypoints();
 

@@ -34,6 +34,7 @@ extern "C" {
 #include <assert.h>
 
 #include "sift.h"
+#include "logger.h"
 
 void Sift::ReadImageFromFile(char* filename)
 {
@@ -51,28 +52,19 @@ void Sift::ReadImageFromFile(char* filename)
 
   err = (q >= sizeof(basename)) ;
 
-  if (err) {
-    //TODO: ERROR HANDLING
-    /*snprintf(err_msg, sizeof(err_msg),
-             "Basename of '%s' is too long", name);*/
-    err = VL_ERR_OVERFLOW ;
-  }
-/*
-  if (verbose) {
-    printf ("sift: <== '%s'\n", name) ;
+  if (err)
+  {
+    Logger::error(Logger::SIFT, "ReadImageFromFile: Basename of '%s' is too long", filename);
+    throw SiftException("Basename of file is too long!");
   }
 
-  if (verbose > 1) {
-    printf ("sift: basename is '%s'\n", basename) ;
-  }*/
 
   /* open input file */
   in = fopen (filename, "rb") ;
-  if (!in) {
-    err = VL_ERR_IO ;
-    //TODO: ERROR HANDLING
-    /*snprintf(err_msg, sizeof(err_msg),
-             "Could not open '%s' for reading.", filename) ;*/
+  if (!in)
+  {
+    Logger::error(Logger::SIFT, "ReadImageFromFile: Failed to open file: '%s' with flags 'rb'", filename);
+    throw SiftException("failed to open file for reading");
   }
 
   /* ...............................................................
@@ -86,15 +78,13 @@ void Sift::ReadImageFromFile(char* filename)
     //TODO: ERROR HANDLING
     switch (vl_get_last_error()) {
     case  VL_ERR_PGM_IO :
-      /*snprintf(err_msg, sizeof(err_msg),
-               "Cannot read from '%s'.", name) ;
-      err = VL_ERR_IO ;*/
+      Logger::error(Logger::SIFT, "ReadImageFromFile: Cannot read from '%s'.", filename);
+      throw SiftException("Cannot read from file");
       break ;
 
     case VL_ERR_PGM_INV_HEAD :
-      /*snprintf(err_msg, sizeof(err_msg),
-               "'%s' contains a malformed PGM header.", name) ;
-      err = VL_ERR_IO ;*/
+      Logger::error(Logger::SIFT, "ReadImageFromFile: '%s' contains a malformed PGM header.", filename);
+      throw SiftException("file contains a malformed PGM header.");
       break;
     }
   }
@@ -110,19 +100,18 @@ void Sift::ReadImageFromFile(char* filename)
   fdata = (vl_sift_pix*)malloc(vl_pgm_get_npixels (&pim) *
                  vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix)) ;
 
-  if (!data || !fdata) {
-    err = VL_ERR_ALLOC ;
-    //TODO: ERROR HANDLING
-    /*snprintf(err_msg, sizeof(err_msg),
-             "Could not allocate enough memory.") ;*/
+  if (!data || !fdata)
+  {
+    Logger::error(Logger::SIFT, "ReadImageFromFile: out of mem while allocating buffers for image.");
+    throw SiftException("out of mem while allocating buffers for image.");
   }
 
   /* read PGM body */
   err  = vl_pgm_extract_data (in, &pim, data) ;
 
   if (err) {
-    //TODO: ERROR HANDLING
-    //snprintf(err_msg, sizeof(err_msg), "PGM body malformed.") ;
+    Logger::error(Logger::SIFT, "ReadImageFromFile: '%s' contains a malformed PGM body.", filename);
+    throw SiftException("file contains a malformed PGM body.");
     err = VL_ERR_IO ;
   }
 
@@ -185,29 +174,27 @@ int Sift::Detect()
   if (peak_thresh >= 0) vl_sift_set_peak_thresh (filt, peak_thresh) ;
   if (magnif      >= 0) vl_sift_set_magnif      (filt, magnif) ;
 
-  if (!filt) {
-    snprintf (err_msg, sizeof(err_msg),
-              "Could not create SIFT filter.") ;
-    err = VL_ERR_ALLOC ;
+  if (!filt)
+  {
+    Logger::error(Logger::SIFT, "Detect: could not create SIFT-fiter.");
+    throw SiftException("could not create SIFT-fiter.");
   }
 
-  if (verbose > 1) {
-    printf ("sift: filter settings:\n") ;
-    printf ("sift:   octaves      (O)     = %d\n",
-            vl_sift_get_noctaves     (filt)) ;
-    printf ("sift:   levels       (S)     = %d\n",
-            vl_sift_get_nlevels      (filt)) ;
-    printf ("sift:   first octave (o_min) = %d\n",
-            vl_sift_get_octave_first (filt)) ;
-    printf ("sift:   edge thresh           = %g\n",
-            vl_sift_get_edge_thresh  (filt)) ;
-    printf ("sift:   peak thresh           = %g\n",
-            vl_sift_get_peak_thresh  (filt)) ;
-    printf ("sift:   magnif                = %g\n",
-            vl_sift_get_magnif       (filt)) ;
-    printf ("sift: will force orientations? %s\n",
-            force_orientations ? "yes" : "no") ;
-  }
+  Logger::debug(Logger::SIFT, "sift: filter settings:") ;
+  Logger::debug(Logger::SIFT, "sift:   octaves      (O)     = %d",
+          vl_sift_get_noctaves     (filt)) ;
+  Logger::debug(Logger::SIFT, "sift:   levels       (S)     = %d",
+          vl_sift_get_nlevels      (filt)) ;
+  Logger::debug(Logger::SIFT, "sift:   first octave (o_min) = %d",
+          vl_sift_get_octave_first (filt)) ;
+  Logger::debug(Logger::SIFT, "sift:   edge thresh           = %g",
+          vl_sift_get_edge_thresh  (filt)) ;
+  Logger::debug(Logger::SIFT, "sift:   peak thresh           = %g",
+          vl_sift_get_peak_thresh  (filt)) ;
+  Logger::debug(Logger::SIFT, "sift:   magnif                = %g",
+          vl_sift_get_magnif       (filt)) ;
+  Logger::debug(Logger::SIFT, "sift: will force orientations? %s",
+          force_orientations ? "yes" : "no") ;
 
   /* ...............................................................
    *                                             Process each octave
@@ -235,11 +222,8 @@ int Sift::Detect()
       break ;
     }
 
-    if (verbose > 1)
-    {
-      printf("sift: GSS octave %d computed\n",
+    Logger::debug(Logger::SIFT, "sift: GSS octave %d computed",
              vl_sift_get_octave_index (filt));
-    }
 
 
     /* run detector ............................................. */
@@ -249,10 +233,8 @@ int Sift::Detect()
     nkeys = vl_sift_get_nkeypoints(filt) ;
     i     = 0 ;
 
-    if (verbose > 1)
-    {
-      printf ("sift: detected %d (unoriented) keypoints\n", nkeys) ;
-    }
+    Logger::debug(Logger::SIFT, "sift: detected %d (unoriented) keypoints", nkeys) ;
+
 
 
     /* for each keypoint ........................................ */
@@ -275,7 +257,7 @@ int Sift::Detect()
 
         /* compute descriptor (if necessary) */
         //if (out.active || dsc.active) {
-          vl_sift_calc_keypoint_descriptor(filt, newKeyPoint.descr, k, angles [q]) ;
+        vl_sift_calc_keypoint_descriptor(filt, newKeyPoint.descr, k, angles [q]) ;
         //}
 
         newKeyPoint.keypoint = *k;
@@ -329,16 +311,7 @@ int Sift::Detect()
     filt = 0 ;
   }
 
-  /* TODO: in case of error ... */
-  /*if (err) {
-    fprintf
-      (stderr,
-       "sift: err: %s (%d)\n",
-       err_msg,
-       err) ;
-    exit_code = 1 ;
-  }*/
 
   /* quit */
-  return exit_code ;
+  return 0;
 }

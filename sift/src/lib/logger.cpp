@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-
+#include <string.h>
 
 #include "logger.h"
 
@@ -19,24 +19,24 @@ std::vector<Logger*> Logger::loggers;
 
 void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen)
 {
-  char* lvl;
+  char lvl[32];
 
   switch(level)
   {
     case DEBUG:
-      lvl = "DEBUG";
+      strncpy(lvl, "DEBUG", sizeof(lvl));
       break;
     case INFO:
-      lvl = "INFO";
+      strncpy(lvl, "\033[1mINFO\033[0m", sizeof(lvl));
       break;
     case WARN:
-      lvl = "WARN";
+      strncpy(lvl, "\033[0;30;43mWARN\033[0m", sizeof(lvl));
       break;
     case ERROR:
-      lvl = "ERROR";
+      strncpy(lvl, "\033[0;30;41mERROR\033[0m", sizeof(lvl));
       break;
     default:
-      lvl = "UNKNOWN-LVL";
+      strncpy(lvl, "UNDEFINED-LVL", sizeof(lvl));
       break;
   }
 

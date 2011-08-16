@@ -66,4 +66,18 @@ public:
 
 };
 
+class SiftException
+{
+  char* msg;
+public:
+  SiftException(char* msg)
+  {
+    this->msg = msg;
+  }
+  char* getMessage()
+  {
+    return msg;
+  }
+};
+
 #endif /* SIFT_H_ */

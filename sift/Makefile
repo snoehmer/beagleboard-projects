@@ -138,7 +138,7 @@ CFLAGS += -Wno-unused-function -Wno-long-long -Wno-variadic-macros
 CFLAGS += -I$(VLDIR)
 
 CFLAGS += $(if $(DEBUG), -DVL_DEBUG -O0 -g, -DNDEBUG -O3)
-CFLAGS += $(if $(PROFILE), -g,)
+CFLAGS += $(if $(PROFILE), -pg,)
 
 # Architecture specific ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
