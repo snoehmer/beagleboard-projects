@@ -10,10 +10,10 @@
 #include <assert.h>
 #include <ctime>
 
-#include "generic-driver.h"
+#include "../../lib/arm/generic-driver.h"
 
-#include "lib/sift.h"
-#include "lib/logger.h"
+#include "../../lib/arm/sift.h"
+#include "../../lib/arm/logger.h"
 
 
 int main(int argc, char** argv)

@@ -269,6 +269,11 @@ endef
 
 include make/dll.mak
 include make/bin.mak
+
+ifeq ($(ARCH),ARM)
+include make/dsp.mak
+endif
+
 #include make/matlab.mak
 #include make/octave.mak
 #include make/doc.mak

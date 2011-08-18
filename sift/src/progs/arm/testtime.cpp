@@ -12,8 +12,8 @@
 #include <sys/time.h>
 #include <iostream>
 
-#include "lib/SystemTimeMeasure.h"
-#include "lib/logger.h"
+#include "../../lib/arm/SystemTimeMeasure.h"
+#include "../../lib/arm/logger.h"
 
 using namespace std;
 

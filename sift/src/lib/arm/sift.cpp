@@ -13,7 +13,7 @@ General Public License version 2.
 
 #define VL_SIFT_DRIVER_VERSION 0.1
 
-#include "../generic-driver.h"
+#include "generic-driver.h"
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
