@@ -1,4 +1,9 @@
 + debugging-facilities
-- time-measuring class
++ time-measuring class
 + get sift in lib running...
 + error handling (exceptions??)
+
+- eventuell noch mehr sift time measure zeugs hinzufügen?
+- sift testbilder zusammenstellen -> verschiedene auflösungen
+- tests durchlaufen lassen -> 2x?
+- ergebnise schön abspeichern

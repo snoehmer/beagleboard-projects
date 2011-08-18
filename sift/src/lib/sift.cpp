@@ -149,8 +149,7 @@ int Sift::Detect()
   int              i ;
   vl_bool          first ;
 
-  SystemTimeMeasure tempTime;
-  TimeMeasureBase& measure = tempTime;
+  TimeMeasureBase& measure = *TimeMeasureBase::getInstance();
 
   measure.startTimer("Sift::Detect()");
 
@@ -212,12 +211,16 @@ int Sift::Detect()
     measure.startTimer("process_octave");
     if (first)
     {
+      measure.startTimer("process_f_octave");
       first = 0 ;
       err = vl_sift_process_first_octave(filt, fdata) ;
+      measure.stopTimer("process_f_octave");
     }
     else
     {
-      err = vl_sift_process_next_octave(filt) ;
+      measure.startTimer("process_n_octave");
+      err = vl_sift_process_next_octave(filt);
+      measure.stopTimer("process_n_octave");
     }
     measure.stopTimer("process_octave");
 

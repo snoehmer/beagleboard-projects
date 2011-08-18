@@ -1,0 +1,31 @@
+VLFeat constructor called
+[SIFTTEST    ] [1mINFO[0m: reading Image pics/pic1_3.pgm from file
+[SIFTTEST    ] [1mINFO[0m: detecting keypoints
+[SIFT        ] DEBUG: sift: filter settings:
+[SIFT        ] DEBUG: sift:   octaves      (O)     = 5
+[SIFT        ] DEBUG: sift:   levels       (S)     = 3
+[SIFT        ] DEBUG: sift:   first octave (o_min) = -1
+[SIFT        ] DEBUG: sift:   edge thresh           = 10
+[SIFT        ] DEBUG: sift:   peak thresh           = 0
+[SIFT        ] DEBUG: sift:   magnif                = 3
+[SIFT        ] DEBUG: sift: will force orientations? no
+[SIFT        ] DEBUG: sift: GSS octave -1 computed
+[SIFT        ] DEBUG: sift: detected 749 (unoriented) keypoints
+[SIFT        ] DEBUG: sift: GSS octave 0 computed
+[SIFT        ] DEBUG: sift: detected 174 (unoriented) keypoints
+[SIFT        ] DEBUG: sift: GSS octave 1 computed
+[SIFT        ] DEBUG: sift: detected 39 (unoriented) keypoints
+[SIFT        ] DEBUG: sift: GSS octave 2 computed
+[SIFT        ] DEBUG: sift: detected 6 (unoriented) keypoints
+[SIFT        ] DEBUG: sift: GSS octave 3 computed
+[SIFT        ] DEBUG: sift: detected 2 (unoriented) keypoints
+identifier        | totaltime(ms)    | callcount    | mean duration
+-----------------------------------------------------------------
+   Sift::Detect() |     25310.302734 |            1 |25310.302734
+   process_octave |      7402.222168 |            6 |1233.703735
+ process_f_octave |      5787.078125 |            1 |5787.078125
+      sift_detect |       555.510986 |            5 |111.102196
+       per_kpoint |     17332.785156 |          970 |17.868851
+ process_n_octave |      1615.052002 |            5 |323.010406
+[SIFTTEST    ] [1mINFO[0m: writing keypoints to file
+VLFeat destructor called

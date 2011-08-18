@@ -1,0 +1,8 @@
+#!/bin/sh
+
+mogrify -format pgm *.jpg
+
+#for f in *.jpg
+#do
+#	echo "converting $f";
+#	convert $f

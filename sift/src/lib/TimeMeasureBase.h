@@ -50,6 +50,7 @@ class TimeMeasureBase
 
   TimeMeasureObject* getTimeMeasureObjectByIdentifier(const char* identifier);
 
+  static TimeMeasureBase* instance;
 
 protected:
   /**
@@ -72,7 +73,7 @@ public:
   void startTimer(const char* identifier);
 
   /**
-   * stops mesuring
+   * stops measuring
    */
   void stopTimer(const char* identifier);
 
@@ -84,6 +85,8 @@ public:
   int getCallCount(const char* identifier);
 
   void printStatistic();
+
+  static TimeMeasureBase* getInstance();
 };
 
 #endif /* TIMEMEASUREBASE_H_ */

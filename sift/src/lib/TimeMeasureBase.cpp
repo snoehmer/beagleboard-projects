@@ -6,10 +6,23 @@
  */
 
 #include "TimeMeasureBase.h"
+#include "SystemTimeMeasure.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "logger.h"
+
+
+TimeMeasureBase* TimeMeasureBase::instance = 0;
+
+TimeMeasureBase* TimeMeasureBase::getInstance()
+{
+  if(instance == 0)
+    instance = new SystemTimeMeasure();
+
+  return instance;
+}
+
 
 TimeMeasureBase::TimeMeasureBase()
 {
@@ -115,13 +128,13 @@ int TimeMeasureBase::getCallCount(const char *identifier)
 
 void TimeMeasureBase::printStatistic()
 {
-  printf("identifier      | totaltime(ms)    | callcount    | mean duration\n");
+  printf("identifier        | totaltime(ms)    | callcount    | mean duration\n");
   printf("-----------------------------------------------------------------\n");
   for(unsigned i = 0; i < timers.size(); i++)
   {
     float test = timers[i].totalTime.tv_usec;
     float totalTime = timers[i].totalTime.tv_sec*1000 + test/1000.0;
-    printf("%15s |%17f |%13d |%f\n", timers[i].identifier, totalTime, (int)timers[i].callCount, totalTime/timers[i].callCount);
+    printf("%17s |%17f |%13d |%f\n", timers[i].identifier, totalTime, (int)timers[i].callCount, totalTime/timers[i].callCount);
   }
 }
 

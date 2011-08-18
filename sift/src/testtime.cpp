@@ -22,8 +22,7 @@ int main(int argc, char** argv)
 {
   //Logger::init();
 
-  SystemTimeMeasure s;
-  TimeMeasureBase& m = s;
+  TimeMeasureBase& m = *TimeMeasureBase::getInstance();
 
   m.startTimer("total");
   float i;

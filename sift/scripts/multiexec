@@ -1,0 +1,10 @@
+#!/bin/sh
+
+
+
+for file in ../../data/pics/*.pgm
+do
+	echo "exec sifttest for $file"
+	echo $base
+	./sifttest $file > "$file result"
+done
