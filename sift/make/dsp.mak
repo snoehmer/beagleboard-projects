@@ -3,8 +3,8 @@
 # author:      Andrea Vedaldi
 
 
-all: bin-all
-clean: bin-clean
+all: dsp-bin-all
+clean: dsp-bin-clean
 archclean: bin-archclean
 distclean: bin-distclean
 info: bin-info
@@ -18,7 +18,7 @@ BIN_LDFLAGS = $(LDFLAGS) -L$(BINDIR) -lvl
 
 DSP_TOOLS := /opt/TI/TI_CGT_C6000_7.2.2
 DSP_DOFFBUILD := /opt/doffbuild
-L6X := $(DSP_TOOLS)/bin/cl6x
+CL6X := $(DSP_TOOLS)/bin/cl6x
 LNK6X := $(DSP_TOOLS)/bin/lnk6x
 DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 # --------------------------------------------------------------------
@@ -31,42 +31,44 @@ DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 # can be modified later by install_name_tool.
 
 
-#helloworld.x64P: helloworld_dsp.o64P helloworld_bridge.o64P
+DSPCFLAGS := 
+DSPINCLUDES := -I$(DSP_TOOLS)/include/
 
-CFLAGS :=
-INCLUDES := -I$(DSP_TOOLS)/include
+dsp_bin_src_dir := $(VLDIR)/src/progs/dsp
+dsp_bin_src := $(wildcard $(dsp_bin_src_dir)/*.c)
+dsp_bin_tgt := $(addprefix $(BINDIR)/, $(patsubst %.c,%.dll64P,$(notdir $(dsp_bin_src))))
 
-bin_src := $(wildcard $(VLDIR)/src/progs/dsp/*.c)
-bin_tgt := $(addprefix $(BINDIR)/, $(patsubst %.c,%.dll64P,$(notdir $(bin_src))))
+dsp-bin-all: $(dsp_bin_tgt)
 
-all: $(bin_tgt)
-
-#clean:
-#	$(QUIET_CLEAN)$(RM) $(bins) *.o *.o64P *.x64P
+dsp-bin-clean:
+	$(QUIET_CLEAN)$(RM) $(dsp_bin_tgt) $(BINDIR)/objs/libdsp/*
 
 # pretty print
 
-ifdef V
+ifndef V
 QUIET_CC    = @echo '   CC         '$@;
 QUIET_LINK  = @echo '   LINK       '$@;
 QUIET_CLEAN = @echo '   CLEAN      '$@;
 QUIET_DLL   = @echo '   DLLCREATE  '$@;
 endif
 
-%.o64P:: %.s
-	$(QUIET_CC)$(CL6X) $(CFLAGS) $(INCLUDES) -mv=64p -eo.o64P -c $<
 
-%.o64P: %.c
-	$(QUIET_CC)$(CL6X) $(CFLAGS) $(INCLUDES) -mv=64p -eo.o64P -c $<
+$(BINDIR)/objs/libdsp/%.o64P: $(dsp_bin_src_dir)/%.c $(BINDIR)/objs/libdsp/.dirstamp
+	@echo $+
+	$(QUIET_CC)$(CL6X) $(DSPCFLAGS) $(DSPINCLUDES) -mv=64p -eo.o64P --obj_directory $(dir $@) -c $<	
 
-%.x64P: %.o64P
+
+$(BINDIR)/objs/libdsp/%_bridge.o64P: $(dsp_bin_src_dir)/%_bridge.s
+	$(QUIET_CC)$(CL6X) $(DSPCFLAGS) $(DSPINCLUDES) -mv=64p -eo.o64P --obj_directory $(dir $@) -c $<	
+
+$(BINDIR)/objs/libdsp/%.x64P: $(BINDIR)/objs/libdsp/%.o64P $(BINDIR)/objs/libdsp/%_bridge.o64P
+	@echo $+
 	$(QUIET_LINK)$(LNK6X) -r -cr --localize='$$bss' -o $@ $+
 
-$(BINDIR)%.dll64P: %.x64P
+
+$(BINDIR)/%.dll64P: $(BINDIR)/objs/libdsp/%.x64P
+	@echo $+
 	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
-
-
-
 
 
 

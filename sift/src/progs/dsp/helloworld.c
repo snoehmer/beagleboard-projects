@@ -21,7 +21,7 @@
  */
 
 #include <stddef.h>
-#include "node.h"
+#include "../../lib/common/node.h"
 
 unsigned int dsp_helloworld_create(void)
 {

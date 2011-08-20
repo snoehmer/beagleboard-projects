@@ -3,7 +3,9 @@
 + get sift in lib running...
 + error handling (exceptions??)
 
-- eventuell noch mehr sift time measure zeugs hinzufügen?
-- sift testbilder zusammenstellen -> verschiedene auflösungen
-- tests durchlaufen lassen -> 2x?
-- ergebnise schön abspeichern
++ eventuell noch mehr sift time measure zeugs hinzufügen?
++ sift testbilder zusammenstellen -> verschiedene auflösungen
++ tests durchlaufen lassen -> 2x?
+
+- dsp build
+- vlfeat zur gänze auf dsp?
