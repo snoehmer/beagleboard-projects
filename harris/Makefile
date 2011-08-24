@@ -5,8 +5,13 @@
 
 OPTIMIZATION_LEVEL = 0
 
-CROSS_PREFIX = arm-linux-gnueabi-
-CC = g++
+# ubuntu version
+#CROSS_PREFIX = arm-linux-gnueabi-
+
+# codesourcery version
+CROSS_PREFIX = /opt/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-
+
+CC = gcc
 LD_FLAGS = `GraphicsMagick++-config --libs`
 CC_FLAGS = -I/usr/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall `GraphicsMagick++-config --cppflags` -c -fmessage-length=0
 
