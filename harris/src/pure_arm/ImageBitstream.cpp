@@ -7,7 +7,6 @@
 
 #include "ImageBitstream.h"
 #include <cmath>
-#include <Magick++.h>
 
 using namespace std;
 using namespace Magick;

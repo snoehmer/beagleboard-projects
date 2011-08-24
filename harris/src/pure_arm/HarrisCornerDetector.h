@@ -8,7 +8,7 @@
 #ifndef HARRISCORNERDETECTOR_H_
 #define HARRISCORNERDETECTOR_H_
 
-#include "GaussFilter.h"
+#include "ImageBitstream.h"
 #include "../util/HarrisCornerPoint.h"
 #include <vector>
 

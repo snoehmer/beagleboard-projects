@@ -6,7 +6,6 @@
  */
 
 #include "HarrisCornerDetector.h"
-#include "GaussFilter.h"
 #include "../util/HarrisCornerPoint.h"
 #include <cmath>
 

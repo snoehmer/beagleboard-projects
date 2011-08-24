@@ -6,7 +6,6 @@
  */
 
 #include <Magick++.h>
-#include "pure_arm/GaussFilter.h"
 #include "pure_arm/ImageBitstream.h"
 #include "pure_arm/HarrisCornerDetector.h"
 #include "util/HarrisCornerPoint.h"

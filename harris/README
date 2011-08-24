@@ -1,2 +1,14 @@
 Implementation of a Harris corner detector
-Write me! :)
+
+can be built in different ways:
+
+ - simple build: builds the HCD for the host architecture (default)
+                 invoked with "make" or "make HarrisCornerDetector"
+                 
+ - ARM only build: builds the HCD using an ARM cross compiler for an ARM target
+                   invoked with "make HarrisCornerDetectorARM"
+                   
+ - ARM/DSP build: builds the HCD main code using an ARM cross compiler
+                  builds optimized code for the DSP using TI'S code generation tools
+                  invoked with "make HarrisCornerDetectorDSP"
+                  not yet finished!

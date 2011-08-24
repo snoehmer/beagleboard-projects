@@ -1,8 +1,17 @@
-# Makefile for Harris Corner Detector on x86
+# Makefile for Harris Corner Detector
+# can compile HCD for the host system using the standard g++ compiler
+# or cross-compile HCD for another platform (ARM)
+# also compiles the sources for the DSP
 
+OPTIMIZATION_LEVEL = 0
+
+CROSS_PREFIX = arm-linux-gnueabi-
 CC = g++
 LD_FLAGS = `GraphicsMagick++-config --libs`
-CC_FLAGS = -I/usr/include/GraphicsMagick -O0 -g3 -Wall `GraphicsMagick++-config --cppflags` -c -fmessage-length=0
+CC_FLAGS = -I/usr/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall `GraphicsMagick++-config --cppflags` -c -fmessage-length=0
+
+LD_FLAGS_ARM = -Lopt/lib -lGraphicsMagick++ -lGraphicsMagick -llcms -ltiff -lfreetype -ljasper -ljpeg -lpng -lwmflite -lXext -lSM -lICE -lX11 -lbz2 -lxml2 -lz -lm -lgomp -lpthread -lltdl -luuid -lxcb -lXau -lXdmcp
+CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c -fmessage-length=0
 
 # source files, TODO
 CPP_SRCS = \
@@ -21,26 +30,40 @@ OBJS = \
 
 BIN = ./bin/HarrisDetector
 
-all: HarrisCornerDetectorx86
+all: HarrisCornerDetectorHost
 
-HarrisCornerDetectorx86: $(OBJS)
-	$(CC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
+# compile for host machine
+HarrisCornerDetectorHost: CCC = $(CC)
+HarrisCornerDetectorHost: $(OBJS)
+	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
-./bin/main.o: ./src/main.cpp
-	$(CC) $(CC_FLAGS) -o"$@" $<
+# compile using cross compiler (for ARM)
+HarrisCornerDetectorARM: CCC = $(CROSS_PREFIX)$(CC)
+HarrisCornerDetectorARM: LD_FLAGS = $(LD_FLAGS_ARM)
+HarrisCornerDetectorARM: CC_FLAGS = $(CC_FLAGS_ARM)
+HarrisCornerDetectorARM: $(OBJS)
+	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
-./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp 
-	$(CC) $(CC_FLAGS) -o"$@" $<
 
-./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp
-	$(CC) $(CC_FLAGS) -o"$@" $<
+# build targets for ARM only version
+./bin/main.o: ./src/main.cpp ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/HarrisCornerDetector.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp
-	$(CC) $(CC_FLAGS) -o"$@" $<
+./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
+	$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp
-	$(CC) $(CC_FLAGS) -o"$@" $<
+./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp ./src/pure_arm/GaussFilter.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
 
 .PHONY: clean
+
 clean:
 	rm -rf $(BIN) $(OBJS)
+
