@@ -27,7 +27,7 @@ public:
      * @param k parameter for Harris detector
      * @param thresh threshold for the corner strength
      */
-    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 0.5f, int kernelSize = 5, float gSigma = 0.5f, float k = 0.04f);
+    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 1.0f, int kernelSize = 5, float gSigma = 2.0f, float k = 0.04f);
 
     virtual ~HarrisCornerDetector();
 
@@ -52,7 +52,7 @@ public:
      * @param cornerList a list of the detected corners
      * @param corners a image with the corner strength
      */
-    ImageBitstream detectCorners(ImageBitstream img, vector<HarrisCornerPoint> &cornerList, float **hcr = 0);
+    vector<HarrisCornerPoint> detectCorners(ImageBitstream img, float **hcr = 0);
 
 
 private:
@@ -90,8 +90,11 @@ private:
      * @param hcr a raw bit stream of the harris corner response
      * @param cornerStrength the thresholded corner strength
      */
-    ImageBitstream performHarris(float **hcr, vector<HarrisCornerPoint> &cornerPoints);
+    vector<HarrisCornerPoint> performHarris(float **hcr);
 
+    void normalize(float *data, int n, float newMax = 1.0f);
+    vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
+    vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
 };
 
 #endif /* HARRISCORNERDETECTOR_H_ */

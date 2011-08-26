@@ -95,17 +95,17 @@ void HarrisCornerDetector::inputImage(ImageBitstream img)
     height_ = img.getHeight();
 }
 
-ImageBitstream HarrisCornerDetector::detectCorners(ImageBitstream img, vector<HarrisCornerPoint> &cornerList, float **hcr)
+vector<HarrisCornerPoint> HarrisCornerDetector::detectCorners(ImageBitstream img, float **hcr)
 {
 	if(!devKernelX_ || !devKernelY_ || !gaussKernel_)
 		init();
 
 	inputImage(img);
 
-	return performHarris(hcr, cornerList);
+	return performHarris(hcr);
 }
 
-ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCornerPoint> &cornerPoints)
+vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 {
 	int imgrow;  // current row and col in the image where the filter is calculated
 	int imgcol;
@@ -119,6 +119,10 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	int extWidth = width_ + 2 * offset;
 	int extHeight = height_ + 2 * offset;
 
+	ImageBitstream extendedImg = input_.extend((kernelSize_ - 1)/ 2);
+
+
+	// step 1: convolve the image with the derives of Gaussians
 	float *diffXX = new float[width_ * height_];
 	float *diffYY = new float[width_ * height_];
 	float *diffXY = new float[width_ * height_];
@@ -127,12 +131,6 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	float sumY;
 	float sumXY;
 
-
-	// init
-	ImageBitstream extendedImg = input_.extend((kernelSize_ - 1)/ 2);
-	cornerPoints.clear();
-
-	// step 1: convolve the image with the derives of Gaussians
 	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
 	{
 		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
@@ -160,13 +158,11 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	}
 
 
-	// step 2a: extend the derived images for Gaussian filtering
+	// step 2: apply Gaussian filters to convolved image
 	float *extDiffXX = extendImage(diffXX, offset);
 	float *extDiffYY = extendImage(diffYY, offset);
 	float *extDiffXY = extendImage(diffXY, offset);
 
-
-	// step 2b: apply Gaussian filters to convolved image
 	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
 	{
 		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
@@ -200,12 +196,11 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	delete[] extDiffXY;
 
 
-	// step 3: calculate Harris corner response and perform thresholding
+	// step 3: calculate Harris corner response
 	float *hcrIntern = new float[width_ * height_];
 	float Ixx;
 	float Iyy;
 	float Ixy;
-	float hcrScore;
 
 	for(row = 0; row < height_; row++)
 	{
@@ -215,15 +210,96 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 			Iyy = diffYY[row * width_ + col];
 			Ixy = diffXY[row * width_ + col];
 
-			hcrScore = Ixx * Iyy - Ixy * Ixy - harrisK_ * (Ixx + Iyy) * (Ixx + Iyy);
+			hcrIntern[row * width_ + col] = Ixx * Iyy - Ixy * Ixy - harrisK_ * (Ixx + Iyy) * (Ixx + Iyy);
+		}
+	}
 
-			if(hcrScore > threshold_)
+	delete[] diffXX;
+	delete[] diffYY;
+	delete[] diffXY;
+
+
+	// step 4: do non-maximum suppression
+	float *diffX = new float[width_ * height_];
+	float *diffY = new float[width_ * height_];
+	float *magnitude = new float[width_ * height_];
+
+	float *extHcr = extendImage(hcrIntern, offset);
+
+	// again, convolve HCR with derived Gaussian to get edges
+	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
+	{
+		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
+		{
+			sumX = 0;
+			sumY = 0;
+
+			// calculate weighted sum over kernel (convolution)
+			for(krow = 0; krow < kernelSize_; krow++)
 			{
-				hcrIntern[row * width_ + col] = hcrScore;
+				for(kcol = 0; kcol < kernelSize_; kcol++)
+				{
+					row = imgrow + krow - offset;
+					col = imgcol + kcol - offset;
 
-				cornerPoints.push_back(HarrisCornerPoint(row, col, hcrScore));
+					sumX += extHcr[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
+					sumY += extHcr[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
+				}
 			}
-			else
+
+			diffX[(imgrow - offset) * width_ + (imgcol - offset)] = sumX;
+			diffY[(imgrow - offset) * width_ + (imgcol - offset)] = sumY;
+			magnitude[(imgrow - offset) * width_ + (imgcol - offset)] = sqrt(sumX * sumX + sumY * sumY);
+		}
+	}
+
+	delete[] extHcr;
+
+
+	// now find maxima
+	bool sameSign;  // dX and dY have same sign
+	int delta;
+	float dX, dY, a1, a2, A, b1, b2, B, P;
+
+	for(row = 1; row < height_ - 1; row++)
+	{
+		for(col = 1; col < width_ - 1; col++)
+		{
+			dX = diffX[row * width_ + col];
+			dY = diffY[row * width_ + col];
+
+			sameSign = ((dX > 0) && (dY > 0)) || ((dX < 0) && (dY<0));
+
+			// set increments for different quadrants
+			if(sameSign || dY == 0) delta = 1;
+			else delta = -1;  // !sameSign || dX == 0
+
+			if((abs(dX) > abs(dY)) || ((abs(dX) == abs(dY) && (!sameSign || dX == 0))))
+			{
+				a1 = magnitude[(row - 1) * width_ + (col)];
+				a2 = magnitude[(row - 1) * width_ + (col + delta)];
+				b1 = magnitude[(row + 1) * width_ + (col)];
+				b2 = magnitude[(row + 1) * width_ + (col - delta)];
+
+				A = (abs(dX) - abs(dY)) * a1 + abs(dY) * a2;
+				B = (abs(dX) - abs(dY)) * b1 + abs(dY) * b2;
+
+				P = magnitude[row * width_ + col] * abs(dX);
+			}
+			else  // abs(dX) < abs(dY) || (abs(dX) == abs(dY) && (sameSign || dY == 0))
+			{
+				a1 = magnitude[(row) * width_ + (col - 1)];
+				a2 = magnitude[(row + delta) * width_ + (col - 1)];
+				b1 = magnitude[(row) * width_ + (col + 1)];
+				b2 = magnitude[(row - delta) * width_ + (col + 1)];
+
+				A = (abs(dY) - abs(dX)) * a1 + abs(dX) * a2;
+				B = (abs(dY) - abs(dX)) * b1 + abs(dX) * b2;
+
+				P = magnitude[row * width_ + col] * abs(dY);
+			}
+
+			if(!(P > A && P > B))
 			{
 				hcrIntern[row * width_ + col] = 0;
 			}
@@ -231,11 +307,9 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	}
 
 
-	// step 4: do non-maximum suppression
-	//TODO
+	// step 5: normalize the image to a range 0...1 and threshold
+	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrIntern, width_ * height_, 1.0f, threshold_);
 
-	// generate grayscale corner strength image
-	ImageBitstream cornerStrength(hcrIntern, width_, height_);
 
 	// return HCR if user wants to, delete it otherwise
 	if(*hcr)
@@ -243,7 +317,7 @@ ImageBitstream HarrisCornerDetector::performHarris(float **hcr, vector<HarrisCor
 	else
 		delete[] hcrIntern;
 
-	return cornerStrength;
+	return cornerPoints;
 }
 
 float* HarrisCornerDetector::extendImage(float *input, int borderSize)
@@ -305,4 +379,67 @@ float* HarrisCornerDetector::extendImage(float *input, int borderSize)
 					extendedImg[row * extWidth + col] = input[(height_ - 1) * width_ + (width_ - 1)];
 
 	return extendedImg;
+}
+
+void HarrisCornerDetector::normalize(float *data, int n, float newMax)
+{
+	int i;
+	float min, max;
+
+	min = max = data[0];
+
+	for(i = 0; i < n; i++)
+	{
+		if(data[i] > max) max = data[i];
+		if(data[i] < min) min = data[i];
+	}
+
+	for(i = 0; i < n; i++)
+	{
+		data[i] = (data[i] - min) * newMax / (max - min);
+	}
+}
+
+vector<HarrisCornerPoint> HarrisCornerDetector::treshold(float *data, int n, float threshold)
+{
+	int i;
+	vector<HarrisCornerPoint> cornerPoints;
+
+	for(i = 0; i < n; i++)
+	{
+		if(data[i] < threshold)
+			data[i] = 0;
+		else
+			cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i]));
+	}
+
+	return cornerPoints;
+}
+
+vector<HarrisCornerPoint> HarrisCornerDetector::normalizeAndThreshold(float *data, int n, float newMax, float threshold)
+{
+	int i;
+	float min, max;
+	vector<HarrisCornerPoint> cornerPoints;
+
+	min = max = data[0];
+
+	for(i = 0; i < n; i++)
+	{
+		if(data[i] > max) max = data[i];
+		if(data[i] < min) min = data[i];
+	}
+
+	for(i = 0; i < n; i++)
+	{
+		if(data[i] < threshold)
+			data[i] = 0;
+		else
+		{
+			data[i] = (data[i] - min) * newMax / (max - min);
+			cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i]));
+		}
+	}
+
+	return cornerPoints;
 }

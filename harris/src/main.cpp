@@ -20,15 +20,15 @@ int main(int argc, char **argv)
     ImageBitstream inputImg("../samples/pic1.png");
 
     // perform Harris corner detection
-    HarrisCornerDetector hcd(5000000.0f);
+    HarrisCornerDetector hcd(0.9f);
     vector<HarrisCornerPoint> cornerPoints;
     float *hcr;
 
     hcd.init();  // generates kernels
 
-    ImageBitstream cornerStrength = hcd.detectCorners(inputImg, cornerPoints, &hcr);
+    cornerPoints = hcd.detectCorners(inputImg, &hcr);
 
-    printf("generated output image (%dx%d), found %d corners\n", cornerStrength.getWidth(), cornerStrength.getHeight(), cornerPoints.size());
+    printf("found %d corners\n", cornerPoints.size());
 
     // mark corners in output image
     Image input = inputImg.getImage();
@@ -41,7 +41,6 @@ int main(int argc, char **argv)
     }
 
     // convert raw pixel data back to image
-    cornerStrength.saveImage("../output/cornerstrength.png");
     input.write("../output/corners.png");
 
     return 0;
