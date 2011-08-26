@@ -17,10 +17,10 @@ int main(int argc, char **argv)
 {
     InitializeMagick(0);
 
-    ImageBitstream inputImg("../samples/pic1.png");
+    ImageBitstream inputImg("../samples/081031.jpg");
 
     // perform Harris corner detection
-    HarrisCornerDetector hcd(0.8f);
+    HarrisCornerDetector hcd(0.3f);
     vector<HarrisCornerPoint> cornerPoints;
     float *hcr;
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     for(int i = 0; i < cornerPoints.size(); i++)
     {
     	printf("corner #%d at (%d, %d) with strength %f\n", i, cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getStrength());
-    	input.draw(DrawableCircle(cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getCol() + 3, cornerPoints[i].getRow()));
+    	input.draw(DrawableCircle(cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getCol() + 1, cornerPoints[i].getRow()));
     }
 
     // convert raw pixel data back to image

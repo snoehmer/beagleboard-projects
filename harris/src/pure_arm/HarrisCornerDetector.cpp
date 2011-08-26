@@ -218,7 +218,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	delete[] diffYY;
 	delete[] diffXY;
 
-
+/*
 	// step 4: do non-maximum suppression
 	float *diffX = new float[width_ * height_];
 	float *diffY = new float[width_ * height_];
@@ -305,7 +305,104 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 			}
 		}
 	}
+*/
 
+	// step 4: do non-maximum suppression
+	float *diffX = new float[width_ * height_];
+	float *diffY = new float[width_ * height_];
+	float *magnitude = new float[width_ * height_];
+
+	float *extHcr = extendImage(hcrIntern, offset);
+
+	// again, convolve HCR with derived Gaussian to get edges
+	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
+	{
+		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
+		{
+			sumX = 0;
+			sumY = 0;
+
+			// calculate weighted sum over kernel (convolution)
+			for(krow = 0; krow < kernelSize_; krow++)
+			{
+				for(kcol = 0; kcol < kernelSize_; kcol++)
+				{
+					row = imgrow + krow - offset;
+					col = imgcol + kcol - offset;
+
+					sumX += extHcr[row * extWidth + col] * devKernelX_[krow * kernelSize_ + kcol];
+					sumY += extHcr[row * extWidth + col] * devKernelY_[krow * kernelSize_ + kcol];
+				}
+			}
+
+			diffX[(imgrow - offset) * width_ + (imgcol - offset)] = sumX;
+			diffY[(imgrow - offset) * width_ + (imgcol - offset)] = sumY;
+			magnitude[(imgrow - offset) * width_ + (imgcol - offset)] = sqrt(sumX * sumX + sumY * sumY);
+		}
+	}
+
+	delete[] extHcr;
+
+	// now find maxima
+	int irow, icol;
+	float dX, dY, a1, a2, A, b1, b2, B, P;
+
+	for(row = 1; row < height_ - 1; row++)
+	{
+		for(col = 1; col < width_ - 1; col++)
+		{
+			dX = diffX[row * width_ + col];
+			dY = diffY[row * width_ + col];
+
+			// set increments for different quadrants
+			if(dX > 0) irow = 1;
+			else irow = -1;
+
+			if(dY > 0) icol = 1;
+			else icol = -1;
+
+			if(abs(dX) > abs(dY))
+			{
+				a1 = magnitude[(row) * width_ + (col + icol)];
+				a2 = magnitude[(row - irow) * width_ + (col + icol)];
+				b1 = magnitude[(row) * width_ + (col - icol)];
+				b2 = magnitude[(row + irow) * width_ + (col - icol)];
+
+				A = (abs(dX) - abs(dY)) * a1 + abs(dY) * a2;
+				B = (abs(dX) - abs(dY)) * b1 + abs(dY) * b2;
+
+				P = magnitude[row * width_ + col] * abs(dX);
+
+				if(P >= A && P > B)
+				{
+					hcrIntern[row * width_ + col] = abs(dX); //magnitude[row * width_ + col];
+				}
+				else
+					hcrIntern[row * width_ + col] = 0;
+			}
+			else
+			{
+				a1 = magnitude[(row - irow) * width_ + (col)];
+				a2 = magnitude[(row - irow) * width_ + (col + icol)];
+				b1 = magnitude[(row + irow) * width_ + (col)];
+				b2 = magnitude[(row + irow) * width_ + (col - icol)];
+
+				A = (abs(dY) - abs(dX)) * a1 + abs(dX) * a2;
+				B = (abs(dY) - abs(dX)) * b1 + abs(dX) * b2;
+
+				P = magnitude[row * width_ + col] * abs(dY);
+
+				if(P >= A && P > B)
+				{
+					hcrIntern[row * width_ + col] = abs(dY); //magnitude[row * width_ + col];
+				}
+				else
+				{
+					hcrIntern[row * width_ + col] = 0;
+				}
+			}
+		}
+	}
 
 	// step 5: normalize the image to a range 0...1 and threshold
 	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrIntern, width_ * height_, 1.0f, threshold_);

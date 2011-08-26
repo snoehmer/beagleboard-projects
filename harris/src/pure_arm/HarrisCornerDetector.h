@@ -27,7 +27,7 @@ public:
      * @param k parameter for Harris detector
      * @param thresh threshold for the corner strength
      */
-    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 1.0f, int kernelSize = 5, float gSigma = 2.0f, float k = 0.04f);
+    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 1.0f, int kernelSize = 5, float gSigma = 2.0f, float k = 0.06f);
 
     virtual ~HarrisCornerDetector();
 
