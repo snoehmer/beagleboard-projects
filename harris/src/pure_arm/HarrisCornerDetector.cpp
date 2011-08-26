@@ -242,8 +242,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 					row = imgrow + krow - offset;
 					col = imgcol + kcol - offset;
 
-					sumX += extHcr[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
-					sumY += extHcr[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
+					sumX += extHcr[row * extWidth + col] * devKernelX_[krow * kernelSize_ + kcol];
+					sumY += extHcr[row * extWidth + col] * devKernelY_[krow * kernelSize_ + kcol];
 				}
 			}
 
@@ -432,13 +432,12 @@ vector<HarrisCornerPoint> HarrisCornerDetector::normalizeAndThreshold(float *dat
 
 	for(i = 0; i < n; i++)
 	{
+		data[i] = (data[i] - min) * newMax / (max - min);
+
 		if(data[i] < threshold)
 			data[i] = 0;
 		else
-		{
-			data[i] = (data[i] - min) * newMax / (max - min);
 			cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i]));
-		}
 	}
 
 	return cornerPoints;
