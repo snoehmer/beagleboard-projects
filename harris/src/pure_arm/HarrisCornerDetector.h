@@ -27,7 +27,7 @@ public:
      * @param k parameter for Harris detector
      * @param thresh threshold for the corner strength
      */
-    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 1.0f, int kernelSize = 5, float gSigma = 2.0f, float k = 0.06f);
+    HarrisCornerDetector(float threshold = 1.0f, float dSigma = 1.0f, int dKernelSize = 3, float gSigma = 2.0f, int gKernelSize = 5, float k = 0.06f);
 
     virtual ~HarrisCornerDetector();
 
@@ -58,8 +58,9 @@ public:
 private:
 
     float devSigma_;
-    int kernelSize_;
+    int devKernelSize_;
     float gaussSigma_;
+    int gaussKernelSize_;
     float harrisK_;
     float threshold_;
     ImageBitstream input_;
@@ -69,14 +70,6 @@ private:
     int width_;
     int height_;
 
-
-    /**
-     * extends the image beyond its borders for the convolution
-     * every pixel on the border is copied outside, so that the image is
-     * extended by (kernelSize - 1)/2 pixels on each border
-     * @returns the buffer containing the extended result
-     */
-    float* extendImage(float *input, int borderSize);
 
     /**
      * performs the convolution with both derived kernels for every pixel

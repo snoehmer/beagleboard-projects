@@ -7,15 +7,18 @@
 
 #include "HarrisCornerDetector.h"
 #include "../util/HarrisCornerPoint.h"
+#include "NonMaxSuppressor.h"
 #include <cmath>
+#include <Magick++.h>
 
 using namespace std;
 
-HarrisCornerDetector::HarrisCornerDetector(float threshold, float dSigma, int kernelSize, float gSigma, float k)
+HarrisCornerDetector::HarrisCornerDetector(float threshold, float dSigma, int dKernelSize, float gSigma, int gKernelSize, float k)
 {
 	devSigma_ = dSigma;
-	kernelSize_ = kernelSize;
+	devKernelSize_ = dKernelSize;
 	gaussSigma_ = gSigma;
+	gaussKernelSize_ = gKernelSize;
 	harrisK_ = k;
 	threshold_ = threshold;
 
@@ -40,7 +43,7 @@ void HarrisCornerDetector::init()
 {
     int row;
     int col;
-    int center = (kernelSize_ - 1) / 2;
+    int center;
     int xc2; // = (x - center)^2
     int yc2;
     float sigma2 = devSigma_ * devSigma_;
@@ -50,39 +53,62 @@ void HarrisCornerDetector::init()
     float sumY = 0;
     float sumGauss = 0;
 
-    devKernelX_ = new float[kernelSize_ * kernelSize_];
-    devKernelY_ = new float[kernelSize_ * kernelSize_];
-    gaussKernel_ = new float[kernelSize_ * kernelSize_];
+    devKernelX_ = new float[devKernelSize_ * devKernelSize_];
+    devKernelY_ = new float[devKernelSize_ * devKernelSize_];
+    gaussKernel_ = new float[gaussKernelSize_ * gaussKernelSize_];
 
 
-    // step 1: calculate derived Gauss function for kernels and the Gauss filter kernel
-    for(row = 0; row < kernelSize_; row++)
+    // step 1: calculate derived Gauss function for dev kernels
+    center = (devKernelSize_ - 1) / 2;
+
+    for(row = 0; row < devKernelSize_; row++)
     {
-        for(col = 0; col < kernelSize_; col++)
+        for(col = 0; col < devKernelSize_; col++)
         {
             xc2 = (col - center) * (col - center);
             yc2 = (row - center) * (row - center);
 
-            devKernelX_[row * kernelSize_ + col] = -((float) col - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
+            devKernelX_[row * devKernelSize_ + col] = -((float) col - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
+            devKernelY_[row * devKernelSize_ + col] = -((float) row - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
 
-            devKernelY_[row * kernelSize_ + col] = -((float) row - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
-
-            gaussKernel_[row * kernelSize_ + col] = exp(((float) -(xc2 + yc2)) / (2 * sigma2g));
-
-            sumX += abs(devKernelX_[row * kernelSize_ + col]);
-            sumY += abs(devKernelY_[row * kernelSize_ + col]);
-            sumGauss += gaussKernel_[row * kernelSize_ + col];
+            sumX += abs(devKernelX_[row * devKernelSize_ + col]);
+            sumY += abs(devKernelY_[row * devKernelSize_ + col]);
         }
     }
 
     // step 2: normalize kernels
-    for(row = 0; row < kernelSize_; row++)
+    for(row = 0; row < devKernelSize_; row++)
     {
-        for(col = 0; col < kernelSize_; col++)
+        for(col = 0; col < devKernelSize_; col++)
         {
-            devKernelX_[row * kernelSize_ + col] = devKernelX_[row * kernelSize_ + col] / sumX;
-            devKernelY_[row * kernelSize_ + col] = devKernelY_[row * kernelSize_ + col] / sumY;
-            gaussKernel_[row * kernelSize_ + col] = gaussKernel_[row * kernelSize_ + col] / sumGauss;
+            devKernelX_[row * devKernelSize_ + col] = devKernelX_[row * devKernelSize_ + col] / sumX;
+            devKernelY_[row * devKernelSize_ + col] = devKernelY_[row * devKernelSize_ + col] / sumY;
+        }
+    }
+
+
+    // step 3: calculate Gauss function for gauss kernels
+    center = (gaussKernelSize_ - 1) / 2;
+
+    for(row = 0; row < gaussKernelSize_; row++)
+    {
+        for(col = 0; col < gaussKernelSize_; col++)
+        {
+            xc2 = (col - center) * (col - center);
+            yc2 = (row - center) * (row - center);
+
+            gaussKernel_[row * gaussKernelSize_ + col] = exp(((float) -(xc2 + yc2)) / (2 * sigma2g));
+
+            sumGauss += gaussKernel_[row * gaussKernelSize_ + col];
+        }
+    }
+
+    // step 2: normalize kernels
+    for(row = 0; row < gaussKernelSize_; row++)
+    {
+        for(col = 0; col < gaussKernelSize_; col++)
+        {
+            gaussKernel_[row * gaussKernelSize_ + col] = gaussKernel_[row * gaussKernelSize_ + col] / sumGauss;
         }
     }
 }
@@ -114,15 +140,18 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	int row;  // row and col of image pixel for current kernel position
 	int col;
 
-	int offset = (kernelSize_ - 1) / 2;
-
-	int extWidth = width_ + 2 * offset;
-	int extHeight = height_ + 2 * offset;
-
-	ImageBitstream extendedImg = input_.extend((kernelSize_ - 1)/ 2);
+	int offset;
+	int extWidth;
+	int extHeight;
 
 
 	// step 1: convolve the image with the derives of Gaussians
+	offset = (devKernelSize_ - 1) / 2;
+	extWidth = width_ + 2 * offset;
+	extHeight = height_ + 2 * offset;
+
+	ImageBitstream extendedImg = input_.extend(offset);
+
 	float *diffXX = new float[width_ * height_];
 	float *diffYY = new float[width_ * height_];
 	float *diffXY = new float[width_ * height_];
@@ -139,15 +168,15 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 			sumY = 0;
 
 			// calculate weighted sum over kernel (convolution)
-			for(krow = 0; krow < kernelSize_; krow++)
+			for(krow = 0; krow < devKernelSize_; krow++)
 			{
-				for(kcol = 0; kcol < kernelSize_; kcol++)
+				for(kcol = 0; kcol < devKernelSize_; kcol++)
 				{
 					row = imgrow + krow - offset;
 					col = imgcol + kcol - offset;
 
-					sumX += extendedImg.pixel(row, col) * devKernelX_[krow * kernelSize_ + kcol];
-					sumY += extendedImg.pixel(row, col) * devKernelY_[krow * kernelSize_ + kcol];
+					sumX += extendedImg.pixel(row, col) * devKernelX_[krow * devKernelSize_ + kcol];
+					sumY += extendedImg.pixel(row, col) * devKernelY_[krow * devKernelSize_ + kcol];
 				}
 			}
 
@@ -159,9 +188,13 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 
 	// step 2: apply Gaussian filters to convolved image
-	float *extDiffXX = extendImage(diffXX, offset);
-	float *extDiffYY = extendImage(diffYY, offset);
-	float *extDiffXY = extendImage(diffXY, offset);
+	offset = (gaussKernelSize_ - 1) / 2;
+	extWidth = width_ + 2 * offset;
+	extHeight = height_ + 2 * offset;
+
+	float *extDiffXX = ImageBitstream::extend(diffXX, width_, height_, offset);
+	float *extDiffYY = ImageBitstream::extend(diffYY, width_, height_, offset);
+	float *extDiffXY = ImageBitstream::extend(diffXY, width_, height_, offset);
 
 	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
 	{
@@ -172,16 +205,16 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 			sumXY = 0;
 
 			// calculate weighted sum over kernel (convolution)
-			for(krow = 0; krow < kernelSize_; krow++)
+			for(krow = 0; krow < gaussKernelSize_; krow++)
 			{
-				for(kcol = 0; kcol < kernelSize_; kcol++)
+				for(kcol = 0; kcol < gaussKernelSize_; kcol++)
 				{
 					row = imgrow + krow - offset;
 					col = imgcol + kcol - offset;
 
-					sumX += extDiffXX[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
-					sumY += extDiffYY[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
-					sumXY += extDiffXY[row * extWidth + col] * gaussKernel_[krow * kernelSize_ + kcol];
+					sumX += extDiffXX[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
+					sumY += extDiffYY[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
+					sumXY += extDiffXY[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
 				}
 			}
 
@@ -306,13 +339,13 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 		}
 	}
 */
-
+/*
 	// step 4: do non-maximum suppression
 	float *diffX = new float[width_ * height_];
 	float *diffY = new float[width_ * height_];
 	float *magnitude = new float[width_ * height_];
 
-	float *extHcr = extendImage(hcrIntern, offset);
+	float *extHcr = ImageBitstream::extend(hcrIntern, width_, height_, offset);
 
 	// again, convolve HCR with derived Gaussian to get edges
 	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
@@ -403,80 +436,29 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 			}
 		}
 	}
+*/
+
+	// step 4: perform non-maximum-suppression
+	NonMaxSuppressor nonMax;
+	float *hcrNonMax;
+
+	hcrNonMax = nonMax.performNonMax(hcrIntern, width_, height_);
+
+	delete[] hcrIntern;
 
 	// step 5: normalize the image to a range 0...1 and threshold
-	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrIntern, width_ * height_, 1.0f, threshold_);
+	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrNonMax, width_ * height_, 1.0f, threshold_);
 
 
 	// return HCR if user wants to, delete it otherwise
 	if(*hcr)
-		*hcr = hcrIntern;
+		*hcr = hcrNonMax;
 	else
-		delete[] hcrIntern;
+		delete[] hcrNonMax;
 
 	return cornerPoints;
 }
 
-float* HarrisCornerDetector::extendImage(float *input, int borderSize)
-{
-	int row;
-	int col;
-	float *extendedImg;
-
-	int offset = borderSize;
-
-	int extWidth = width_ + 2 * offset;
-	int extHeight = height_ + 2 * offset;
-
-	extendedImg = new float[extWidth * extHeight];
-
-	// step 0: copy image
-	for(row = 0; row < height_; row++)
-			for(col = 0; col < width_; col++)
-					extendedImg[(row + offset) * extWidth + (col + offset)] = input[row * width_ + col];
-
-	// step 1a: copy upper border
-	for(row = 0; row < offset; row++)
-			for(col = 0; col < width_; col++)
-					extendedImg[row * extWidth + (col + offset)] = input[0 * width_ + col];
-
-	// step 1b: copy lower border
-	for(row = offset + height_; row < height_ + 2*offset; row++)
-			for(col = 0; col < width_; col++)
-					extendedImg[row * extWidth + (col + offset)] = input[(height_ - 1) * width_ + col];
-
-	// step 1c: copy left border
-	for(col = 0; col < offset; col++)
-			for(row = 0; row < height_; row++)
-					extendedImg[(row + offset) * extWidth + col] = input[row * width_ + 0];
-
-	// step 1d: copy right border
-	for(col = offset + width_; col < width_ + 2*offset; col++)
-			for(row = 0; row < height_; row++)
-					extendedImg[(row + offset) * extWidth + col] = input[row * width_ + (width_ - 1)];
-
-	// step 2a: copy upper left corner
-	for(row = 0; row < offset; row++)
-			for(col = 0; col < offset; col++)
-					extendedImg[row * extWidth + col] = input[0 * width_ + 0];
-
-	// step 2b: copy upper right corner
-	for(row = 0; row < offset; row++)
-			for(col = offset + width_; col < width_ + 2*offset; col++)
-					extendedImg[row * extWidth + col] = input[0 * width_ + (width_ - 1)];
-
-	// step 2c: copy lower left corner
-	for(row = offset + height_; row < height_ + 2*offset; row++)
-			for(col = 0; col < offset; col++)
-					extendedImg[row * extWidth + col] = input[(height_ - 1) * width_ + 0];
-
-	// step 2d: copy lower right corner
-	for(row = offset + height_; row < height_ + 2*offset; row++)
-			for(col = offset + width_; col < width_ + 2*offset; col++)
-					extendedImg[row * extWidth + col] = input[(height_ - 1) * width_ + (width_ - 1)];
-
-	return extendedImg;
-}
 
 void HarrisCornerDetector::normalize(float *data, int n, float newMax)
 {

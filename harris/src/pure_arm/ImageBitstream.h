@@ -49,6 +49,10 @@ public:
 
 	ImageBitstream& operator=(const ImageBitstream& original);
 
+	static float* extend(float *input, int width, int height, int borderSize);
+	static int* extend(int *input, int width, int height, int borderSize);
+	static unsigned char* extend(unsigned char *input, int width, int height, int borderSize);
+
 private:
 
 	unsigned char *bitstream_;

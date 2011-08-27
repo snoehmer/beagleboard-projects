@@ -22,14 +22,18 @@ CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c
 CPP_SRCS = \
 ./src/util/HarrisCornerPoint.cpp \
 ./src/pure_arm/ImageBitstream.cpp \
+./src/util/FeatureDescriptor.cpp \
 ./src/pure_arm/GaussFilter.cpp \
+./src/pure_arm/NonMaxSuppressor.cpp \
 ./src/pure_arm/HarrisCornerDetector.cpp \
 ./src/main.cpp 
 
 OBJS = \
 ./bin/HarrisCornerPoint.o \
 ./bin/ImageBitstream.o \
+./bin/FeatureDescriptor.o \
 ./bin/GaussFilter.o \
+./bin/NonMaxSuppressor.o \
 ./bin/HarrisCornerDetector.o \
 ./bin/main.o 
 
@@ -60,10 +64,16 @@ HarrisCornerDetectorARM: $(OBJS)
 ./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp ./src/pure_arm/GaussFilter.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/NonMaxSuppressor.o: ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/FeatureDescriptor.o: ./src/util/FeatureDescriptor.cpp ./src/util/FeatureDescriptor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 
