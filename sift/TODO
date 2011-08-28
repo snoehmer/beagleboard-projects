@@ -7,5 +7,12 @@
 + sift testbilder zusammenstellen -> verschiedene auflösungen
 + tests durchlaufen lassen -> 2x?
 
-- dsp build
-- vlfeat zur gänze auf dsp?
++ dsp build
++ vlfeat zur gänze auf dsp?
++ DSP classe: Initialisierung
+- test der neuen alloc funktionen anhand von dsphellow.cpp
+  dazu noch im Dsp/DspNode fehlende Funktionen
+  implementieren (runnode, terminatenode, sendmessage...)
+- vlfeat initialisieren (mem-funktionen ...)
+- vlfeat auch im DSP initialisieren!!! ???
+- mem allocation in sift.cpp

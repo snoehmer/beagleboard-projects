@@ -15,6 +15,8 @@
 #include <vl/stringop.h>
 #include <vl/pgm.h>
 
+#include "Exception.h"
+
 struct KeyPointDescriptor
 {
   VlSiftKeypoint keypoint;
@@ -25,58 +27,48 @@ struct KeyPointDescriptor
 
 class Sift
 {
-private:
+protected:
   VlPgmImage pim;
   vl_uint8 *data;
   vl_sift_pix *fdata;
   std::vector<KeyPointDescriptor> detected_keypoints;
 
 public:
-  int Detect();
-  void ReadImageFromFile(char* filename);
+  virtual int Detect();
+  virtual void ReadImageFromFile(char* filename);
 
-  Sift()
-  {
-    data = 0;
-    fdata = 0;
-  }
+  Sift();
 
-  ~Sift()
+  virtual ~Sift()
   {
     /* release image data */
     if (fdata)
     {
-      free (fdata);
+      vl_free (fdata);
       fdata = 0;
     }
 
     /* release image data */
     if (data)
     {
-      free (data) ;
+      vl_free (data) ;
       data = 0 ;
     }
 
   }
 
-  std::vector<KeyPointDescriptor>& GetDetectedKeypoints()
+  virtual std::vector<KeyPointDescriptor>& GetDetectedKeypoints()
   {
     return detected_keypoints;
   }
 
 };
 
-class SiftException
+class SiftException : public Exception
 {
-  const char* msg;
 public:
-  SiftException(const char* msg)
+  SiftException(const char* msg) : Exception(msg)
   {
-    this->msg = msg;
-  }
-  const char* getMessage()
-  {
-    return msg;
   }
 };
 

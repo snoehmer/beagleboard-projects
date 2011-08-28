@@ -36,6 +36,17 @@ extern "C" {
 #include "sift.h"
 #include "logger.h"
 #include "SystemTimeMeasure.h"
+#include "Dsp.h"
+
+Sift::Sift()
+{
+  data = 0;
+  fdata = 0;
+
+  //init some vlfeat stuff
+  Logger::debug(Logger::SIFT, "Setting alloc functions");
+  vl_set_alloc_func(dsp_malloc, dsp_realloc, dsp_calloc, dsp_free);
+}
 
 void Sift::ReadImageFromFile(char* filename)
 {
@@ -47,6 +58,8 @@ void Sift::ReadImageFromFile(char* filename)
   /* ...............................................................
    *                                                 Determine files
    * ............................................................ */
+
+  Logger::info(Logger::SIFT, "ReadImageFromFile(%s)", filename);
 
   /* get basename from filename */
   q = vl_string_basename (basename, sizeof(basename), filename, 1) ;
@@ -96,9 +109,9 @@ void Sift::ReadImageFromFile(char* filename)
             pim. height) ;*/
 
   /* allocate buffer */
-  data  = (vl_uint8*)malloc(vl_pgm_get_npixels (&pim) *
+  data  = (vl_uint8*)vl_malloc(vl_pgm_get_npixels (&pim) *
                  vl_pgm_get_bpp(&pim) * sizeof (vl_uint8)   ) ;
-  fdata = (vl_sift_pix*)malloc(vl_pgm_get_npixels (&pim) *
+  fdata = (vl_sift_pix*)vl_malloc(vl_pgm_get_npixels (&pim) *
                  vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix)) ;
 
   if (!data || !fdata)
@@ -206,6 +219,8 @@ int Sift::Detect()
   {
     VlSiftKeypoint const *keys = 0 ;
     int                   nkeys ;
+
+    Logger::debug(Logger::SIFT, "sift: computing octave");
 
     /* calculate the GSS for the next octave .................... */
     measure.startTimer("process_octave");

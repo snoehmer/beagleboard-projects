@@ -191,8 +191,11 @@ GNU GPLv2, or (at your option) any later version.
 #define VL_COMPILER_MSC _MSC_VER
 #endif
 
+
 #if defined(__LCC__) || defined(__DOXYGEN__)
+#ifndef ARM_DSP
 #warning "LCC support is experimental!"
+#endif
 #define VL_COMPILER_LCC 1
 #endif
 
@@ -307,6 +310,12 @@ VL_INLINE float fabsf(float x) { return (float) fabs((double) x) ; }
 #else
 #define VL_EXPORT
 #endif
+#endif
+
+#if defined(ARM_DSP)
+#define VL_EXPORT
+#define VL_INLINE
+#define VL_UNUSED
 #endif
 
 VL_EXPORT char * vl_static_configuration_to_string_copy () ;

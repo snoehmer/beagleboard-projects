@@ -15,6 +15,10 @@ info: bin-info
 BIN_CFLAGS = $(filter-out -std=c99,$(CFLAGS))
 BIN_LDFLAGS = $(LDFLAGS) -L$(BINDIR) -lvl
 
+DSP_API := 2
+BIN_CFLAGS += -DDSP_API=$(DSP_API) -ansi
+BIN_CFLAGS += -D_GNU_SOURCE
+
 # --------------------------------------------------------------------
 #                                                                Build
 # --------------------------------------------------------------------
@@ -50,13 +54,14 @@ $(BINDIR)/% : $(VLDIR)/src/progs/arm/%.cpp $(dll-dir) $(lib_tgt)
 $(BINDIR)/%.d : $(VLDIR)/src/progs/arm/%.cpp $(dll-dir)
 	$(call C,CPP) $(BIN_CFLAGS) -M -MT  \
 	       '$(BINDIR)/$* $(BINDIR)/$*.d' \
-	       "$<" -MF "$@"
-	       
-$(BINDIR)/objs/libarm/%.o : $(lib_src) $(dll-dir) $(BINDIR)/objs/libarm/.dirstamp
+	       "$<" -MF "$@"    
+
+$(BINDIR)/objs/libarm/%.o : $(lib_src) $(dll-dir) $(BINDIR)/objs/libarm/.dirstamp  
 	$(call C,CPP) $(BIN_CFLAGS) $(BIN_LDFLAGS) -c "$(VLDIR)/src/lib/arm/$(patsubst %.o,%.cpp,$(notdir $@))" -o $@
 
+
 bin-clean:
-	rm -f $(bin_dep)
+	rm -f $(bin_dep) $(bin_tgt)
 
 bin-archclean: bin-clean
 
@@ -73,7 +78,8 @@ bin-info:
 
 deploy: all
 	@echo deploying files to beagleboard ...
-	scp -r $(arch_bins)  ubuntu@beagleboard:/home/ubuntu/tom/
+	#scp -r $(arch_bins)  ubuntu@beagleboard:/home/ubuntu/tom/
+	scp -P 23456 -r $(arch_bins)  ubuntu@bierwg.no-ip.org:/home/ubuntu/tom/
 
 # Local variables:
 # mode: Makefile

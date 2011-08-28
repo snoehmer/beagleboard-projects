@@ -505,7 +505,11 @@ snprintf(compilerString, 1024,
 #ifdef VL_COMPILER_ILP32
   "ILP32"
 #endif
+#ifdef ARM_DSP
+    "ARM_DSP");
+#else
            , v) ;
+#endif
 
   {
     char * string = 0 ;

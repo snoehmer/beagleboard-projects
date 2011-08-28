@@ -56,6 +56,9 @@ void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen
     case TIMEMEASURE:
       snprintf(prefix, maxlen, "[TIMEMEASURE ] %s: ", lvl);
       break;
+    case DSP:
+      snprintf(prefix, maxlen, "[DSP         ] %s: ", lvl);
+      break;
     default:
       snprintf(prefix, maxlen, "[UNKNOWN     ] %s: ", lvl);
       break;

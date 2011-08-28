@@ -399,7 +399,7 @@ vl_calloc (size_t n, size_t size)
 VL_INLINE void
 vl_free (void *ptr)
 {
-  (vl_get_state()->free_func)(ptr) ;
+  (vl_get_state()->free_func)(ptr);
 }
 
 /* VL_GENERIC_H */

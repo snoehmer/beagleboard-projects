@@ -69,7 +69,6 @@ ifeq ($(ARCH),ARM)
 dll_src := $(filter-out %_sse2.c, $(dll_src))
 dll_obj := $(filter-out %_sse2.o, $(dll_obj))
 dll_dep := $(filter-out %_sse2.d, $(dll_dep))
-
 endif
 
 arch_bins += $(dll_tgt)
@@ -111,6 +110,7 @@ $(BINDIR)/lib$(DLL_NAME).so : $(dll_obj)
 
 dll-clean:
 	rm -f $(dll_dep) $(dll_obj)
+
 
 dll-archclean: dll-clean
 	rm -rf $(BINDIR)

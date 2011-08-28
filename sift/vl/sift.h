@@ -16,6 +16,8 @@ GNU GPLv2, or (at your option) any later version.
 #include <stdio.h>
 #include "generic.h"
 
+
+
 /** @brief SIFT filter pixel type */
 typedef float vl_sift_pix ;
 
