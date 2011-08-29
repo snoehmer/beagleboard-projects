@@ -9,15 +9,19 @@
 #define FEATUREDESCRIPTOR_H_
 
 class ImageBitstream;
+class HarrisCornerPoint;
 
 class FeatureDescriptor
 {
 public:
-	static const int patchSize_ = 16;
+	static const int patchSize_ = 3;
 
+	FeatureDescriptor();
 	FeatureDescriptor(unsigned char *f);
 	FeatureDescriptor(unsigned char *bitstream, int centerrow, int centercol, int width, int height);
+	FeatureDescriptor(unsigned char *bitstream, HarrisCornerPoint center, int width, int height);
 	FeatureDescriptor(ImageBitstream source, int centerrow, int centercol);
+	FeatureDescriptor(ImageBitstream source, HarrisCornerPoint center);
 
 	unsigned char* get();
 

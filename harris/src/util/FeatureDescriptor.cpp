@@ -7,7 +7,14 @@
 
 #include "FeatureDescriptor.h"
 #include "../pure_arm/ImageBitstream.h"
+#include "HarrisCornerPoint.h"
 #include <cstring>
+
+
+FeatureDescriptor::FeatureDescriptor()
+{
+}
+
 
 FeatureDescriptor::FeatureDescriptor(unsigned char *f)
 {
@@ -24,6 +31,18 @@ FeatureDescriptor::FeatureDescriptor(unsigned char *bitstream, int centerrow, in
 FeatureDescriptor::FeatureDescriptor(ImageBitstream source, int centerrow, int centercol)
 {
 	init(source.getBitstream(), centerrow, centercol, source.getWidth(), source.getHeight());
+}
+
+
+FeatureDescriptor::FeatureDescriptor(ImageBitstream source, HarrisCornerPoint center)
+{
+	init(source.getBitstream(), center.getRow(), center.getCol(), source.getWidth(), source.getHeight());
+}
+
+
+FeatureDescriptor::FeatureDescriptor(unsigned char *bitstream, HarrisCornerPoint center, int width, int height)
+{
+	init(bitstream, center.getRow(), center.getCol(), width, height);
 }
 
 
@@ -47,10 +66,12 @@ void FeatureDescriptor::init(unsigned char *bitstream, int centerrow, int center
 	{
 		for(col = 0; col < patchSize_; col++)
 		{
-			imagerow = centerrow - (patchSize_ - 1)/2 + row;
-			imagecol = centercol - (patchSize_ - 1)/2 + col;
+			imagerow = centerrow - (patchSize_ - 1)/2 + row + patchSize_/2;
+			imagecol = centercol - (patchSize_ - 1)/2 + col + patchSize_/2;
 
-			patch_[row * patchSize_ + col] = extBitstream[imagerow * width + imagecol];
+			patch_[row * patchSize_ + col] = extBitstream[imagerow * (width + patchSize_) + imagecol];
 		}
 	}
+
+	delete[] extBitstream;
 }

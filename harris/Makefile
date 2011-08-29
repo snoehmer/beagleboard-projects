@@ -23,6 +23,8 @@ CPP_SRCS = \
 ./src/util/HarrisCornerPoint.cpp \
 ./src/pure_arm/ImageBitstream.cpp \
 ./src/util/FeatureDescriptor.cpp \
+./src/pure_arm/FeatureDetector.cpp \
+./src/util/FeatureGenerator.cpp \
 ./src/pure_arm/GaussFilter.cpp \
 ./src/pure_arm/NonMaxSuppressor.cpp \
 ./src/pure_arm/HarrisCornerDetector.cpp \
@@ -32,6 +34,8 @@ OBJS = \
 ./bin/HarrisCornerPoint.o \
 ./bin/ImageBitstream.o \
 ./bin/FeatureDescriptor.o \
+./bin/FeatureDetector.o \
+./bin/FeatureGenerator.o \
 ./bin/GaussFilter.o \
 ./bin/NonMaxSuppressor.o \
 ./bin/HarrisCornerDetector.o \
@@ -55,7 +59,7 @@ HarrisCornerDetectorARM: $(OBJS)
 
 
 # build targets for ARM only version
-./bin/main.o: ./src/main.cpp ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/HarrisCornerDetector.cpp
+./bin/main.o: ./src/main.cpp ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/FeatureDetector.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h 
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
@@ -74,6 +78,12 @@ HarrisCornerDetectorARM: $(OBJS)
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/FeatureDescriptor.o: ./src/util/FeatureDescriptor.cpp ./src/util/FeatureDescriptor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/FeatureGenerator.o: ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 

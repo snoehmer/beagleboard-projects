@@ -5,6 +5,8 @@
  *      Author: sn
  */
 
+//#define DEBUG_OUTPUT_PICS
+
 #include "HarrisCornerDetector.h"
 #include "../util/HarrisCornerPoint.h"
 #include "NonMaxSuppressor.h"
@@ -144,6 +146,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	int extWidth;
 	int extHeight;
 
+	Image tempImg;
+
 
 	// step 1: convolve the image with the derives of Gaussians
 	offset = (devKernelSize_ - 1) / 2;
@@ -187,6 +191,16 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	}
 
 
+#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
+	tempImg.write("../output/diffXX.png");
+	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
+	tempImg.write("../output/diffYY.png");
+	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
+	tempImg.write("../output/diffXY.png");
+#endif
+
+
 	// step 2: apply Gaussian filters to convolved image
 	offset = (gaussKernelSize_ - 1) / 2;
 	extWidth = width_ + 2 * offset;
@@ -228,6 +242,15 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	delete[] extDiffYY;
 	delete[] extDiffXY;
 
+#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
+	tempImg.write("../output/diffXX-gauss.png");
+	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
+	tempImg.write("../output/diffYY-gauss.png");
+	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
+	tempImg.write("../output/diffXY-gauss.png");
+#endif
+
 
 	// step 3: calculate Harris corner response
 	float *hcrIntern = new float[width_ * height_];
@@ -251,192 +274,11 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	delete[] diffYY;
 	delete[] diffXY;
 
-/*
-	// step 4: do non-maximum suppression
-	float *diffX = new float[width_ * height_];
-	float *diffY = new float[width_ * height_];
-	float *magnitude = new float[width_ * height_];
+#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);
+	tempImg.write("../output/hcrIntern.png");
+#endif
 
-	float *extHcr = extendImage(hcrIntern, offset);
-
-	// again, convolve HCR with derived Gaussian to get edges
-	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
-	{
-		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
-		{
-			sumX = 0;
-			sumY = 0;
-
-			// calculate weighted sum over kernel (convolution)
-			for(krow = 0; krow < kernelSize_; krow++)
-			{
-				for(kcol = 0; kcol < kernelSize_; kcol++)
-				{
-					row = imgrow + krow - offset;
-					col = imgcol + kcol - offset;
-
-					sumX += extHcr[row * extWidth + col] * devKernelX_[krow * kernelSize_ + kcol];
-					sumY += extHcr[row * extWidth + col] * devKernelY_[krow * kernelSize_ + kcol];
-				}
-			}
-
-			diffX[(imgrow - offset) * width_ + (imgcol - offset)] = sumX;
-			diffY[(imgrow - offset) * width_ + (imgcol - offset)] = sumY;
-			magnitude[(imgrow - offset) * width_ + (imgcol - offset)] = sqrt(sumX * sumX + sumY * sumY);
-		}
-	}
-
-	delete[] extHcr;
-
-
-	// now find maxima
-	bool sameSign;  // dX and dY have same sign
-	int delta;
-	float dX, dY, a1, a2, A, b1, b2, B, P;
-
-	for(row = 1; row < height_ - 1; row++)
-	{
-		for(col = 1; col < width_ - 1; col++)
-		{
-			dX = diffX[row * width_ + col];
-			dY = diffY[row * width_ + col];
-
-			sameSign = ((dX > 0) && (dY > 0)) || ((dX < 0) && (dY<0));
-
-			// set increments for different quadrants
-			if(sameSign || dY == 0) delta = 1;
-			else delta = -1;  // !sameSign || dX == 0
-
-			if((abs(dX) > abs(dY)) || ((abs(dX) == abs(dY) && (!sameSign || dX == 0))))
-			{
-				a1 = magnitude[(row - 1) * width_ + (col)];
-				a2 = magnitude[(row - 1) * width_ + (col + delta)];
-				b1 = magnitude[(row + 1) * width_ + (col)];
-				b2 = magnitude[(row + 1) * width_ + (col - delta)];
-
-				A = (abs(dX) - abs(dY)) * a1 + abs(dY) * a2;
-				B = (abs(dX) - abs(dY)) * b1 + abs(dY) * b2;
-
-				P = magnitude[row * width_ + col] * abs(dX);
-			}
-			else  // abs(dX) < abs(dY) || (abs(dX) == abs(dY) && (sameSign || dY == 0))
-			{
-				a1 = magnitude[(row) * width_ + (col - 1)];
-				a2 = magnitude[(row + delta) * width_ + (col - 1)];
-				b1 = magnitude[(row) * width_ + (col + 1)];
-				b2 = magnitude[(row - delta) * width_ + (col + 1)];
-
-				A = (abs(dY) - abs(dX)) * a1 + abs(dX) * a2;
-				B = (abs(dY) - abs(dX)) * b1 + abs(dX) * b2;
-
-				P = magnitude[row * width_ + col] * abs(dY);
-			}
-
-			if(!(P > A && P > B))
-			{
-				hcrIntern[row * width_ + col] = 0;
-			}
-		}
-	}
-*/
-/*
-	// step 4: do non-maximum suppression
-	float *diffX = new float[width_ * height_];
-	float *diffY = new float[width_ * height_];
-	float *magnitude = new float[width_ * height_];
-
-	float *extHcr = ImageBitstream::extend(hcrIntern, width_, height_, offset);
-
-	// again, convolve HCR with derived Gaussian to get edges
-	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
-	{
-		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
-		{
-			sumX = 0;
-			sumY = 0;
-
-			// calculate weighted sum over kernel (convolution)
-			for(krow = 0; krow < kernelSize_; krow++)
-			{
-				for(kcol = 0; kcol < kernelSize_; kcol++)
-				{
-					row = imgrow + krow - offset;
-					col = imgcol + kcol - offset;
-
-					sumX += extHcr[row * extWidth + col] * devKernelX_[krow * kernelSize_ + kcol];
-					sumY += extHcr[row * extWidth + col] * devKernelY_[krow * kernelSize_ + kcol];
-				}
-			}
-
-			diffX[(imgrow - offset) * width_ + (imgcol - offset)] = sumX;
-			diffY[(imgrow - offset) * width_ + (imgcol - offset)] = sumY;
-			magnitude[(imgrow - offset) * width_ + (imgcol - offset)] = sqrt(sumX * sumX + sumY * sumY);
-		}
-	}
-
-	delete[] extHcr;
-
-	// now find maxima
-	int irow, icol;
-	float dX, dY, a1, a2, A, b1, b2, B, P;
-
-	for(row = 1; row < height_ - 1; row++)
-	{
-		for(col = 1; col < width_ - 1; col++)
-		{
-			dX = diffX[row * width_ + col];
-			dY = diffY[row * width_ + col];
-
-			// set increments for different quadrants
-			if(dX > 0) irow = 1;
-			else irow = -1;
-
-			if(dY > 0) icol = 1;
-			else icol = -1;
-
-			if(abs(dX) > abs(dY))
-			{
-				a1 = magnitude[(row) * width_ + (col + icol)];
-				a2 = magnitude[(row - irow) * width_ + (col + icol)];
-				b1 = magnitude[(row) * width_ + (col - icol)];
-				b2 = magnitude[(row + irow) * width_ + (col - icol)];
-
-				A = (abs(dX) - abs(dY)) * a1 + abs(dY) * a2;
-				B = (abs(dX) - abs(dY)) * b1 + abs(dY) * b2;
-
-				P = magnitude[row * width_ + col] * abs(dX);
-
-				if(P >= A && P > B)
-				{
-					hcrIntern[row * width_ + col] = abs(dX); //magnitude[row * width_ + col];
-				}
-				else
-					hcrIntern[row * width_ + col] = 0;
-			}
-			else
-			{
-				a1 = magnitude[(row - irow) * width_ + (col)];
-				a2 = magnitude[(row - irow) * width_ + (col + icol)];
-				b1 = magnitude[(row + irow) * width_ + (col)];
-				b2 = magnitude[(row + irow) * width_ + (col - icol)];
-
-				A = (abs(dY) - abs(dX)) * a1 + abs(dX) * a2;
-				B = (abs(dY) - abs(dX)) * b1 + abs(dX) * b2;
-
-				P = magnitude[row * width_ + col] * abs(dY);
-
-				if(P >= A && P > B)
-				{
-					hcrIntern[row * width_ + col] = abs(dY); //magnitude[row * width_ + col];
-				}
-				else
-				{
-					hcrIntern[row * width_ + col] = 0;
-				}
-			}
-		}
-	}
-*/
 
 	// step 4: perform non-maximum-suppression
 	NonMaxSuppressor nonMax;
@@ -446,8 +288,19 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 	delete[] hcrIntern;
 
+#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
+	tempImg.write("../output/hcrNonMax.png");
+#endif
+
+
 	// step 5: normalize the image to a range 0...1 and threshold
 	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrNonMax, width_ * height_, 1.0f, threshold_);
+
+#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
+	tempImg.write("../output/hcrNonMax-tresh.png");
+#endif
 
 
 	// return HCR if user wants to, delete it otherwise
