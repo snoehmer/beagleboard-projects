@@ -12,13 +12,14 @@
 #include <Magick++.h>
 #include "ImageBitstream.h"
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
 class FeatureDetector
 {
 public:
-	FeatureDetector(int featuresThreshold = 50, float nccThreshold = 0.5f);
+	FeatureDetector(unsigned int featuresThreshold = 75, float nccThreshold = 0.8f);
 	virtual ~FeatureDetector();
 
 	void setFeatures(vector<FeatureDescriptor> features);
@@ -29,13 +30,13 @@ public:
 
 private:
 
-	int featuresThreshold_;
+	unsigned int featuresThreshold_;
 	float nccThreshold_;
 	vector<FeatureDescriptor> features_;
 
 
-	float getNCCScore(ImageBitstream image, FeatureDescriptor feature);
-
+	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature);
+	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature);
 };
 
 #endif /* FEATUREDETECTOR_H_ */

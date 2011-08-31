@@ -23,7 +23,7 @@ FeatureGenerator::~FeatureGenerator()
 vector<FeatureDescriptor> FeatureGenerator::generateFeatures(ImageBitstream image, vector<HarrisCornerPoint> corners)
 {
 	vector<FeatureDescriptor> features;
-	int i;
+	unsigned int i;
 	FeatureDescriptor feature;
 	HarrisCornerPoint corner;
 

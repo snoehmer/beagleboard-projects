@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
 
     // perform Harris corner detection
-    HarrisCornerDetector hcd(0.3f);
+    HarrisCornerDetector hcd(0.7f);
     vector<HarrisCornerPoint> cornerPoints;
     float *hcr;
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 
     // detect features in images
     ImageBitstream currentImg;
-    FeatureDetector featureDet;
+    FeatureDetector featureDet(80, 0.8f);
 
     featureDet.setFeatures(features);
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     Image input = inputImg.getImage();
     input.strokeColor("red");
 
-    for(int i = 0; i < cornerPoints.size(); i++)
+    for(unsigned int i = 0; i < cornerPoints.size(); i++)
     {
     	cout << "corner # " << i << " at (" << cornerPoints[i].getCol() << "," << cornerPoints[i].getRow() << " with strength " << cornerPoints[i].getStrength() << endl;
     	input.draw(DrawableCircle(cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getCol() + 1, cornerPoints[i].getRow()));
