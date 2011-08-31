@@ -15,9 +15,16 @@ info: bin-info
 BIN_CFLAGS = $(filter-out -std=c99,$(CFLAGS))
 BIN_LDFLAGS = $(LDFLAGS) -L$(BINDIR) -lvl
 
+
+
 DSP_API := 2
 BIN_CFLAGS += -DDSP_API=$(DSP_API) -ansi
 BIN_CFLAGS += -D_GNU_SOURCE
+
+ifneq ($(DBG),)
+BIN_CFLAGS += -g
+endif
+
 
 # --------------------------------------------------------------------
 #                                                                Build

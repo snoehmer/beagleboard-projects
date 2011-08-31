@@ -46,6 +46,7 @@ Sift::Sift()
   //init some vlfeat stuff
   Logger::debug(Logger::SIFT, "Setting alloc functions");
   vl_set_alloc_func(dsp_malloc, dsp_realloc, dsp_calloc, dsp_free);
+  vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end);
 }
 
 void Sift::ReadImageFromFile(char* filename)

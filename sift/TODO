@@ -10,9 +10,11 @@
 + dsp build
 + vlfeat zur gänze auf dsp?
 + DSP classe: Initialisierung
-- test der neuen alloc funktionen anhand von dsphellow.cpp
-  dazu noch im Dsp/DspNode fehlende Funktionen
-  implementieren (runnode, terminatenode, sendmessage...)
++ getmessage im dspnode
++ test der neuen alloc funktionen und gesamten dsp klasse anhand von dsphellow.cpp
++  dazu noch im Dsp/DspNode fehlende Funktionen
++  implementieren (runnode, terminatenode, sendmessage...)
+-  invalidate memfunktionen in dsp.cpp rein!!!
 - vlfeat initialisieren (mem-funktionen ...)
 - vlfeat auch im DSP initialisieren!!! ???
 - mem allocation in sift.cpp

@@ -155,6 +155,10 @@ typedef struct _VlState
   void *(*calloc_func)  (size_t, size_t) ;
   void  (*free_func)    (void*) ;
 
+  void *(*dsp_get_mapped_addr) (void* ptr);
+  int (*dsp_dmm_buffer_begin) (void* ptr);
+  int (*dsp_dmm_buffer_end)  (void* ptr);
+
 #if defined(VL_ARCH_IX86) || defined(VL_ARCH_X64) || defined(VL_ARCH_IA64)
   VlX86CpuInfo cpuInfo ;
 #endif
@@ -212,6 +216,12 @@ vl_set_alloc_func (void *(*malloc_func)  (size_t),
                    void *(*realloc_func) (void*,size_t),
                    void *(*calloc_func)  (size_t, size_t),
                    void  (*free_func)    (void*)) ;
+
+VL_EXPORT void
+vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
+                    int (*dsp_dmm_buffer_begin) (void* ptr),
+                    int (*dsp_dmm_buffer_end)  (void* ptr));
+
 VL_INLINE void *vl_malloc  (size_t n) ;
 VL_INLINE void *vl_realloc (void *ptr, size_t n) ;
 VL_INLINE void *vl_calloc  (size_t n, size_t size) ;
@@ -401,6 +411,25 @@ vl_free (void *ptr)
 {
   (vl_get_state()->free_func)(ptr);
 }
+
+VL_INLINE void*
+vl_dsp_get_mapped_addr (void *ptr)
+{
+  return (vl_get_state()->dsp_get_mapped_addr)(ptr);
+}
+
+VL_INLINE int
+vl_dsp_dmm_buffer_begin (void *ptr)
+{
+  return (vl_get_state()->dsp_dmm_buffer_begin)(ptr);
+}
+
+VL_INLINE int
+vl_dsp_dmm_buffer_end (void *ptr)
+{
+  return (vl_get_state()->dsp_dmm_buffer_end)(ptr);
+}
+
 
 /* VL_GENERIC_H */
 #endif

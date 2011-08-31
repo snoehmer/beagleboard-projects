@@ -74,6 +74,35 @@ unsigned int dsp_helloworld_execute(void *env)
 				NODE_putMsg(env, NULL, &msg, 0);
 				break;
 			}
+    case 4:
+    {
+      int* data = (int*)msg.arg_1;
+      int length = (int)msg.arg_2;
+      int i,a;
+
+      BCACHE_inv((void*) data, length*sizeof(int), 1);
+
+      /*for(i = 0; i < length; i++)
+      {
+        data[i] += 10;
+      }*/
+
+      for(a = 0; a < 10000; a++)
+      {
+        for(i = 0; i < length; i++)
+        {
+          data[i] += data[i]*2;
+        }
+      }
+
+
+
+      BCACHE_wbInv((void*) data, length*sizeof(int), 1);
+
+      msg.cmd = 42;
+      NODE_putMsg(env, NULL, &msg, 0);
+      break;
+    }
 		case 0x80000000:
 			done = 1;
 			break;
