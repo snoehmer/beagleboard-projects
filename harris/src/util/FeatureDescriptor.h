@@ -14,7 +14,7 @@ class HarrisCornerPoint;
 class FeatureDescriptor
 {
 public:
-	static const int patchSize_ = 3;
+	static const int patchSize_ = 16;
 
 	FeatureDescriptor();
 	FeatureDescriptor(unsigned char *f);
@@ -27,7 +27,7 @@ public:
 
 
 private:
-	unsigned char patch_[patchSize_];
+	unsigned char patch_[patchSize_ * patchSize_];
 
 	void init(unsigned char *bitstream, int centerrow, int centercol, int width, int height);
 };

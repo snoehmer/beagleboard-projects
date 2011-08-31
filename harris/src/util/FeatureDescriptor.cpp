@@ -49,9 +49,7 @@ FeatureDescriptor::FeatureDescriptor(unsigned char *bitstream, HarrisCornerPoint
 unsigned char* FeatureDescriptor::get()
 {
 	//unsigned char *patch;
-
 	//memcpy(&patch, &patch_, sizeof(patchSize_ * patchSize_ * sizeof(unsigned char)));
-
 	//return patch;
 
 	return &patch_[0];

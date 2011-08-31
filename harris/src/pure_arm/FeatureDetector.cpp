@@ -45,10 +45,6 @@ bool FeatureDetector::match(ImageBitstream image)
 	// resize image for cross correlation
 	ImageBitstream extendedImg = image.extend(FeatureDescriptor::patchSize_ / 2);
 
-	Image temp;
-	temp.read(extendedImg.getWidth(), extendedImg.getHeight(), "I", CharPixel, extendedImg.getBitstream());
-	temp.write("../output/extNCC.jpg");
-
 	for(i = 0; i < nFeatures; i++)
 	{
 		if(getNCCResult(extendedImg, features_[i]))
@@ -66,30 +62,19 @@ bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor featu
 {
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
-	int realWidth = image.getWidth() - patchSize/2 - (patchSize-1)/2;
-	int realHeight = image.getHeight() - patchSize/2 - (patchSize-1)/2;
-	static int idx = 0;
 
 	float ncc;
-	float *nccI = new float[realWidth * realHeight];
 
 	for(row = (patchSize - 1) / 2; row < image.getHeight() - patchSize / 2; row++)
 	{
 		for(col = (patchSize - 1) / 2; col < image.getWidth() - patchSize / 2; col++)
 		{
 			ncc = getNCC(image, row, col, feature);
-			nccI[(row - (patchSize-1)/2) * realWidth + (col - (patchSize-1)/2)] = ncc;
 
-			//if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
-				//return true;
+			if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
+				return true;
 		}
 	}
-
-	char tempName[30];
-	Image temp;
-	temp.read(realWidth, realHeight, "I", FloatPixel, nccI);
-	sprintf(tempName, "../output/ncc%d.jpg", idx);
-	temp.write(tempName);
 
 	return false;
 }
