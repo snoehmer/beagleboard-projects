@@ -89,7 +89,7 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 	unsigned char *P = feature.get();
 
 	// calculate average of image in feature patch
-	float pavg = 0, iavg = 0;
+	int pavg = 0, iavg = 0;
 
 	for(row = 0; row < patchSize; row++)
 	{
@@ -106,8 +106,8 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 
 
 	// calculate NCC
-	float pnorm, inorm;
-	float sumII = 0, sumPP = 0, sumIP = 0;
+	int pnorm, inorm;
+	int sumII = 0, sumPP = 0, sumIP = 0;
 	float ncc;
 
 	for(row = 0; row < patchSize; row++)
