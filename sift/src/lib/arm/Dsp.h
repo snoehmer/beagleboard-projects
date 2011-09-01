@@ -13,7 +13,9 @@
 #include "Exception.h"
 #include <map>
 
-//this functions are just for the vlfeat library.
+#include "../common/node.h"
+
+//this functions are just for the vlfeat library. (C - Functions ...)
 void* dsp_malloc  (size_t n) ;
 void* dsp_realloc (void *ptr, size_t n) ;
 void* dsp_calloc  (size_t n, size_t size) ;
@@ -21,6 +23,9 @@ void  dsp_free    (void* ptr) ;
 void* dsp_get_mapped_addr(void* ptr);
 int dsp_dmm_buffer_begin(void* ptr);
 int dsp_dmm_buffer_end(void* ptr);
+dsp_msg_t dsp_get_message();
+int dsp_send_message(uint32_t cmd, uint32_t arg1, uint32_t arg2);
+
 
 class DspNode;
 

@@ -133,6 +133,8 @@ void DspNode::SendMessage(uint32_t cmd, uint32_t arg1, uint32_t arg2, unsigned i
   SendMessage(msg, timeout);
 }
 
+
+
 void DspNode::SendMessage(dsp_msg msg, unsigned int timeout)
 {
   Logger::info(Logger::DSP, "DspNode::SendMessage(cmd=%d, arg_1=%d, arg_2=%d, timeout=%d)", msg.cmd, msg.arg_1, msg.arg_2, timeout);
@@ -349,4 +351,31 @@ int dsp_dmm_buffer_end(void* ptr)
   return 0;
 }
 
+int dsp_send_message(uint32_t cmd, uint32_t arg1, uint32_t arg2)
+{
+  try
+  {
+    Dsp::Instance().GetNode().SendMessage(cmd, arg1, arg2);
+  }
+  catch(DspException e)
+  {
+    return -1;
+  }
 
+  return 0;
+}
+
+dsp_msg_t dsp_get_message()
+{
+  try
+  {
+    dsp_msg m = (Dsp::Instance().GetNode().GetMessage());
+    return *((dsp_msg_t*)&m);
+  }
+  catch(DspException)
+  {
+    dsp_msg_t err;
+    err.cmd = -1;
+    return err;
+  }
+}
