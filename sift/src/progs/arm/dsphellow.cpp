@@ -21,7 +21,7 @@ extern DmmManager dmmManager;
 
 #define BUFLEN 20
 
-int main(int argc, char** argv)
+int main()
 {
   Logger::init();
 
@@ -53,36 +53,26 @@ int main(int argc, char** argv)
 
     dmm_buffer_begin(dmmManager.GetDMMBuffer(mydata), BUFLEN*sizeof(int));
 
-    m->startTimer("a");
     node.SendMessage(4, (uint32_t)dsp_get_mapped_addr(mydata), BUFLEN);
 
     dsp_msg msg = node.GetMessage();
-    m->stopTimer("a");
 
     for(i = 0; i < BUFLEN; i++)
     {
       mydata[i] = i;
     }
 
-    m->startTimer("b");
-    for(int a = 0; a < 10000; a++)
-    {
-      for(i = 0; i < BUFLEN; i++)
-      {
-        mydata[i] += mydata[i]*2;
-      }
-    }
-    m->stopTimer("b");
-
     dmm_buffer_end(dmmManager.GetDMMBuffer(mydata), BUFLEN*sizeof(int));
-    m->printStatistic();
 
     for(i = 0; i < 10; i++)
     {
       printf("%3d;", mydata[i]);
     }
 
+    printf("\n");
+
     dsp_free(mydata);
+
 
 
     /*

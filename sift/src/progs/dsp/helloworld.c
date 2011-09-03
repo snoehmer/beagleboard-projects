@@ -78,23 +78,14 @@ unsigned int dsp_helloworld_execute(void *env)
     {
       int* data = (int*)msg.arg_1;
       int length = (int)msg.arg_2;
-      int i,a;
+      int i;
 
       BCACHE_inv((void*) data, length*sizeof(int), 1);
 
-      /*for(i = 0; i < length; i++)
+      for(i = 0; i < length; i++)
       {
         data[i] += 10;
-      }*/
-
-      for(a = 0; a < 10000; a++)
-      {
-        for(i = 0; i < length; i++)
-        {
-          data[i] += data[i]*2;
-        }
       }
-
 
 
       BCACHE_wbInv((void*) data, length*sizeof(int), 1);

@@ -31,13 +31,16 @@
 static unsigned long input_buffer_size = 0x1000;
 static unsigned long output_buffer_size = 0x1000;
 static bool done;
+static int sig;
 
 static int dsp_handle;
 static void *proc;
 
+
 static void signal_handler(int signal)
 {
 	done = true;
+	sig = signal;
 }
 
 static inline struct dsp_node* create_node(void)
@@ -92,8 +95,6 @@ static bool run_task(struct dsp_node *node)
 {
   char text_send[] = "Hello";
   char text_receive[31];
-  
-  unsigned long exit_status;
   
   struct dsp_msg msg;
 
@@ -153,7 +154,7 @@ static bool run_task(struct dsp_node *node)
 }
 
 
-int main(int argc, const char **argv)
+int main()
 {
 	struct dsp_node *node;
 	int ret = 0;

@@ -44,10 +44,45 @@ Sift::Sift()
   fdata = 0;
 
   //init some vlfeat stuff
+#ifdef ARCH_ARM
+
+  Logger::debug(Logger::SIFT, "setting up dsp...");
+
+  dsp = &Dsp::Instance();
+
+  dsp->Init();
+
+  const struct dsp_uuid sift_uuid = { 0x3dac26d0, 0x6d4b, 0x11dd, 0xad, 0x8b, { 0x08, 0x00, 0x20, 0x0c, 0x9a, 0x64 } };
+  DspNode& node = dsp->CreateNode(sift_uuid,"./sift.dll64P");
+
+
+  node.Run();
+
+  //throw 0;
+
   Logger::debug(Logger::SIFT, "Setting alloc functions");
   vl_set_alloc_func(dsp_malloc, dsp_realloc, dsp_calloc, dsp_free);
   vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end, dsp_get_message, dsp_send_message);
+#endif
 }
+
+Sift::~Sift()
+{
+  /* release image data */
+  if (fdata)
+  {
+    vl_free (fdata);
+    fdata = 0;
+  }
+
+  /* release image data */
+  if (data)
+  {
+    vl_free (data) ;
+    data = 0 ;
+  }
+}
+
 
 void Sift::ReadImageFromFile(char* filename)
 {
@@ -183,7 +218,9 @@ int Sift::Detect()
    *                                                     Make filter
    * ............................................................ */
 
+
   filt = vl_sift_new (pim.width, pim.height, O, S, omin) ;
+  Logger::debug(Logger::SIFT, "new filter(vl_sift_new) created:%x", filt) ;
 
   if (edge_thresh >= 0) vl_sift_set_edge_thresh (filt, edge_thresh) ;
   if (peak_thresh >= 0) vl_sift_set_peak_thresh (filt, peak_thresh) ;
@@ -305,6 +342,7 @@ int Sift::Detect()
   /* release filter */
   if (filt)
   {
+    Logger::debug(Logger::SIFT, "freeing filt: %x", filt);
     vl_sift_delete (filt) ;
     filt = 0 ;
   }

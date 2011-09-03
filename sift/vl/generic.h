@@ -33,6 +33,9 @@ GNU GPLv2, or (at your option) any later version.
 #include "../src/lib/common/node.h"
 
 
+
+
+
 /** @brief Library version string */
 #define VL_VERSION_STRING "0.9.9"
 

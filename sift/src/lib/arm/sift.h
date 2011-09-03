@@ -24,6 +24,7 @@ struct KeyPointDescriptor
   double angle;
 };
 
+class Dsp;
 
 class Sift
 {
@@ -32,6 +33,7 @@ protected:
   vl_uint8 *data;
   vl_sift_pix *fdata;
   std::vector<KeyPointDescriptor> detected_keypoints;
+  Dsp* dsp;
 
 public:
   virtual int Detect();
@@ -39,23 +41,7 @@ public:
 
   Sift();
 
-  virtual ~Sift()
-  {
-    /* release image data */
-    if (fdata)
-    {
-      vl_free (fdata);
-      fdata = 0;
-    }
-
-    /* release image data */
-    if (data)
-    {
-      vl_free (data) ;
-      data = 0 ;
-    }
-
-  }
+  virtual ~Sift();
 
   virtual std::vector<KeyPointDescriptor>& GetDetectedKeypoints()
   {

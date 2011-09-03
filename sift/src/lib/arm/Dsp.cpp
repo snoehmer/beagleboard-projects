@@ -5,6 +5,8 @@
  *      Author: tom
  */
 
+
+
 #include "Dsp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,14 +15,12 @@
 #include <signal.h>
 
 #include "logger.h"
-
 #include "dmm_buffer.h"
 #include "dsp_bridge.h"
 
 
-static unsigned long input_buffer_size = 0x1000;
-static unsigned long output_buffer_size = 0x1000;
 static bool done;
+static int sig;
 
 Dsp* Dsp::instance = NULL;
 
@@ -46,6 +46,7 @@ Dsp::~Dsp()
 static void signal_handler(int signal)
 {
   done = true;
+  sig = signal;
 }
 
 void DspNode::Create(void)
@@ -257,8 +258,23 @@ void* dsp_malloc(size_t n)
 void* dsp_realloc(void *ptr, size_t n)
 {
   Logger::debug(Logger::DSP, "dsp_realloc(0x%x, %d)", ptr, n);
-  //TODO
-  return realloc(ptr, n);
+
+  //TODO: this is a very stupid implementation!!!!
+
+  dmm_buffer* buf = dmm_buffer_new(Dsp::Instance().GetHandle(), Dsp::Instance().GetProc(), DMA_BIDIRECTIONAL);
+  dmm_buffer_allocate(buf, n);
+
+  dmmManager.Add(buf);
+
+  dmm_buffer* old_buf = dmmManager.GetDMMBuffer(ptr);
+
+  memcpy(buf->data, old_buf->data, old_buf->size);
+
+  //free the old buffer!
+  dmmManager.Remove(ptr);
+  dmm_buffer_free(old_buf);
+
+  return buf->data;
 }
 
 void* dsp_calloc(size_t n, size_t size)
@@ -369,8 +385,11 @@ dsp_msg_t dsp_get_message()
 {
   try
   {
+    //UGLY CAST!
     dsp_msg m = (Dsp::Instance().GetNode().GetMessage());
-    return *((dsp_msg_t*)&m);
+    dsp_msg_t * mp = (dsp_msg_t*)&m;
+
+    return *(mp);
   }
   catch(DspException)
   {

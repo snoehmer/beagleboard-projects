@@ -193,7 +193,7 @@ GNU GPLv2, or (at your option) any later version.
 
 
 #if defined(__LCC__) || defined(__DOXYGEN__)
-#ifndef ARM_DSP
+#if !defined(ARM_DSP) && !defined(ARCH_DSP)
 #warning "LCC support is experimental!"
 #endif
 #define VL_COMPILER_LCC 1
@@ -313,6 +313,12 @@ VL_INLINE float fabsf(float x) { return (float) fabs((double) x) ; }
 #endif
 
 #if defined(ARM_DSP)
+#define VL_EXPORT
+#define VL_INLINE
+#define VL_UNUSED
+#endif
+
+#if defined(ARCH_DSP)
 #define VL_EXPORT
 #define VL_INLINE
 #define VL_UNUSED

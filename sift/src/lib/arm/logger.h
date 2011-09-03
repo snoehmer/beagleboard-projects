@@ -47,6 +47,7 @@ public:
   static const int SIFTTEST    = 0x00002 | outputEna;
   static const int TIMEMEASURE = 0x00004;
   static const int DSP         = 0x00008 | outputEna;
+  static const int DMMMANGER   = 0x00010 | outputEna;
 
   static void debug(const int type, const char* fmt, ...);
   static void info(const int type, const char* fmt, ...);

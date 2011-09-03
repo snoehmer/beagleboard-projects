@@ -29,7 +29,7 @@ DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 # can be modified later by install_name_tool.
 
 
-DSPCFLAGS := 
+DSPCFLAGS := -DARCH_DSP
 DSPINCLUDES := -I$(DSP_TOOLS)/include/
 
 dsp_bin_src_dir := $(VLDIR)/src/progs/dsp
@@ -75,7 +75,8 @@ $(BINDIR)/%.dll64P: $(BINDIR)/objs/libdsp/%.x64P
 dsp_dll_src := $(VLDIR)/vl/sift.c $(VLDIR)/vl/host.c $(VLDIR)/vl/generic.c $(VLDIR)/vl/random.c $(VLDIR)/vl/imopv.c $(VLDIR)/vl/mathop.c 
 dsp_dll_obj := $(addprefix $(BINDIR)/objs/, $(notdir $(dsp_dll_src:.c=.o64P)))
 
-DSPCFLAGS_VL := -gcc -DVL_DISABLE_THREADS -DVL_DISABLE_SSE2 -I$(VLDIR) -DARM_DSP
+DSPCFLAGS_VL := -gcc -DVL_DISABLE_THREADS -DVL_DISABLE_SSE2 -I$(VLDIR)
+DSPCFLAGS_VL += $(DSPCFLAGS)
 
 dsp_vl_obj: $(dsp_dll_obj)
 

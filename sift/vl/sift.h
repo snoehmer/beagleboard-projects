@@ -17,20 +17,6 @@ GNU GPLv2, or (at your option) any later version.
 #include "generic.h"
 
 
-typedef struct _imconvol_vf_params
-{
-  float* dst;
-  int dst_stride;
-  float const* src;
-  int src_width;
-  int src_height;
-  int src_stride;
-  float const* filt;
-  int filt_begin;
-  int filt_end;
-  int step;
-  unsigned int flags;
-}imconvol_vf_params;
 
 
 /** @brief SIFT filter pixel type */
@@ -429,6 +415,7 @@ vl_sift_set_window_size (VlSiftFilt *f, double x)
 {
   f -> windowSize = x ;
 }
+
 
 /* VL_SIFT_H */
 #endif

@@ -174,6 +174,7 @@ DISABLE_SSE2=yes
 CROSS_COMPILE := /usr/local/sourcery-arm-linux/bin/arm-none-linux-gnueabi-
 CC := $(CROSS_COMPILE)gcc
 CPP := $(CROSS_COMPILE)g++
+CFLAGS += -DARCH_ARM
 endif
 
 # --------------------------------------------------------------------

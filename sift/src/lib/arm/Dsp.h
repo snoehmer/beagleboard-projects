@@ -14,6 +14,7 @@
 #include <map>
 
 #include "../common/node.h"
+#include "logger.h"
 
 //this functions are just for the vlfeat library. (C - Functions ...)
 void* dsp_malloc  (size_t n) ;
@@ -120,19 +121,36 @@ class DmmManager
 public:
   void Add(dmm_buffer* buf)
   {
+    Logger::debug(Logger::DMMMANGER, "DmmManager::Add(buf->data:%x)", buf->data);
     allocated_mem[buf->data] = buf;
   }
 
   void Remove(void* addr)
   {
+    Logger::debug(Logger::DMMMANGER, "DmmManager::Remove(buf->data:%x)", addr);
     allocated_mem.erase(addr);
   }
 
   dmm_buffer* GetDMMBuffer(void* addr)
   {
-    //TODO: searching in case of addr points not to the first position
-    // of allocated mem...
-    return allocated_mem[addr];
+    Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x)", addr);
+
+    dmm_buffer* buf =  allocated_mem[addr];
+    if(buf)
+      return buf;
+
+    Logger::warn(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) not found -> searching", addr);
+
+    map<void*,dmm_buffer*>::iterator iter;
+    for( iter = allocated_mem.begin(); iter != allocated_mem.end(); iter++ )
+    {
+      if(((unsigned)addr >= (unsigned)iter->first) && (unsigned)addr <= ((unsigned)iter->first + (unsigned)iter->second->size))
+      {
+        return iter->second;
+      }
+    }
+
+    return NULL;
   }
 };
 
