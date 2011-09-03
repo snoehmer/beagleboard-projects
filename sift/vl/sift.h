@@ -16,6 +16,9 @@ GNU GPLv2, or (at your option) any later version.
 #include <stdio.h>
 #include "generic.h"
 
+
+
+
 /** @brief SIFT filter pixel type */
 typedef float vl_sift_pix ;
 
@@ -412,6 +415,7 @@ vl_sift_set_window_size (VlSiftFilt *f, double x)
 {
   f -> windowSize = x ;
 }
+
 
 /* VL_SIFT_H */
 #endif

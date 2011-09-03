@@ -13,7 +13,7 @@ General Public License version 2.
 
 #define VL_SIFT_DRIVER_VERSION 0.1
 
-#include "generic-driver.h"
+#include "../../lib/arm/generic-driver.h"
 
 //TODO: ADD TO VL?
 

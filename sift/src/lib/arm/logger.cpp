@@ -12,6 +12,7 @@
 #include "logger.h"
 
 #include "ConsoleLogger.h"
+#include "FileLogger.h"
 
 std::vector<Logger*> Logger::loggers;
 
@@ -19,6 +20,7 @@ std::vector<Logger*> Logger::loggers;
 void Logger::init()
 {
   loggers.push_back(new ConsoleLogger(DEBUG));
+  loggers.push_back(new FileLogger(DEBUG, "log/log"));
 }
 
 
@@ -48,16 +50,22 @@ void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen
   switch(type)
   {
     case SIFT:
-      snprintf(prefix, maxlen, "[SIFT        ] %s: ", lvl);
+      snprintf(prefix, maxlen, "[\033[0;31mSIFT\033[0m        ] %s: ", lvl);
       break;
     case SIFTTEST:
-      snprintf(prefix, maxlen, "[SIFTTEST    ] %s: ", lvl);
+      snprintf(prefix, maxlen, "[\033[0;32mSIFTTEST\033[0m    ] %s: ", lvl);
       break;
     case TIMEMEASURE:
-      snprintf(prefix, maxlen, "[TIMEMEASURE ] %s: ", lvl);
+      snprintf(prefix, maxlen, "[\033[0;33mTIMEMEASURE\033[0m ] %s: ", lvl);
+      break;
+    case DSP:
+      snprintf(prefix, maxlen, "[\033[0;34mDSP\033[0m         ] %s: ", lvl);
+      break;
+    case DMMMANGER:
+      snprintf(prefix, maxlen, "[\033[0;35mDMMMANGER\033[0m   ] %s: ", lvl);
       break;
     default:
-      snprintf(prefix, maxlen, "[UNKNOWN     ] %s: ", lvl);
+      snprintf(prefix, maxlen, "[\033[0;31mUNKNOWN\033[0m     ] %s: ", lvl);
       break;
   }
 

@@ -627,6 +627,35 @@ vl_set_alloc_func (void *(*malloc_func)  (size_t),
   vl_unlock_state () ;
 }
 
+
+/** ------------------------------------------------------------------
+ ** @brief Set memory allocation functions for DSP
+ ** @param dsp_get_mapped_addr  pointer to @c dsp_get_mapped_addr.
+ ** @param dsp_dmm_buffer_begin pointer to @c dsp_dmm_buffer_begin.
+ ** @param dsp_dmm_buffer_end  pointer to @c dsp_dmm_buffer_end.
+ **/
+VL_EXPORT void
+vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
+                    int (*dsp_dmm_buffer_begin) (void* ptr),
+                    int (*dsp_dmm_buffer_end)  (void* ptr),
+                    dsp_msg_t (*dsp_get_message)(),
+                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2))
+{
+  VlState * state ;
+  vl_lock_state () ;
+  state = vl_get_state() ;
+
+  state->dsp_get_mapped_addr = dsp_get_mapped_addr;
+  state->dsp_dmm_buffer_begin = dsp_dmm_buffer_begin;
+  state->dsp_dmm_buffer_end = dsp_dmm_buffer_end;
+  state->dsp_send_message = dsp_send_message;
+  state->dsp_get_message = dsp_get_message;
+
+  vl_unlock_state () ;
+}
+
+
+
 VL_EXPORT void
 vl_set_printf_func (printf_func_t printf_func)
 {

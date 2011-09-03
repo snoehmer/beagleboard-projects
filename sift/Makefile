@@ -174,6 +174,7 @@ DISABLE_SSE2=yes
 CROSS_COMPILE := /usr/local/sourcery-arm-linux/bin/arm-none-linux-gnueabi-
 CC := $(CROSS_COMPILE)gcc
 CPP := $(CROSS_COMPILE)g++
+CFLAGS += -DARCH_ARM
 endif
 
 # --------------------------------------------------------------------
@@ -269,6 +270,11 @@ endef
 
 include make/dll.mak
 include make/bin.mak
+
+ifeq ($(ARCH),ARM)
+include make/dsp.mak
+endif
+
 #include make/matlab.mak
 #include make/octave.mak
 #include make/doc.mak

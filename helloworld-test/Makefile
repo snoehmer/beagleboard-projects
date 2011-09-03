@@ -49,7 +49,7 @@ clean:
 	$(QUIET_CLEAN)$(RM) $(bins) *.o *.o64P *.x64P
 
 # pretty print
-ifndef V
+ifdef V
 QUIET_CC    = @echo '   CC         '$@;
 QUIET_LINK  = @echo '   LINK       '$@;
 QUIET_CLEAN = @echo '   CLEAN      '$@;

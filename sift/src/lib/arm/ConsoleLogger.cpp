@@ -12,7 +12,7 @@
 
 void ConsoleLogger::add(const int type, const int level, const char* fmt, va_list ap)
 {
-  char prefix[41];
+  char prefix[51];
   getPrefix(type, level, prefix, sizeof(prefix));
 
   printf("%s", prefix);

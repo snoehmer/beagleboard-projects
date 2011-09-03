@@ -676,12 +676,14 @@ Gaussian window size is set to have standard deviation
 #include "sift.h"
 #include "imopv.h"
 #include "mathop.h"
+#include "sift_dsp.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+
 
 /** @internal @brief Use bilinear interpolation to compute orientations */
 #define VL_SIFT_BILINEAR_ORIENTATIONS 1
@@ -804,7 +806,7 @@ _vl_sift_smooth (VlSiftFilt * self,
     if (self->gaussFilter) vl_free (self->gaussFilter) ;
     self->gaussFilterWidth = VL_MAX(ceil(4.0 * sigma), 1) ;
     self->gaussFilterSigma = sigma ;
-    self->gaussFilter = vl_malloc (sizeof(vl_sift_pix) * (2 * self->gaussFilterWidth + 1)) ;
+    self->gaussFilter = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * (2 * self->gaussFilterWidth + 1)) ;
 
     for (j = 0 ; j < 2 * self->gaussFilterWidth + 1 ; ++j) {
       vl_sift_pix d = ((vl_sift_pix)((signed)j - (signed)self->gaussFilterWidth)) / ((vl_sift_pix)sigma) ;
@@ -821,18 +823,30 @@ _vl_sift_smooth (VlSiftFilt * self,
     return ;
   }
 
-  vl_imconvcol_vf (tempImage, height,
+  #ifdef ARCH_ARM
+    vl_imconvcol_vf_on_dsp
+  #else
+    vl_imconvcol_vf
+  #endif
+                  (tempImage, height,
                    inputImage, width, height, width,
                    self->gaussFilter,
                    - self->gaussFilterWidth, self->gaussFilterWidth,
                    1, VL_PAD_BY_CONTINUITY | VL_TRANSPOSE) ;
 
-  vl_imconvcol_vf (outputImage, width,
+  #ifdef ARCH_ARM
+    vl_imconvcol_vf_on_dsp
+  #else
+    vl_imconvcol_vf
+  #endif
+                  (outputImage, width,
                    tempImage, height, width, height,
                    self->gaussFilter,
                    - self->gaussFilterWidth, self->gaussFilterWidth,
                    1, VL_PAD_BY_CONTINUITY | VL_TRANSPOSE) ;
 }
+
+
 
 /** ------------------------------------------------------------------
  ** @internal
@@ -894,7 +908,7 @@ vl_sift_new (int width, int height,
              int noctaves, int nlevels,
              int o_min)
 {
-  VlSiftFilt *f = vl_malloc (sizeof(VlSiftFilt)) ;
+  VlSiftFilt *f = (VlSiftFilt *)vl_malloc (sizeof(VlSiftFilt)) ;
 
   int w   = VL_SHIFT_LEFT (width,  -o_min) ;
   int h   = VL_SHIFT_LEFT (height, -o_min) ;
@@ -914,12 +928,12 @@ vl_sift_new (int width, int height,
   f-> s_max   = nlevels + 1 ;
   f-> o_cur   = o_min ;
 
-  f-> temp    = vl_malloc (sizeof(vl_sift_pix) * nel    ) ;
-  f-> octave  = vl_malloc (sizeof(vl_sift_pix) * nel
+  f-> temp    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel    ) ;
+  f-> octave  = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min + 1)  ) ;
-  f-> dog     = vl_malloc (sizeof(vl_sift_pix) * nel
+  f-> dog     = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min    )  ) ;
-  f-> grad    = vl_malloc (sizeof(vl_sift_pix) * nel * 2
+  f-> grad    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel * 2
                         * (f->s_max - f->s_min    )  ) ;
 
   f-> sigman  = 0.5 ;
@@ -1064,6 +1078,8 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
   sa = sigma0 * pow (sigmak,   s_min) ;
   sb = sigman * pow (2.0,    - o_min) ;
 
+
+
   if (sa > sb) {
     double sd = sqrt (sa*sa - sb*sb) ;
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
@@ -1078,6 +1094,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
                      vl_sift_get_octave(f, s - 1), w, h, sd) ;
   }
+
 
   return VL_ERR_OK ;
 }
@@ -1192,6 +1209,7 @@ vl_sift_detect (VlSiftFilt * f)
   /* clear current list */
   f-> nkeys = 0 ;
 
+
   /* compute difference of gaussian (DoG) */
   pt = f-> dog ;
   for (s = s_min ; s <= s_max - 1 ; ++s) {
@@ -1254,11 +1272,11 @@ vl_sift_detect (VlSiftFilt * f)
           if (f->nkeys >= f->keys_res) {
             f->keys_res += 500 ;
             if (f->keys) {
-              f->keys = vl_realloc (f->keys,
+              f->keys = (VlSiftKeypoint*)vl_realloc (f->keys,
                                     f->keys_res *
                                     sizeof(VlSiftKeypoint)) ;
             } else {
-              f->keys = vl_malloc (f->keys_res *
+              f->keys = (VlSiftKeypoint*)vl_malloc (f->keys_res *
                                    sizeof(VlSiftKeypoint)) ;
             }
           }

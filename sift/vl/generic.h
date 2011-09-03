@@ -29,6 +29,13 @@ GNU GPLv2, or (at your option) any later version.
 #include <pthread.h>
 #endif
 
+
+#include "../src/lib/common/node.h"
+
+
+
+
+
 /** @brief Library version string */
 #define VL_VERSION_STRING "0.9.9"
 
@@ -155,6 +162,13 @@ typedef struct _VlState
   void *(*calloc_func)  (size_t, size_t) ;
   void  (*free_func)    (void*) ;
 
+  void *(*dsp_get_mapped_addr) (void* ptr);
+  int (*dsp_dmm_buffer_begin) (void* ptr);
+  int (*dsp_dmm_buffer_end)  (void* ptr);
+
+  dsp_msg_t (*dsp_get_message)();
+  int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2);
+
 #if defined(VL_ARCH_IX86) || defined(VL_ARCH_X64) || defined(VL_ARCH_IA64)
   VlX86CpuInfo cpuInfo ;
 #endif
@@ -212,6 +226,14 @@ vl_set_alloc_func (void *(*malloc_func)  (size_t),
                    void *(*realloc_func) (void*,size_t),
                    void *(*calloc_func)  (size_t, size_t),
                    void  (*free_func)    (void*)) ;
+
+VL_EXPORT void
+vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
+                    int (*dsp_dmm_buffer_begin) (void* ptr),
+                    int (*dsp_dmm_buffer_end)  (void* ptr),
+                    dsp_msg_t (*dsp_get_message)(),
+                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2));
+
 VL_INLINE void *vl_malloc  (size_t n) ;
 VL_INLINE void *vl_realloc (void *ptr, size_t n) ;
 VL_INLINE void *vl_calloc  (size_t n, size_t size) ;
@@ -399,8 +421,38 @@ vl_calloc (size_t n, size_t size)
 VL_INLINE void
 vl_free (void *ptr)
 {
-  (vl_get_state()->free_func)(ptr) ;
+  (vl_get_state()->free_func)(ptr);
 }
+
+VL_INLINE void*
+vl_dsp_get_mapped_addr (void *ptr)
+{
+  return (vl_get_state()->dsp_get_mapped_addr)(ptr);
+}
+
+VL_INLINE int
+vl_dsp_dmm_buffer_begin (void *ptr)
+{
+  return (vl_get_state()->dsp_dmm_buffer_begin)(ptr);
+}
+
+VL_INLINE int
+vl_dsp_dmm_buffer_end (void *ptr)
+{
+  return (vl_get_state()->dsp_dmm_buffer_end)(ptr);
+}
+
+
+VL_INLINE int vl_dsp_send_message(uint32_t cmd, uint32_t arg1, uint32_t arg2)
+{
+  return (vl_get_state()->dsp_send_message(cmd, arg1, arg2));
+}
+
+VL_INLINE dsp_msg_t vl_dsp_get_message()
+{
+  return (vl_get_state()->dsp_get_message());
+}
+
 
 /* VL_GENERIC_H */
 #endif
