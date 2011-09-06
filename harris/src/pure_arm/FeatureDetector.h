@@ -13,6 +13,7 @@
 #include "ImageBitstream.h"
 #include <vector>
 #include <cmath>
+#include <iostream>
 
 using namespace std;
 
@@ -35,8 +36,8 @@ private:
 	vector<FeatureDescriptor> features_;
 
 
-	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature, int &imageAvg, int *imageNorm, int *imageSqSum, bool &imageAvgCalculated, bool *imageDataCalculated);
-	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int &imageAvg, int *imageNorm, int *imageSqSum, bool &imageAvgCalculated, bool *imageDataCalculated, int &patchAvg, int *patchNorm, int &patchSqSum, bool &patchDataCalculated);
+	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated);
+	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated, int &patchAvg, int *patchNorm, int &patchSqSum, bool &patchDataCalculated);
 };
 
 #endif /* FEATUREDETECTOR_H_ */
