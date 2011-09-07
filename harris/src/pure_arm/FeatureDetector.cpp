@@ -59,7 +59,7 @@ bool FeatureDetector::match(ImageBitstream image)
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
-		if(getNCCResult(extendedImg, features_[i], imageIntegral, imageIntegral2, imageSqSum))
+		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, features_[i].get(), imageIntegral, imageIntegral2, imageSqSum))
 			matchCount++;
 
 		if(matchCount >= featuresToMatch)
@@ -79,16 +79,13 @@ bool FeatureDetector::match(ImageBitstream image)
 }
 
 
-bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum)
+bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum)
 {
-	int row, col;
-	int prow, pcol;
-	int irow, icol;
+	unsigned int row, col;
+	unsigned int prow, pcol;
+	unsigned int irow, icol;
 
-	int patchSize = FeatureDescriptor::patchSize_;
-	int width = image.getWidth();
-
-	unsigned char *I = image.getBitstream();
+	unsigned int patchSize = FeatureDescriptor::patchSize_;
 
 
 	// calculate patch parameters once per patch
@@ -96,37 +93,41 @@ bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor featu
 	int *patchNorm = new int[patchSize * patchSize];
 	int patchSqSum;
 
-	calculatePatchData(feature.get(), patchAvg, patchNorm, patchSqSum);
+	calculatePatchData(feature, patchAvg, patchNorm, patchSqSum);
 
 	// calculate NCC
 	int sumIP = 0;
 	float ncc;
 
-	for(row = patchSize / 2; row < image.getHeight() - patchSize / 2; row++)
+	for(row = patchSize / 2; row < height - patchSize / 2; row++)
 	{
-		for(col = patchSize / 2; col < image.getWidth() - patchSize / 2; col++)
+		for(col = patchSize / 2; col < width - patchSize / 2; col++)
 		{
-			ncc = getNCC(image, row, col, feature, patchAvg, patchNorm, patchSqSum, imageIntegral, imageIntegral2, imageSqSum);
-/*
 			sumIP = 0;
 
-			for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
-			{
-				for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
-				{
-					sumIP += patchNorm[prow * patchSize + pcol] * I[irow * width + icol];
-				}
-			}
-
 			if(imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)] == 0)
-				ncc = 0.0f;
+			{
+				ncc = 0.0f;  // completely homogenous area -> we wont find matches here!
+			}
 			else
+			{
+				for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+				{
+					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
+					{
+						sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol];
+					}
+				}
+
 				ncc = sumIP / (patchSqSum * imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
-*/
+			}
 
 			if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
 				break;
 		}
+
+		if(ncc >= nccThreshold_)
+			break;
 	}
 
 	delete[] patchNorm;
@@ -171,7 +172,7 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 {
 	unsigned int row, col;
 
-	cout << "calculating image data...";
+	//cout << "calculating image data...";
 
 	// initialize integral arrays
 	for(col = 0; col < width + 1; col++)  // fill 1st row with zeros
@@ -216,7 +217,7 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 		}
 	}
 
-	cout << "finished" << endl;
+	//cout << "finished" << endl;
 }
 
 void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, int *patchNorm, int &patchSqSum)
@@ -224,7 +225,7 @@ void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, in
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
 
-	cout << "calculating patch data...";
+	//cout << "calculating patch data...";
 
 	// calculate average of feature patch
 	int psum = 0;
@@ -255,5 +256,5 @@ void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, in
 
 	patchSqSum = (int) sqrt(sqSum);
 
-	cout << "finished" << endl;
+	//cout << "finished" << endl;
 }
