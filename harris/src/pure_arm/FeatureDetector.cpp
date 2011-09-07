@@ -41,12 +41,10 @@ bool FeatureDetector::match(ImageBitstream image)
 	unsigned int i;
 	unsigned int matchCount = 0;
 	unsigned int nFeatures = features_.size();
-	unsigned int featuresToMatch = featuresThreshold_ * nFeatures / 100;
+	unsigned int featuresToMatch = (featuresThreshold_ * nFeatures) / 100;
 
 	unsigned int width = image.getWidth();
 	unsigned int height = image.getHeight();
-
-	cout << "resizing" << endl;
 
 	// resize image for cross correlation
 	ImageBitstream extendedImg = image.extend(FeatureDescriptor::patchSize_ / 2);

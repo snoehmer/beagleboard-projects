@@ -87,8 +87,6 @@ int main(int argc, char **argv)
     		return -1;
     	}
 
-    	cout << "beginning matching..." << endl;
-
     	if(featureDet.match(currentImg))
     		cout << "image #" << (i-1) << " ('" << argv[i] << "') is a match!" << endl;
     	else
