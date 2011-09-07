@@ -97,7 +97,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 
 	// calculate NCC
 	int sumIP = 0;
-	float ncc;
+	float ncc = 0.0f;
 
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
 	{

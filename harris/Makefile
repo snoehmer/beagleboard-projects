@@ -3,7 +3,7 @@
 # or cross-compile HCD for another platform (ARM)
 # also compiles the sources for the DSP
 
-OPTIMIZATION_LEVEL = 0
+OPTIMIZATION_LEVEL = 3
 
 # ubuntu version
 #CROSS_PREFIX = arm-linux-gnueabi-

@@ -15,7 +15,7 @@
 
 using namespace std;
 
-HarrisCornerDetector::HarrisCornerDetector(float threshold, float dSigma, int dKernelSize, float gSigma, int gKernelSize, float k)
+HarrisCornerDetector::HarrisCornerDetector(float threshold, float k, float dSigma, int dKernelSize, float gSigma, int gKernelSize)
 {
 	devSigma_ = dSigma;
 	devKernelSize_ = dKernelSize;
