@@ -130,6 +130,9 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 		}
 	}
 
+	if(imageSqSum[(y - patchSize/2) * (width - patchSize) + (x - patchSize/2)] == 0)
+		return 0.0f;
+
 	ncc = sumIP / (patchSqSum * imageSqSum[(y - patchSize/2) * (width - patchSize) + (x - patchSize/2)]);
 
 	return ncc;
@@ -139,6 +142,8 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 void FeatureDetector::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum)
 {
 	unsigned int row, col;
+
+	cout << "calculating image data...";
 
 	// initialize integral arrays
 	for(col = 0; col < width + 1; col++)  // fill 1st row with zeros
@@ -182,12 +187,16 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 			imageSqSum[(row - offset) * imageWidth + (col - offset)] = A - (B * B) / (patchSize * patchSize);
 		}
 	}
+
+	cout << "finished" << endl;
 }
 
 void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, int *patchNorm, int &patchSqSum)
 {
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
+
+	cout << "calculating patch data...";
 
 	// calculate average of feature patch
 	int psum = 0;
@@ -217,4 +226,6 @@ void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, in
 	}
 
 	patchSqSum = (int) sqrt(sqSum);
+
+	cout << "finished" << endl;
 }
