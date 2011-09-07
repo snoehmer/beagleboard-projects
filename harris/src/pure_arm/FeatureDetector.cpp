@@ -43,82 +43,49 @@ bool FeatureDetector::match(ImageBitstream image)
 	unsigned int nFeatures = features_.size();
 	unsigned int featuresToMatch = (featuresThreshold_ * nFeatures) / 100;
 
-	unsigned int width = image.getWidth();
-	unsigned int height = image.getHeight();
-
 	// resize image for cross correlation
 	ImageBitstream extendedImg = image.extend(FeatureDescriptor::patchSize_ / 2);
-	unsigned int extWidth = width + FeatureDescriptor::patchSize_;
-	unsigned int extHeight = height + FeatureDescriptor::patchSize_;
-
-	// new image loaded, so image data must be updated
-	bool *imageDataCalculated = new bool[extWidth * extHeight];
-	int *imageAvg = new int[extWidth * extHeight];
-	int *imageSqSum = new int[extWidth * extHeight];
-
-	for(i = 0; i < extWidth * extHeight; i++)
-		imageDataCalculated[i] = false;
 
 	for(i = 0; i < nFeatures; i++)
 	{
-		cout << "calculating NCC result for feature #" << i << endl;
-
-		if(getNCCResult(extendedImg, features_[i], imageAvg, imageSqSum, imageDataCalculated))
+		if(getNCCResult(extendedImg, features_[i]))
 			matchCount++;
 
 		if(matchCount >= featuresToMatch)
 			break;
-
-		if(i % (nFeatures / 10) == 0)
-			cout << "#";
 	}
 
-	delete[] imageSqSum;
-	delete[] imageDataCalculated;
+	cout << "matched " << matchCount << " of " << nFeatures << " features" << endl;
 
-	if(i < nFeatures)
+	if(matchCount >= featuresToMatch)
 		return true;
 	else
 		return false;
 }
 
 
-bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated)
+bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor feature)
 {
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
 
-	float ncc = 0;
+	float ncc;
 
-	// new patch, so patch data must be updated
-	bool patchDataCalculated = false;
-	int patchAvg;
-	int *patchNorm = new int[patchSize * patchSize];
-	int patchSqSum;
-
-	for(row = (patchSize - 1) / 2; row < image.getHeight() - patchSize / 2; row++)
+	for(row = patchSize / 2; row < image.getHeight() - patchSize / 2; row++)
 	{
-		for(col = (patchSize - 1) / 2; col < image.getWidth() - patchSize / 2; col++)
+		for(col = patchSize / 2; col < image.getWidth() - patchSize / 2; col++)
 		{
-			ncc = getNCC(image, row, col, feature, imageAvg, imageSqSum, imageDataCalculated, patchAvg, patchNorm, patchSqSum, patchDataCalculated);
+			ncc = getNCC(image, row, col, feature);
 
 			if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
-				break;
+				return true;
 		}
-
-		if(row % (image.getHeight() / 20) == 0)
-			cout << ".";
 	}
 
-	delete[] patchNorm;
-
-	if(ncc >= nccThreshold_)
-		return true;
-	else
-		return false;
+	return false;
 }
 
-float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated, int &patchAvg, int *patchNorm, int &patchSqSum, bool &patchDataCalculated)
+float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature)
 {
 	int prow, pcol;
 	int irow, icol;
@@ -129,33 +96,24 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 	unsigned char *P = feature.get();
 
 	// calculate average of image in feature patch
-	if(!patchDataCalculated || !imageDataCalculated[y * width + x])
+	int pavg = 0, iavg = 0;
+
+	for(prow = 0, irow = y - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
 	{
-		int psum = 0, isum = 0;
-
-		for(prow = 0, irow = y - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+		for(pcol = 0, icol = x - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 		{
-			for(pcol = 0, icol = x - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
-			{
-				if(!patchDataCalculated)
-					psum += P[prow * patchSize + pcol];
+			pavg += P[prow * patchSize + pcol];
 
-				if(!imageDataCalculated[y * width + x])
-					isum += I[irow * width + icol];
-			}
+			iavg += I[irow * width + icol];
 		}
-
-		if(!patchDataCalculated)
-			patchAvg = psum / (patchSize * patchSize);
-
-		if(!imageDataCalculated[y * width + x])
-			imageAvg[y * width + x] = isum / (patchSize * patchSize);
-
 	}
+
+	pavg = pavg / (patchSize * patchSize);
+	iavg = iavg / (patchSize * patchSize);
 
 
 	// calculate NCC
-	int inorm;
+	int pnorm, inorm;
 	int sumII = 0, sumPP = 0, sumIP = 0;
 	float ncc;
 
@@ -163,39 +121,16 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 	{
 		for(pcol = 0, icol = x - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 		{
-			if(!patchDataCalculated)
-			{
-				patchNorm[prow * patchSize + pcol] = P[prow * patchSize + pcol] - patchAvg;
-				sumPP += patchNorm[prow * patchSize + pcol] * patchNorm[prow * patchSize + pcol];
+			pnorm = P[prow * patchSize + pcol] - pavg;
+			inorm = I[irow * width + icol] - iavg;
 
-			}
-
-			if(!imageDataCalculated[y * width + x])
-			{
-				inorm = I[irow * width + icol] - imageAvg[y * width + x];
-				sumII += inorm * inorm;
-			}
-
-			sumIP += patchNorm[prow * patchSize + pcol] * (I[irow * width + icol] - imageAvg[y * width + x]);
+			sumIP += pnorm * inorm;
+			sumPP += pnorm * pnorm;
+			sumII += inorm * inorm;
 		}
 	}
 
-	if(!patchDataCalculated)
-	{
-		patchSqSum = sqrt(sumPP);
-		patchDataCalculated = true;
-	}
-
-	if(!imageDataCalculated[y * width + x])
-	{
-		imageSqSum[y * width + x] = sqrt(sumII);
-		imageDataCalculated[y * width + x] = true;
-	}
-
-	if(sumIP == 0)
-		return 0.0f;
-
-	ncc = sumIP / (patchSqSum * imageSqSum[y * width + x]);
+	ncc = sumIP / (sqrt(sumPP) * sqrt(sumII));
 
 	return ncc;
 }

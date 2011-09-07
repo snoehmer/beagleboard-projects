@@ -36,8 +36,8 @@ private:
 	vector<FeatureDescriptor> features_;
 
 
-	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated);
-	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int *imageAvg, int *imageSqSum, bool *imageDataCalculated, int &patchAvg, int *patchNorm, int &patchSqSum, bool &patchDataCalculated);
+	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature);
+	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature);
 };
 
 #endif /* FEATUREDETECTOR_H_ */
