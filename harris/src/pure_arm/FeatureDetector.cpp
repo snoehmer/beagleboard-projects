@@ -82,31 +82,59 @@ bool FeatureDetector::match(ImageBitstream image)
 bool FeatureDetector::getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum)
 {
 	int row, col;
+	int prow, pcol;
+	int irow, icol;
+
 	int patchSize = FeatureDescriptor::patchSize_;
+	int width = image.getWidth();
 
-	float ncc;
+	unsigned char *I = image.getBitstream();
 
+
+	// calculate patch parameters once per patch
 	int patchAvg;
 	int *patchNorm = new int[patchSize * patchSize];
 	int patchSqSum;
 
-	// calculate patch parameters once per patch
 	calculatePatchData(feature.get(), patchAvg, patchNorm, patchSqSum);
+
+	// calculate NCC
+	int sumIP = 0;
+	float ncc;
 
 	for(row = patchSize / 2; row < image.getHeight() - patchSize / 2; row++)
 	{
 		for(col = patchSize / 2; col < image.getWidth() - patchSize / 2; col++)
 		{
 			ncc = getNCC(image, row, col, feature, patchAvg, patchNorm, patchSqSum, imageIntegral, imageIntegral2, imageSqSum);
+/*
+			sumIP = 0;
+
+			for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+			{
+				for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
+				{
+					sumIP += patchNorm[prow * patchSize + pcol] * I[irow * width + icol];
+				}
+			}
+
+			if(imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)] == 0)
+				ncc = 0.0f;
+			else
+				ncc = sumIP / (patchSqSum * imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
+*/
 
 			if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
-				return true;
+				break;
 		}
 	}
 
 	delete[] patchNorm;
 
-	return false;
+	if(ncc >= nccThreshold_)
+		return true;
+	else
+		return false;
 }
 
 float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int patchAvg, int *patchNorm, int patchSqSum, int *imageIntegral, int *imageIntegral2, int* imageSqSum)
