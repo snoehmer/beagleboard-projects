@@ -37,7 +37,9 @@ private:
 
 
 	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature);
-	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature);
+	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int patchAvg, int *patchNorm, int patchSqSum);
+
+	void calculatePatchData(unsigned char *feature, int &patchAvg, int *patchNorm, int &patchSqSum);
 };
 
 #endif /* FEATUREDETECTOR_H_ */
