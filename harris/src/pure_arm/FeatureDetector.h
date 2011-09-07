@@ -36,10 +36,11 @@ private:
 	vector<FeatureDescriptor> features_;
 
 
-	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature);
-	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int patchAvg, int *patchNorm, int patchSqSum);
+	bool getNCCResult(ImageBitstream image, FeatureDescriptor feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum);
+	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int patchAvg, int *patchNorm, int patchSqSum, int *imageIntegral, int *imageIntegral2, int* imageSqSum);
 
-	void calculatePatchData(unsigned char *feature, int &patchAvg, int *patchNorm, int &patchSqSum);
+	void calculatePatchData(unsigned char *patch, int &patchAvg, int *patchNorm, int &patchSqSum);
+	void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum);
 };
 
 #endif /* FEATUREDETECTOR_H_ */
