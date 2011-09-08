@@ -52,14 +52,15 @@ bool FeatureDetector::match(ImageBitstream image)
 	int *imageIntegral = new int[(extWidth + 1) * (extHeight + 1)];
 	int *imageIntegral2 = new int[(extWidth + 1) * (extHeight + 1)];
 	int *imageSqSum = new int[image.getWidth() * image.getHeight()];
+	int *imageAvg = new int[image.getWidth() * image.getHeight()];
 
-	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum);
+	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum, imageAvg);
 
 
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
-		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, features_[i].get(), imageIntegral, imageIntegral2, imageSqSum))
+		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, features_[i].get(), imageIntegral, imageIntegral2, imageSqSum, imageAvg))
 			matchCount++;
 
 		if(matchCount >= featuresToMatch)
@@ -79,7 +80,7 @@ bool FeatureDetector::match(ImageBitstream image)
 }
 
 
-bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum)
+bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum, int *imageAvg)
 {
 	unsigned int row, col;
 	unsigned int prow, pcol;
@@ -115,7 +116,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 				{
 					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 					{
-						sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol];
+						sumIP += patchNorm[prow * patchSize + pcol] * (image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
 					}
 				}
 
@@ -168,7 +169,7 @@ float FeatureDetector::getNCC(ImageBitstream image, int x, int y, FeatureDescrip
 }
 
 
-void FeatureDetector::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum)
+void FeatureDetector::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum, int *imageAvg)
 {
 	unsigned int row, col;
 
@@ -213,7 +214,8 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 			A = imageIntegral2[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral2[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 			B = imageIntegral[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 
-			imageSqSum[(row - offset) * imageWidth + (col - offset)] = A - (B * B) / (patchSize * patchSize);
+			imageSqSum[(row - offset) * imageWidth + (col - offset)] = sqrt(A - (B * B) / (patchSize * patchSize));
+			imageAvg[(row - offset) * imageWidth + (col - offset)] = B / (patchSize * patchSize);
 		}
 	}
 

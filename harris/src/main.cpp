@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
 
     // perform Harris corner detection
-    HarrisCornerDetector hcd(0.75f);
+    HarrisCornerDetector hcd(0.7f);
     vector<HarrisCornerPoint> cornerPoints;
     float *hcr;
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 
     // detect features in images
     ImageBitstream currentImg;
-    FeatureDetector featureDet(20, 0.2f);
+    FeatureDetector featureDet(80, 0.8f);
 
     featureDet.setFeatures(features);
 
