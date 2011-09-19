@@ -136,6 +136,7 @@ public:
     Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x)", addr);
 
     dmm_buffer* buf =  allocated_mem[addr];
+
     if(buf)
       return buf;
 
@@ -146,10 +147,12 @@ public:
     {
       if(((unsigned)addr >= (unsigned)iter->first) && (unsigned)addr <= ((unsigned)iter->first + (unsigned)iter->second->size))
       {
+        Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) search succeeded: found %x, (end: %x)", addr, iter->first, (int)iter->first + iter->second->size);
         return iter->second;
       }
     }
 
+    Logger::error(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) not found -> searching FAILED", addr);
     return NULL;
   }
 };

@@ -75,7 +75,7 @@ SHELL = /bin/bash
 all:
 
 # Feature selection
-DISABLE_SSE2=no
+DISABLE_SSE2=yes
 DISABLE_THREADS=no
 
 # --------------------------------------------------------------------

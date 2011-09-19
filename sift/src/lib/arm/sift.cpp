@@ -32,11 +32,32 @@ extern "C" {
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #include "sift.h"
 #include "logger.h"
 #include "SystemTimeMeasure.h"
 #include "Dsp.h"
+
+char my_vl_printf_buf[512];
+
+int my_vl_printf(const char* fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt); /* Initialize the va_list */
+
+
+
+  vsnprintf(my_vl_printf_buf, sizeof(my_vl_printf_buf), fmt, ap);
+
+  Logger::debug(Logger::VLFEAT, my_vl_printf_buf);
+
+  va_end(ap); /* Cleanup the va_list */
+
+  return 0;
+}
+
 
 Sift::Sift()
 {
@@ -63,6 +84,7 @@ Sift::Sift()
   Logger::debug(Logger::SIFT, "Setting alloc functions");
   vl_set_alloc_func(dsp_malloc, dsp_realloc, dsp_calloc, dsp_free);
   vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end, dsp_get_message, dsp_send_message);
+  vl_set_printf_func(my_vl_printf);
 #endif
 }
 

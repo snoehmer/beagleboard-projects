@@ -18,6 +18,8 @@ void FileLogger::add(const int type, const int level, const char* fmt, va_list a
   fprintf(file,"%s", prefix);
 
   vfprintf(file, fmt, ap); /* Call vprintf */
+
   fprintf(file, "\n");
+
   fflush(file);
 }

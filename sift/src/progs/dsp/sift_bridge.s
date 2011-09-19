@@ -22,7 +22,7 @@
 	.string "3," ; max message depth queued to node;
 	.string "1," ; # of input streams;
 	.string "1," ; # of output streams;
-	.string "3e8H," ; timeout value of GPP blocking calls;
+	.string "6e8H," ; timeout value of GPP blocking calls;
 
 	.string "dsp_sift_create," ; create phase name;
 	.string "dsp_sift_execute," ; execute phase name;

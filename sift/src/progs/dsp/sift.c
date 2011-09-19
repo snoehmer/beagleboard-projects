@@ -21,6 +21,9 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
+
+
 #include "../../lib/common/node.h"
 //#include "../../../vl/sift.h"
 //#include "../../../vl/imopv.h"
@@ -29,7 +32,7 @@
 
 unsigned int dsp_sift_create(void)
 {
-	return 0x8000;
+  return 0x8000;
 }
 
 unsigned int dsp_sift_delete(void)
@@ -37,11 +40,14 @@ unsigned int dsp_sift_delete(void)
 	return 0x8000;
 }
 
+
+
 unsigned int dsp_sift_execute(void *env)
 {
 	dsp_msg_t msg;
 	unsigned char done = 0;
-	
+
+
 
 	while (!done) {
 		NODE_getMsg(env, &msg, (unsigned) -1);
@@ -49,6 +55,7 @@ unsigned int dsp_sift_execute(void *env)
 		switch (msg.cmd) {
 		case 1:
 			{
+			  printf("SIFT: convolving :)");
 			  imconvol_vf_params * params = (imconvol_vf_params*) msg.arg_1;
 
 
@@ -57,17 +64,22 @@ unsigned int dsp_sift_execute(void *env)
 			  BCACHE_inv((void*) params->dst, params->dst_size, 1);
 			  BCACHE_inv((void*) params->filt, params->filt_size, 1);
 
+			  //params->dst[0] = 1;
 			  vl_imconvcol_vf (params->dst, params->dst_stride,
 			      params->src, params->src_width, params->src_height, params->src_stride,
 			      params->filt,
 			      params->filt_begin, params->filt_end,
 			      params->step, params->flags);
+			  //params->dst[0] = 2;
 
+			  memcpy(params->dbg_str, "abc", 4);
 
 			  BCACHE_wbInv((void*) params, sizeof(params), 1);
 			  BCACHE_wbInv((void*) params->src, params->src_size, 1);
 			  BCACHE_wbInv((void*) params->dst, params->dst_size, 1);
 			  BCACHE_wbInv((void*) params->filt, params->filt_size, 1);
+			  BCACHE_wbInv((void*) params->dbg_str, params->dbg_str_size, 1);
+
 
 
         msg.cmd = 2;

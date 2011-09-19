@@ -24,9 +24,18 @@ typedef struct _imconvol_vf_params
   int filt_end;
   int step;
   unsigned int flags;
+
+  char* dbg_str;
+  int dbg_str_size;
 }imconvol_vf_params;
 
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
+    float const* src,
+    int src_width, int src_height, int src_stride,
+    float const* filt, int filt_begin, int filt_end,
+    int step, unsigned int flags);
+
+void debugParams(float* dst, int dst_stride,
     float const* src,
     int src_width, int src_height, int src_stride,
     float const* filt, int filt_begin, int filt_end,

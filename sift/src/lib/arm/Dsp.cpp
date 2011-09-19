@@ -317,8 +317,8 @@ void* dsp_get_mapped_addr(void* ptr)
     dmm_buffer_map(buf);
   }
 
-  Logger::debug(Logger::DSP, "dsp_get_mapped_addr(%x)=%x", ptr, buf->map);
-  return buf->map;
+  Logger::debug(Logger::DSP, "dsp_get_mapped_addr(%x)=%x", ptr, (int)buf->map + ((int)ptr - (int)buf->data));
+  return (void*)((int)buf->map + ((int)ptr - (int)buf->data));
 }
 
 int dsp_dmm_buffer_begin(void* ptr)

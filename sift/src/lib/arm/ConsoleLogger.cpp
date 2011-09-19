@@ -18,5 +18,6 @@ void ConsoleLogger::add(const int type, const int level, const char* fmt, va_lis
   printf("%s", prefix);
 
   vprintf(fmt, ap); /* Call vprintf */
+
   printf("\n");
 }

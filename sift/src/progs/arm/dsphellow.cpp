@@ -50,6 +50,10 @@ int main()
 
     (uint32_t)dsp_get_mapped_addr(mydata);
 
+    for(i = 0; i < BUFLEN; i++)
+    {
+      mydata[i] = i;
+    }
 
     dmm_buffer_begin(dmmManager.GetDMMBuffer(mydata), BUFLEN*sizeof(int));
 
@@ -57,10 +61,6 @@ int main()
 
     dsp_msg msg = node.GetMessage();
 
-    for(i = 0; i < BUFLEN; i++)
-    {
-      mydata[i] = i;
-    }
 
     dmm_buffer_end(dmmManager.GetDMMBuffer(mydata), BUFLEN*sizeof(int));
 

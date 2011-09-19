@@ -23,6 +23,16 @@ void Logger::init()
   loggers.push_back(new FileLogger(DEBUG, "log/log"));
 }
 
+/* colors:
+ * black - 30
+ * red - 31
+ * green - 32
+ * brown - 33
+ * blue - 34
+ * magenta - 35
+ * cyan - 36
+ * lightgray - 37
+ */
 
 void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen)
 {
@@ -63,6 +73,9 @@ void Logger::getPrefix(const int type, const int level, char* prefix, int maxlen
       break;
     case DMMMANGER:
       snprintf(prefix, maxlen, "[\033[0;35mDMMMANGER\033[0m   ] %s: ", lvl);
+      break;
+    case VLFEAT:
+      snprintf(prefix, maxlen, "[\033[0;36mVLFEAT\033[0m      ] %s: ", lvl);
       break;
     default:
       snprintf(prefix, maxlen, "[\033[0;31mUNKNOWN\033[0m     ] %s: ", lvl);
