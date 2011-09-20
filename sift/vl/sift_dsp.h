@@ -5,8 +5,23 @@
  *      Author: tom
  */
 
+
+
 #ifndef SIFT_DSP_H_
 #define SIFT_DSP_H_
+
+#ifndef ARCH_DSP
+#include "convolutionkernel.h"
+#endif
+
+enum
+{
+  DSP_CALC_IMCONVOL_VF = 1,
+  DSP_CALC_GAUSSIAN_FIXEDPOINT,
+  DSP_CALC_IMCONVOL_VF_FINISHED = 100,
+  DSP_CALC_GAUSSIAN_FIXEDPOINT_FINISHED,
+  DSP_CALC_IMCONVOL_VF_FAILED
+};
 
 typedef struct _imconvol_vf_params
 {
@@ -29,6 +44,15 @@ typedef struct _imconvol_vf_params
   int dbg_str_size;
 }imconvol_vf_params;
 
+typedef struct _filterImageGaussian_params
+{
+  short* inputOutputImage;
+  int inputOutputImageSize;
+  int width;
+  int height;
+  ConvolutionKernelRef gauss;
+}filterImageGaussian_params;
+
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
     float const* src,
     int src_width, int src_height, int src_stride,
@@ -40,6 +64,11 @@ void debugParams(float* dst, int dst_stride,
     int src_width, int src_height, int src_stride,
     float const* filt, int filt_begin, int filt_end,
     int step, unsigned int flags);
+
+void filterImageGaussian_on_dsp(short* inputOutputImage,
+    int width, int height,
+    ConvolutionKernel gauss);
+
 
 #ifdef ARCH_DSP
 //defininition for DSP, to avoid including the whole vlfeat stuff...

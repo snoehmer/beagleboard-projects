@@ -45,7 +45,7 @@ int main()
       mydata[i] = i;
     }
 
-    TimeMeasureBase* m = TimeMeasureBase::getInstance();
+    //TimeMeasureBase* m = TimeMeasureBase::getInstance();
 
 
     (uint32_t)dsp_get_mapped_addr(mydata);

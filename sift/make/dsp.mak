@@ -29,7 +29,8 @@ DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 # can be modified later by install_name_tool.
 
 
-DSPCFLAGS := -DARCH_DSP --std_lib_func_defined -ol0
+DSPCFLAGS := -DARCH_DSP --std_lib_func_defined --silicon_version=6400+
+DSPLDFLAGS := --silicon_version=6400+ 
 DSPINCLUDES := -I$(DSP_TOOLS)/include/
 
 dsp_bin_src_dir := $(VLDIR)/src/progs/dsp
@@ -55,7 +56,7 @@ endif
 
 
 
-$(BINDIR)/objs/libdsp/%.o64P: $(dsp_bin_src_dir)/%.c $(BINDIR)/objs/libdsp/.dirstamp
+$(BINDIR)/objs/libdsp/%.o64P: $(dsp_bin_src_dir)/%.c $(BINDIR)/objs/libdsp/.dirstamp  make/dsp.mak
 	$(QUIET_CC)$(CL6X) $(DSPCFLAGS) $(DSPINCLUDES) -mv=64p -eo.o64P --obj_directory $(dir $@) -c $<	
 
 
@@ -63,7 +64,7 @@ $(BINDIR)/objs/libdsp/%_bridge.o64P: $(dsp_bin_src_dir)/%_bridge.s
 	$(QUIET_CC)$(CL6X) $(DSPCFLAGS) $(DSPINCLUDES) -mv=64p -eo.o64P --obj_directory $(dir $@) -c $<	
 
 $(BINDIR)/objs/libdsp/%.x64P: $(BINDIR)/objs/libdsp/%.o64P $(BINDIR)/objs/libdsp/%_bridge.o64P $(dsp_dll_obj)
-	$(QUIET_LINK)$(LNK6X) -r -cr --localize='$$bss' -o $@ $+
+	$(QUIET_LINK)$(LNK6X) -r -cr --localize='$$bss' -o $@ $+ $(DSPLDFLAGS)
 
 
 $(BINDIR)/%.dll64P: $(BINDIR)/objs/libdsp/%.x64P

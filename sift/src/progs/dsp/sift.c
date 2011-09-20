@@ -22,6 +22,15 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <c6x.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct  {
+  int width;
+  float sigma;
+  short * data;
+}  ConvolutionKernelRef, *ConvolutionKernel;
 
 
 #include "../../lib/common/node.h"
@@ -29,6 +38,11 @@
 //#include "../../../vl/imopv.h"
 #include "../../../vl/sift_dsp.h"
 
+
+int filterImageGaussian(
+  short* inputOutputImage,
+  int width, int height,
+  ConvolutionKernel gauss);
 
 unsigned int dsp_sift_create(void)
 {
@@ -53,7 +67,7 @@ unsigned int dsp_sift_execute(void *env)
 		NODE_getMsg(env, &msg, (unsigned) -1);
 
 		switch (msg.cmd) {
-		case 1:
+		case DSP_CALC_IMCONVOL_VF:
 			{
 			  printf("SIFT: convolving :)");
 			  imconvol_vf_params * params = (imconvol_vf_params*) msg.arg_1;
@@ -82,11 +96,42 @@ unsigned int dsp_sift_execute(void *env)
 
 
 
-        msg.cmd = 2;
+        msg.cmd = DSP_CALC_IMCONVOL_VF_FINISHED;
 
 				NODE_putMsg(env, NULL, &msg, 0);
 				break;
 			}
+
+		case DSP_CALC_GAUSSIAN_FIXEDPOINT:
+		  {
+		    filterImageGaussian_params * params = (filterImageGaussian_params*) msg.arg_1;
+		    int result;
+
+        BCACHE_inv((void*) params, sizeof(filterImageGaussian_params), 1);
+        BCACHE_inv((void*) params->inputOutputImage, params->inputOutputImageSize, 1);
+        BCACHE_inv((void*) params->gauss.data, params->gauss.width * sizeof(short), 1);
+
+
+        result = filterImageGaussian(params->inputOutputImage, params->width, params->height, &params->gauss);
+
+        BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_params), 1);
+        BCACHE_wbInv((void*) params->inputOutputImage, params->inputOutputImageSize, 1);
+
+
+        if(result == 0)
+          msg.cmd = DSP_CALC_IMCONVOL_VF_FINISHED;
+        else
+          msg.cmd = DSP_CALC_IMCONVOL_VF_FAILED;
+
+        msg.arg_2 = (uint32_t)params->width;
+
+        NODE_putMsg(env, NULL, &msg, 0);
+        //params->inputOutputImage[0] = 0;
+        //params->height--;
+
+		    break;
+		  }
+
 		case 0x80000000:
 			done = 1;
 			break;
@@ -183,3 +228,103 @@ void vl_imconvcol_vf(float* dst, int dst_stride,
   } //next x
 
 }
+
+
+void DSP_fir_gen
+(
+  short     * x,  // Input ('nr + nh - 1' samples)
+  short     * h,  // Filter coefficients (nh taps)
+  short       * r,  // Output array ('nr' samples)
+  int          nh, // Length of filter (nh >= 5)
+  int          nr  // Length of output (nr >= 1)
+)
+{
+  int i, j, sum;
+  for (j = 0; j < nr; j++)
+  {
+    sum = 0;
+    for (i = 0; i < nh; i++)
+    {
+      sum += x[i + j] * h[i];
+    }
+    r[j] = sum >> 15;
+  }
+}
+
+void DSP_mat_trans(short *x, short rows, short columns, short *r)
+{
+  short i,j;
+    for(i=0; i<columns; i++)
+      for(j=0; j<rows; j++)
+        *(r+i*rows+j)=*(x+i+columns*j);
+}
+
+
+int filterImageGaussian(
+  short* inputOutputImage,
+  int width, int height,
+  ConvolutionKernel gauss)
+{
+  short * tmpSpace;
+  int radius;
+
+  int kernelLen = gauss->width;
+  radius = kernelLen >> 1;
+
+
+  // alloc temporary space
+#ifdef ARCH_DSP
+  tmpSpace = (short*) memalign(8,(8 + width*height + kernelLen - 1)*sizeof(short));
+#else //_ON_DSP_
+#ifdef WIN32
+  tmpSpace = (short*) vl_malloc((8 + width*height + kernelLen - 1)*sizeof(short));
+#else // WIN32
+  posix_memalign((void**)&tmpSpace,8,(8 + width*height + kernelLen - 1)*sizeof(short));
+#endif // WIN32
+#endif //_ON_DSP_
+
+  if(!tmpSpace)
+    return -1;
+
+
+  memset(tmpSpace,0x00,(8 + width*height + kernelLen - 1)*sizeof(short));
+  //inputOutputImage[0] = 0;
+
+  // TO MAKE EVERYTHING WELL DEFINED!?!?!?!?
+  memset(inputOutputImage + width*height,0x00,(kernelLen - 1)*sizeof(short));
+
+
+
+
+  // filter horizontally
+  DSP_fir_gen(inputOutputImage,
+    gauss->data,
+    tmpSpace + 8,
+    kernelLen,
+    width*height);
+
+  // transpose ver.1 // CAUSES NO MORE BAD SHIFT ERRORS!!!
+  DSP_mat_trans(tmpSpace + (8-radius), height, width, inputOutputImage);
+
+  // set output zero
+  memset(tmpSpace,0x00,(8 + width*height + kernelLen - 1)*sizeof(short));
+
+  // filter vertically
+  DSP_fir_gen(inputOutputImage,
+    gauss->data,
+    tmpSpace + 8,
+    kernelLen,
+    width*height);
+
+
+
+  // transpose image again
+  DSP_mat_trans(tmpSpace + (8-radius), width, height, inputOutputImage);
+
+  // vl_free temporary space
+  free(tmpSpace);
+
+  return 0;
+}
+
+

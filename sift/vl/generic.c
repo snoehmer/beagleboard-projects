@@ -327,6 +327,7 @@ GNU GPLv2, or (at your option) any later version.
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h>
+#include <malloc.h>
 
 #if defined(VL_OS_WIN)
 #include <Windows.h>
@@ -639,7 +640,8 @@ vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
                     int (*dsp_dmm_buffer_begin) (void* ptr),
                     int (*dsp_dmm_buffer_end)  (void* ptr),
                     dsp_msg_t (*dsp_get_message)(),
-                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2))
+                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2),
+                    void *(*memalign_func)  (size_t, size_t))
 {
   VlState * state ;
   vl_lock_state () ;
@@ -650,6 +652,7 @@ vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
   state->dsp_dmm_buffer_end = dsp_dmm_buffer_end;
   state->dsp_send_message = dsp_send_message;
   state->dsp_get_message = dsp_get_message;
+  state->memalign_func = memalign_func;
 
   vl_unlock_state () ;
 }
@@ -852,11 +855,12 @@ vl_constructor ()
 #endif
 #endif
 
-  state->malloc_func  = malloc ;
-  state->realloc_func = realloc ;
-  state->calloc_func  = calloc ;
-  state->free_func    = free ;
-  state->printf_func  = printf ;
+  state->malloc_func  = malloc;
+  state->realloc_func = realloc;
+  state->calloc_func  = calloc;
+  state->free_func    = free;
+  state->printf_func  = printf;
+  state->memalign_func = memalign;
 
 #if defined(VL_ARCH_IX86) || defined(VL_ARCH_X64) || defined(VL_ARCH_IA64)
   _vl_x86cpu_info_init (&state->cpuInfo) ;

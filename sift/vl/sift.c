@@ -677,6 +677,8 @@ Gaussian window size is set to have standard deviation
 #include "imopv.h"
 #include "mathop.h"
 #include "sift_dsp.h"
+#include "convolutionkernel.h"
+#include "pgm.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -777,6 +779,63 @@ copy_and_upsample_rows
   }
 }
 
+
+/* ----------------------------------------------------------------- */
+/** @brief Save image on disk
+ ** @internal
+ **/
+static int
+my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char* filename)
+{
+  int i ;
+  int err = 0 ;
+  VlPgmImage pim ;
+  vl_uint8 *buffer = 0 ;
+  FILE* file;
+
+  pim.width     = width ;
+  pim.height    = height ;
+  pim.max_value = 255 ;
+  pim.is_raw    = 1 ;
+
+  buffer = (vl_uint8*)vl_malloc (sizeof(vl_uint8) * width * height) ;
+  if (! buffer)
+  {
+    return -1;
+  }
+
+  //conversion
+  for (i = 0 ; i < width * height ; ++i)
+  {
+    buffer [i] = (vl_uint8) image [i];
+  }
+
+  file = fopen(filename, "wb");
+
+  if (!file)
+  {
+    vl_free(buffer);
+    return -1;
+  }
+
+  //write data to file...
+
+  err = vl_pgm_insert (file, &pim, buffer);
+
+  if (err)
+  {
+    vl_free(buffer);
+    fclose(file);
+    return -1;
+  }
+
+  vl_free(buffer);
+  fclose(file);
+
+  return 0;
+}
+
+
 /** ------------------------------------------------------------------
  ** @internal
  ** @brief Smooth an image
@@ -789,7 +848,6 @@ copy_and_upsample_rows
  ** @param height      input image height.
  ** @param sigma       smoothing.
  **/
-
 static void
 _vl_sift_smooth (VlSiftFilt * self,
                  vl_sift_pix * outputImage,
@@ -799,7 +857,51 @@ _vl_sift_smooth (VlSiftFilt * self,
                  vl_size height,
                  double sigma)
 {
-  /* prepare Gaussian filter */
+  static int counter = 0;
+  char filenamebefore[31];
+  char filenameafter[31];
+
+  counter++;
+
+  snprintf(filenamebefore, sizeof(filenamebefore), "tmp/before_%02d.pgm", counter);
+  snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
+
+  my_write_pgm_image(inputImage, width, height, filenamebefore);
+
+  VL_PRINTF("smoothing with sigma %lf, width: %d, height: %d", sigma, width, height);
+
+#define FIXEDPOINT
+#ifdef FIXEDPOINT
+
+
+  vl_size i;
+
+  ConvolutionKernel gausskernel = createConvolutionKernel(sigma, 0, 15);
+
+  // because the filter exceeds the memory buffer, we extend the buffer by (maximal tap width - 1)
+  // beware that if we override the maximum size in the convolutionkernel constructor, we also have to take care of this here!!!!
+  short* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
+  for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
+    shortImage[i] = ((short)inputImage[i]) << 7;
+
+#ifdef ARCH_ARM
+  filterImageGaussian_on_dsp(shortImage, width, height, gausskernel);
+#else
+  filterImageGaussian(shortImage, width, height, gausskernel);
+#endif
+
+
+  for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
+    outputImage[i] = (float)(shortImage[i] >> 7);
+
+
+  destroyConvolutionKernel(gausskernel);
+
+  vl_free(shortImage);
+
+#else
+
+  // prepare Gaussian filter
   if (self->gaussFilterSigma != sigma) {
     vl_uindex j ;
     vl_sift_pix acc = 0 ;
@@ -844,6 +946,31 @@ _vl_sift_smooth (VlSiftFilt * self,
                    self->gaussFilter,
                    - self->gaussFilterWidth, self->gaussFilterWidth,
                    1, VL_PAD_BY_CONTINUITY | VL_TRANSPOSE) ;
+#endif
+    /*{
+      static int counter = 0;
+      int x,y;
+
+      counter++;
+
+      char buf[501] = {0};
+
+      VL_PRINT("------------DEBUGPARAMS(%d)----------", counter);
+
+      for(y = 0; y < height; y++)
+      {
+        buf[0] = 0;
+        for(x = 0; x < width; x++)
+        {
+          int size = strnlen(buf, sizeof(buf));
+          snprintf(buf + size, sizeof(buf) - size, "%3.3f ", outputImage[y*width + x]);
+        }
+        VL_PRINT(buf);
+      }
+
+      VL_PRINT("------------END OF DEBUGPARAMS(%d)----------", counter);
+    }*/
+    my_write_pgm_image(outputImage, width, height, filenameafter);
 }
 
 

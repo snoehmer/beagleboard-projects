@@ -5,11 +5,51 @@
  *      Author: tom
  */
 
+#include "convolutionkernel.h"
 #include "sift.h"
 #include "sift_dsp.h"
 #include "imopv.h"
+
 #include <string.h>
 
+#define UDSP
+
+void filterImageGaussian_on_dsp(short* inputOutputImage,
+    int width, int height,
+    ConvolutionKernel gauss)
+{
+#ifdef UDSP
+  VL_PRINTF("filterImageGaussian_on_dsp: using DSP....");
+  filterImageGaussian_params* params = vl_malloc(sizeof(filterImageGaussian_params));
+
+  params->inputOutputImage = (short*)vl_dsp_get_mapped_addr(inputOutputImage);
+  params->inputOutputImageSize = (width * height + 23 - 1)*sizeof(short);
+  params->width = width;
+  params->height = height;
+  params->gauss = *gauss;
+
+  VL_PRINTF("gauss->data: %x", gauss->data);
+  params->gauss.data = (short*)vl_dsp_get_mapped_addr(gauss->data);
+  VL_PRINTF("gauss->data: %x", gauss->data);
+
+  vl_dsp_dmm_buffer_begin((void*)inputOutputImage);
+  vl_dsp_dmm_buffer_begin((void*)gauss->data);
+  vl_dsp_dmm_buffer_begin((void*)params);
+
+
+  vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
+
+  //dsp_msg_t msg =
+  vl_dsp_get_message();
+
+  vl_dsp_dmm_buffer_end((void*)inputOutputImage);
+
+  vl_free(params);
+#else
+  VL_PRINTF("filterImageGaussian_on_dsp: NOT using DSP....");
+  filterImageGaussian(inputOutputImage, width, height, gauss);
+#endif
+}
 
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
     float const* src,
@@ -23,7 +63,6 @@ void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
       filt_begin, filt_end,
       step, flags);
 
-#define UDSP
 #ifdef UDSP
 
 
@@ -67,7 +106,7 @@ void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
   vl_dsp_dmm_buffer_begin((void*)params);
 
 
-  vl_dsp_send_message(1, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
+  vl_dsp_send_message(DSP_CALC_IMCONVOL_VF, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
 
   //dsp_msg_t msg =
   vl_dsp_get_message();

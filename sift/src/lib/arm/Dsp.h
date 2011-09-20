@@ -21,6 +21,8 @@ void* dsp_malloc  (size_t n) ;
 void* dsp_realloc (void *ptr, size_t n) ;
 void* dsp_calloc  (size_t n, size_t size) ;
 void  dsp_free    (void* ptr) ;
+void* dsp_memalign(size_t boundary, size_t n);
+
 void* dsp_get_mapped_addr(void* ptr);
 int dsp_dmm_buffer_begin(void* ptr);
 int dsp_dmm_buffer_end(void* ptr);

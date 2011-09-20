@@ -83,9 +83,9 @@ Sift::Sift()
 
   Logger::debug(Logger::SIFT, "Setting alloc functions");
   vl_set_alloc_func(dsp_malloc, dsp_realloc, dsp_calloc, dsp_free);
-  vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end, dsp_get_message, dsp_send_message);
-  vl_set_printf_func(my_vl_printf);
+  vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end, dsp_get_message, dsp_send_message, dsp_memalign);
 #endif
+  vl_set_printf_func(my_vl_printf);
 }
 
 Sift::~Sift()
@@ -219,6 +219,7 @@ int Sift::Detect()
   vl_size          q ;
   int              i ;
   vl_bool          first ;
+
 
   TimeMeasureBase& measure = *TimeMeasureBase::getInstance();
 

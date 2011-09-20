@@ -158,6 +158,7 @@ typedef struct _VlState
 
   int   (*printf_func)  (char const * format, ...) ;
   void *(*malloc_func)  (size_t) ;
+  void *(*memalign_func)  (size_t, size_t) ;
   void *(*realloc_func) (void*,size_t) ;
   void *(*calloc_func)  (size_t, size_t) ;
   void  (*free_func)    (void*) ;
@@ -225,14 +226,16 @@ VL_EXPORT void
 vl_set_alloc_func (void *(*malloc_func)  (size_t),
                    void *(*realloc_func) (void*,size_t),
                    void *(*calloc_func)  (size_t, size_t),
-                   void  (*free_func)    (void*)) ;
+                   void  (*free_func)    (void*)
+                   ) ;
 
 VL_EXPORT void
 vl_set_dsp_mem_func (void *(*dsp_get_mapped_addr) (void* ptr),
                     int (*dsp_dmm_buffer_begin) (void* ptr),
                     int (*dsp_dmm_buffer_end)  (void* ptr),
                     dsp_msg_t (*dsp_get_message)(),
-                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2));
+                    int (*dsp_send_message)(uint32_t cmd, uint32_t arg1, uint32_t arg2),
+                    void *(*memalign_func)  (size_t, size_t));
 
 VL_INLINE void *vl_malloc  (size_t n) ;
 VL_INLINE void *vl_realloc (void *ptr, size_t n) ;
@@ -404,6 +407,12 @@ VL_INLINE void*
 vl_malloc (size_t n)
 {
   return (vl_get_state()->malloc_func)(n) ;
+}
+
+VL_INLINE void*
+vl_memalign (size_t boundary, size_t n)
+{
+  return (vl_get_state()->memalign_func)(boundary, n) ;
 }
 
 VL_INLINE void*
