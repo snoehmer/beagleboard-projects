@@ -18,13 +18,30 @@ FeatureDetector::FeatureDetector(unsigned int featuresThreshold, float nccThresh
 
 FeatureDetector::~FeatureDetector()
 {
+	unsigned int i;
+
 	features_.clear();
+
+	for(i = 0; i < features_.size(); i++)
+	{
+		delete[] featureData_[i].patchNorm_;
+	}
+
+	featureData_.clear();
 }
 
 
 void FeatureDetector::setFeatures(vector<FeatureDescriptor> features)
 {
+	unsigned int i;
+
 	features_ = features;
+	featureData_.resize(features_.size());  // pre-allocate for performance
+
+	for(i = 0; i < features_.size(); i++)
+	{
+		featureData_[i] = calculatePatchData(features_[i].get());
+	}
 }
 
 
@@ -60,7 +77,7 @@ bool FeatureDetector::match(ImageBitstream image)
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
-		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, features_[i].get(), imageIntegral, imageIntegral2, imageSqSum, imageAvg))
+		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, featureData_[i], imageIntegral, imageIntegral2, imageSqSum, imageAvg))
 			matchCount++;
 
 		if(matchCount >= featuresToMatch)
@@ -80,7 +97,7 @@ bool FeatureDetector::match(ImageBitstream image)
 }
 
 
-bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *feature, int *imageIntegral, int *imageIntegral2, int* imageSqSum, int *imageAvg)
+bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, int* imageSqSum, int *imageAvg)
 {
 	unsigned int row, col;
 	unsigned int prow, pcol;
@@ -90,11 +107,9 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 
 
 	// calculate patch parameters once per patch
-	int patchAvg;
-	int *patchNorm = new int[patchSize * patchSize];
-	int patchSqSum;
-
-	calculatePatchData(feature, patchAvg, patchNorm, patchSqSum);
+	int patchAvg = patchData.patchAvg_;
+	int *patchNorm = patchData.patchNorm_;
+	int patchSqSum = patchData.patchSqSum_;
 
 	// calculate NCC
 	int sumIP = 0;
@@ -117,6 +132,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 					{
 						sumIP += patchNorm[prow * patchSize + pcol] * (image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
+						//sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol];
 					}
 				}
 
@@ -130,8 +146,6 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 		if(ncc >= nccThreshold_)
 			break;
 	}
-
-	delete[] patchNorm;
 
 	if(ncc >= nccThreshold_)
 		return true;
@@ -222,10 +236,14 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 	//cout << "finished" << endl;
 }
 
-void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, int *patchNorm, int &patchSqSum)
+PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
 {
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
+
+	int patchAvg;
+	int *patchNorm = new int[patchSize * patchSize];
+	int patchSqSum;
 
 	//cout << "calculating patch data...";
 
@@ -245,6 +263,7 @@ void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, in
 
 	// now calculate normalized patch and sqSum
 	int sqSum = 0;
+	int testPatchNorm = 0;
 
 	for(row = 0; row < patchSize; row++)
 	{
@@ -253,10 +272,19 @@ void FeatureDetector::calculatePatchData(unsigned char *patch, int &patchAvg, in
 			patchNorm[row * patchSize + col] = patch[row * patchSize + col] - patchAvg;
 
 			sqSum += patchNorm[row * patchSize + col] * patchNorm[row * patchSize + col];
+			testPatchNorm += patchNorm[row * patchSize + col];
 		}
 	}
 
 	patchSqSum = (int) sqrt(sqSum);
 
 	//cout << "finished" << endl;
+	//cout << "patch average is " << patchAvg << ", patch normalization sum is " << testPatchNorm << endl;
+
+	PatchData pd;
+	pd.patchAvg_ = patchAvg;
+	pd.patchNorm_ = patchNorm;
+	pd.patchSqSum_ = patchSqSum;
+
+	return pd;
 }
