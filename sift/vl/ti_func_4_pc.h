@@ -56,4 +56,7 @@ void DSP_mat_trans(short *x, short rows, short columns, short *r);
 void QDMA_move(void *dest, void *source, unsigned int elements);
 void QDMA_wait(void);
 
+void DSP_q15tofl(short *x, float *r, int nx);
+void DSP_fltoq15(float x[], short r[], short nx);
+
 #endif

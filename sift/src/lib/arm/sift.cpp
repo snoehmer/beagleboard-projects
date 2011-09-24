@@ -58,6 +58,15 @@ int my_vl_printf(const char* fmt, ...)
   return 0;
 }
 
+void my_vl_timemeasuring_start(char* name)
+{
+  TimeMeasureBase::getInstance()->startTimer(name);
+}
+
+void my_vl_timemeasuring_stop(char* name)
+{
+  TimeMeasureBase::getInstance()->stopTimer(name);
+}
 
 Sift::Sift()
 {
@@ -86,7 +95,11 @@ Sift::Sift()
   vl_set_dsp_mem_func(dsp_get_mapped_addr, dsp_dmm_buffer_begin, dsp_dmm_buffer_end, dsp_get_message, dsp_send_message, dsp_memalign);
 #endif
   vl_set_printf_func(my_vl_printf);
+  vl_set_timemeasuring_start_func(my_vl_timemeasuring_start);
+  vl_set_timemeasuring_stop_func(my_vl_timemeasuring_stop);
 }
+
+
 
 Sift::~Sift()
 {

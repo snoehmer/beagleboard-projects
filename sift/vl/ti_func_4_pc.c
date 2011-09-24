@@ -1,10 +1,37 @@
 #include "ti_func_4_pc.h"
 
-#ifdef WIN32
+//#ifdef WIN32
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#endif
+//#endif
+
+void DSP_fltoq15(float x[], short r[], short nx)
+{
+  int i, a;
+
+  for(i = 0; i < nx; i++)
+  {
+    a = 32768 * x[i];
+    // saturate to 16−bit //
+    if (a>32767)
+      a = 32767;
+
+    if (a<-32768)
+      a = -32768;
+
+    r[i] = (short) a;
+  }
+}
+
+
+void DSP_q15tofl(short *x, float *r, int nx)
+{
+  int i;
+  for (i=0;i<nx;i++)
+    r[i] = (float) x[i] / 0x8000;
+}
+
 
 void DSP_fir_gen
 (

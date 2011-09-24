@@ -25,6 +25,8 @@
 #include <c6x.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dsplib.h>
+
 
 typedef struct  {
   int width;
@@ -37,6 +39,8 @@ typedef struct  {
 //#include "../../../vl/sift.h"
 //#include "../../../vl/imopv.h"
 #include "../../../vl/sift_dsp.h"
+
+
 
 
 int filterImageGaussian(
@@ -114,6 +118,7 @@ unsigned int dsp_sift_execute(void *env)
 
         result = filterImageGaussian(params->inputOutputImage, params->width, params->height, &params->gauss);
 
+
         BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_params), 1);
         BCACHE_wbInv((void*) params->inputOutputImage, params->inputOutputImageSize, 1);
 
@@ -126,8 +131,6 @@ unsigned int dsp_sift_execute(void *env)
         msg.arg_2 = (uint32_t)params->width;
 
         NODE_putMsg(env, NULL, &msg, 0);
-        //params->inputOutputImage[0] = 0;
-        //params->height--;
 
 		    break;
 		  }
@@ -227,36 +230,6 @@ void vl_imconvcol_vf(float* dst, int dst_stride,
     x += 1 ;
   } //next x
 
-}
-
-
-void DSP_fir_gen
-(
-  short     * x,  // Input ('nr + nh - 1' samples)
-  short     * h,  // Filter coefficients (nh taps)
-  short       * r,  // Output array ('nr' samples)
-  int          nh, // Length of filter (nh >= 5)
-  int          nr  // Length of output (nr >= 1)
-)
-{
-  int i, j, sum;
-  for (j = 0; j < nr; j++)
-  {
-    sum = 0;
-    for (i = 0; i < nh; i++)
-    {
-      sum += x[i + j] * h[i];
-    }
-    r[j] = sum >> 15;
-  }
-}
-
-void DSP_mat_trans(short *x, short rows, short columns, short *r)
-{
-  short i,j;
-    for(i=0; i<columns; i++)
-      for(j=0; j<rows; j++)
-        *(r+i*rows+j)=*(x+i+columns*j);
 }
 
 

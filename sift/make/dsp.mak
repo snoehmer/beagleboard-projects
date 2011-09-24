@@ -29,8 +29,8 @@ DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 # can be modified later by install_name_tool.
 
 
-DSPCFLAGS := -DARCH_DSP --std_lib_func_defined --silicon_version=6400+
-DSPLDFLAGS := --silicon_version=6400+ 
+DSPCFLAGS := -DARCH_DSP --std_lib_func_defined --silicon_version=6400+ -Idsplib/inc/
+DSPLDFLAGS := --silicon_version=6400+ -ldsplib/lib/dsplib.a64P
 DSPINCLUDES := -I$(DSP_TOOLS)/include/
 
 dsp_bin_src_dir := $(VLDIR)/src/progs/dsp

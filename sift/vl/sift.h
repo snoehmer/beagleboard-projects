@@ -16,8 +16,8 @@ GNU GPLv2, or (at your option) any later version.
 #include <stdio.h>
 #include "generic.h"
 
-
-
+VL_EXPORT void vl_set_timemeasuring_start_func(void (*func)  (char*));
+VL_EXPORT void vl_set_timemeasuring_stop_func(void (*func)  (char*));
 
 /** @brief SIFT filter pixel type */
 typedef float vl_sift_pix ;

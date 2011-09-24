@@ -699,6 +699,25 @@ double expn_tab [EXPN_SZ+1] ; /**< ::fast_expn table      @internal */
 
 #define log2(x) (log(x)/VL_LOG_OF_2)
 
+
+static void (*time_measureing_start_func)  (char*) = NULL;
+static void (*time_measureing_stop_func)  (char*) = NULL;
+
+void vl_set_timemeasuring_start_func(void (*func)  (char*))
+{
+  time_measureing_start_func = func;
+}
+
+void vl_set_timemeasuring_stop_func(void (*func)  (char*))
+{
+  time_measureing_stop_func = func;
+}
+
+#define TIME_MEASURING_START_FUNC(ABC); if(time_measureing_start_func) { time_measureing_start_func(ABC); }
+#define TIME_MEASURING_STOP_FUNC(ABC); if(time_measureing_stop_func) { time_measureing_stop_func(ABC); }
+
+
+
 /** ------------------------------------------------------------------
  ** @internal
  ** @brief Fast @f$exp(-x)@f$ approximation
@@ -882,7 +901,9 @@ _vl_sift_smooth (VlSiftFilt * self,
   // beware that if we override the maximum size in the convolutionkernel constructor, we also have to take care of this here!!!!
   short* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
   for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
-    shortImage[i] = ((short)inputImage[i]) << 7;
+    shortImage[i] = ((short)round(inputImage[i]*128));
+
+
 
 #ifdef ARCH_ARM
   filterImageGaussian_on_dsp(shortImage, width, height, gausskernel);
@@ -892,7 +913,7 @@ _vl_sift_smooth (VlSiftFilt * self,
 
 
   for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
-    outputImage[i] = (float)(shortImage[i] >> 7);
+    outputImage[i] = ((float)shortImage[i])/128;
 
 
   destroyConvolutionKernel(gausskernel);
@@ -1336,7 +1357,7 @@ vl_sift_detect (VlSiftFilt * f)
   /* clear current list */
   f-> nkeys = 0 ;
 
-
+  TIME_MEASURING_START_FUNC("VL_DOG");
   /* compute difference of gaussian (DoG) */
   pt = f-> dog ;
   for (s = s_min ; s <= s_max - 1 ; ++s) {
@@ -1347,6 +1368,7 @@ vl_sift_detect (VlSiftFilt * f)
       *pt++ = *src_b++ - *src_a++ ;
     }
   }
+  TIME_MEASURING_STOP_FUNC("VL_DOG");
 
   /* -----------------------------------------------------------------
    *                                          Find local maxima of DoG
@@ -2146,9 +2168,10 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
      si    >  f->s_max - 2     )
     return ;
 
+  TIME_MEASURING_START_FUNC("VL_updgradient");
   /* synchronize gradient buffer */
   update_gradient (f) ;
-
+  TIME_MEASURING_STOP_FUNC("VL_updgradient");
   /* VL_PRINTF("W = %d ; magnif = %g ; SBP = %g\n", W,magnif,SBP) ; */
 
   /* clear descriptor */
@@ -2163,6 +2186,7 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
 #undef atd
 #define atd(dbinx,dbiny,dbint) *(dpt + (dbint)*binto + (dbiny)*binyo + (dbinx)*binxo)
 
+  TIME_MEASURING_START_FUNC("VL_descr_loop");
   /*
    * Process pixels in the intersection of the image rectangle
    * (1,1)-(M-1,N-1) and the keypoint bounding box.
@@ -2230,7 +2254,9 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
       }
     }
   }
+  TIME_MEASURING_STOP_FUNC("VL_descr_loop");
 
+  TIME_MEASURING_START_FUNC("VL_desc_norm");
   /* Standard SIFT descriptors are normalized, truncated and normalized again */
   if(1) {
 
@@ -2253,6 +2279,8 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
       normalize_histogram (descr, descr + NBO*NBP*NBP) ;
     }
   }
+
+  TIME_MEASURING_STOP_FUNC("VL_desc_norm");
 
 }
 

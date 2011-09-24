@@ -57,7 +57,7 @@ static void _computeGaussKernel(
   int powerOfTwo,
   ConvolutionKernel gauss)
 {
-	const float factor = 0.01f;   // for truncating tail  ->0.1 works
+	const float factor = 0.005f;   // for truncating tail  ->0.1 works
 	int hw;
 	int MAX_KERNEL_WIDTH;
 	float max_gauss = 1.0f;
