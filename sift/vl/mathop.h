@@ -162,6 +162,18 @@ vl_abs_f (float x)
 }
 
 /** @brief Fast @c abs(x)
+ ** @param x argument.
+ ** @return @c abs(x)
+ **/
+VL_INLINE short
+vl_abs_s (short x)
+{
+  if(x < 0)
+    return -x;
+  return x;
+}
+
+/** @brief Fast @c abs(x)
  ** @sa vl_abs_f
  **/
 

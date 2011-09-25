@@ -854,6 +854,32 @@ my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char*
   return 0;
 }
 
+#define VL_FIXED_TO_FLOAT(A) (((float)(A))/128)
+#define VL_FLOAT_TO_FIXED(A) ((short)round((A)*128))
+#define VL_INT_TO_FIXED(A) ((short)(A)*128)
+#define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))/128)
+
+static vl_sift_pix_fixed* _vl_create_fixed_from_float(const float* src, int len)
+{
+  short* shortImage = (short*)vl_malloc(len*sizeof(short));
+  for(int i = 0; i < len; i++) // beware, we stay in the signed range!
+    shortImage[i] = VL_FLOAT_TO_FIXED(src[i]);
+
+  return shortImage;
+}
+
+static void _vl_convert_float_to_fixed(const float* src, vl_sift_pix_fixed* dst, vl_size len)
+{
+  for(vl_size i = 0; i < len; i++) // beware, we stay in the signed range!
+    dst[i] = VL_FLOAT_TO_FIXED(src[i]);
+}
+
+static void _vl_convert_fixed_to_float(const vl_sift_pix_fixed* src, float* dst, int len)
+{
+  for(int i = 0; i < len; i++) // beware, we stay in the signed range!
+    dst[i] = VL_FIXED_TO_FLOAT(src[i]);
+}
+
 
 /** ------------------------------------------------------------------
  ** @internal
@@ -893,16 +919,16 @@ _vl_sift_smooth (VlSiftFilt * self,
 #ifdef FIXEDPOINT
 
 
-  vl_size i;
+  //vl_size i;
 
   ConvolutionKernel gausskernel = createConvolutionKernel(sigma, 0, 15);
 
   // because the filter exceeds the memory buffer, we extend the buffer by (maximal tap width - 1)
   // beware that if we override the maximum size in the convolutionkernel constructor, we also have to take care of this here!!!!
-  short* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
+  /*short* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
   for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
-    shortImage[i] = ((short)round(inputImage[i]*128));
-
+    shortImage[i] = ((short)round(inputImage[i]*128));*/
+  vl_sift_pix_fixed* shortImage = _vl_create_fixed_from_float(inputImage, ((width*height)+MAX_KERNEL_WIDTH_DEF-1));
 
 
 #ifdef ARCH_ARM
@@ -911,9 +937,7 @@ _vl_sift_smooth (VlSiftFilt * self,
   filterImageGaussian(shortImage, width, height, gausskernel);
 #endif
 
-
-  for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
-    outputImage[i] = ((float)shortImage[i])/128;
+  _vl_convert_fixed_to_float(shortImage, outputImage, width*height);
 
 
   destroyConvolutionKernel(gausskernel);
@@ -1083,6 +1107,8 @@ vl_sift_new (int width, int height,
                         * (f->s_max - f->s_min    )  ) ;
   f-> grad    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel * 2
                         * (f->s_max - f->s_min    )  ) ;
+  f-> fixed_grad = (vl_sift_pix_fixed*)vl_malloc (sizeof(vl_sift_pix_fixed) * nel * 2
+                        * (f->s_max - f->s_min    )  ) ;
 
   f-> sigman  = 0.5 ;
   f-> sigmak  = pow (2.0, 1.0 / nlevels) ;
@@ -1129,6 +1155,7 @@ vl_sift_delete (VlSiftFilt* f)
   if (f) {
     if (f->keys) vl_free (f->keys) ;
     if (f->grad) vl_free (f->grad) ;
+    if (f->fixed_grad) vl_free (f->fixed_grad) ;
     if (f->dog) vl_free (f->dog) ;
     if (f->octave) vl_free (f->octave) ;
     if (f->temp) vl_free (f->temp) ;
@@ -1626,10 +1653,12 @@ vl_sift_detect (VlSiftFilt * f)
  ** The function makes sure that the gradient buffer is up-to-date
  ** with the current GSS data.
  **
+ ** @return 1 if the gradient has been updated, otherwise 0
+ **
  ** @remark The minimum octave size is 2x2xS.
  **/
 
-static void
+static int
 update_gradient (VlSiftFilt *f)
 {
   int       s_min = f->s_min ;
@@ -1641,7 +1670,7 @@ update_gradient (VlSiftFilt *f)
   int const so    = h * w ;
   int y, s ;
 
-  if (f->grad_o == f->o_cur) return ;
+  if (f->grad_o == f->o_cur) return 0;
 
   for (s  = s_min + 1 ;
        s <= s_max - 2 ; ++ s) {
@@ -1714,6 +1743,10 @@ update_gradient (VlSiftFilt *f)
     SAVE_BACK ;
   }
   f->grad_o = f->o_cur ;
+
+  _vl_convert_float_to_fixed(f->grad, f->fixed_grad, w*h* 2 * (f->s_max - f->s_min));
+
+  return 1;
 }
 
 /** ------------------------------------------------------------------
@@ -2154,9 +2187,13 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
   int const binyo = NBO * NBP ;  /* bin y-stride */
   int const binxo = NBO ;        /* bin x-stride */
 
+
   int bin, dxi, dyi ;
-  vl_sift_pix const *pt ;
+  vl_sift_pix_fixed const *pt ;
+  //vl_sift_pix const *pt ;
   vl_sift_pix       *dpt ;
+
+
 
   /* check bounds */
   if(k->o  != f->o_cur        ||
@@ -2170,23 +2207,32 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
 
   TIME_MEASURING_START_FUNC("VL_updgradient");
   /* synchronize gradient buffer */
-  update_gradient (f) ;
+  update_gradient (f)
+
+
   TIME_MEASURING_STOP_FUNC("VL_updgradient");
   /* VL_PRINTF("W = %d ; magnif = %g ; SBP = %g\n", W,magnif,SBP) ; */
 
   /* clear descriptor */
   memset (descr, 0, sizeof(vl_sift_pix) * NBO*NBP*NBP) ;
 
+
+
   /* Center the scale space and the descriptor on the current keypoint.
    * Note that dpt is pointing to the bin of center (SBP/2,SBP/2,0).
    */
-  pt  = f->grad + xi*xo + yi*yo + (si - f->s_min - 1)*so ;
+  pt  = f->fixed_grad + xi*xo + yi*yo + (si - f->s_min - 1)*so ;
   dpt = descr + (NBP/2) * binyo + (NBP/2) * binxo ;
 
 #undef atd
 #define atd(dbinx,dbiny,dbint) *(dpt + (dbint)*binto + (dbiny)*binyo + (dbinx)*binxo)
 
   TIME_MEASURING_START_FUNC("VL_descr_loop");
+
+  static float abweichung_sum = 0;
+  static float abweichung_max = 0;
+  static float max_result = 0;
+
   /*
    * Process pixels in the intersection of the image rectangle
    * (1,1)-(M-1,N-1) and the keypoint bounding box.
@@ -2198,9 +2244,14 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
         dxi <= VL_MIN (+ W, w - xi - 2) ; ++ dxi) {
 
       /* retrieve */
-      vl_sift_pix mod   = *( pt + dxi*xo + dyi*yo + 0 ) ;
-      vl_sift_pix angle = *( pt + dxi*xo + dyi*yo + 1 ) ;
-      vl_sift_pix theta = vl_mod_2pi_f (angle - angle0) ;
+      vl_sift_pix_fixed mod   = (*( pt + dxi*xo + dyi*yo + 0 )) ;
+      vl_sift_pix_fixed angle = (*( pt + dxi*xo + dyi*yo + 1 )) ;
+
+
+      //VL_PRINTF("mod:%e, angle: %e, %d", mod, angle, *( pt + dxi*xo + dyi*yo + 0 ));
+
+
+      vl_sift_pix theta = vl_mod_2pi_f (VL_FIXED_TO_FLOAT(angle) - angle0) ;
 
       /* fractional displacement */
       vl_sift_pix dx = xi + dxi - x;
@@ -2217,17 +2268,17 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
        * are in the normalized frame, so that -NBP/2 <= dx <=
        * NBP/2. */
       vl_sift_pix const wsigma = f->windowSize ;
-      vl_sift_pix win = fast_expn
-        ((nx*nx + ny*ny)/(2.0 * wsigma * wsigma)) ;
+      vl_sift_pix_fixed win = VL_FLOAT_TO_FIXED(fast_expn
+        ((nx*nx + ny*ny)/(2.0 * wsigma * wsigma))) ;
 
       /* The sample will be distributed in 8 adjacent bins.
          We start from the ``lower-left'' bin. */
       int         binx = vl_floor_f (nx - 0.5) ;
       int         biny = vl_floor_f (ny - 0.5) ;
       int         bint = vl_floor_f (nt) ;
-      vl_sift_pix rbinx = nx - (binx + 0.5) ;
-      vl_sift_pix rbiny = ny - (biny + 0.5) ;
-      vl_sift_pix rbint = nt - bint ;
+      vl_sift_pix_fixed rbinx = VL_FLOAT_TO_FIXED(nx - (binx + 0.5));
+      vl_sift_pix_fixed rbiny = VL_FLOAT_TO_FIXED(ny - (biny + 0.5)) ;
+      vl_sift_pix_fixed rbint = VL_FLOAT_TO_FIXED(nt - bint) ;
       int         dbinx ;
       int         dbiny ;
       int         dbint ;
@@ -2240,20 +2291,48 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
             if (binx + dbinx >= - (NBP/2) &&
                 binx + dbinx <    (NBP/2) &&
                 biny + dbiny >= - (NBP/2) &&
-                biny + dbiny <    (NBP/2) ) {
-              vl_sift_pix weight = win
-                * mod
-                * vl_abs_f (1 - dbinx - rbinx)
-                * vl_abs_f (1 - dbiny - rbiny)
-                * vl_abs_f (1 - dbint - rbint) ;
+                biny + dbiny <    (NBP/2) )
+            {
+              const int BITS_SHIFT = 8;
 
-              atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight ;
+              int weight = VL_FIXED_MUL(win<<BITS_SHIFT,mod);
+              weight = VL_FIXED_MUL(weight,
+                  vl_abs_s (VL_INT_TO_FIXED(1 - dbinx) - rbinx));
+              weight = VL_FIXED_MUL(weight,
+                vl_abs_s (VL_INT_TO_FIXED(1 - dbiny) - rbiny));
+              weight = VL_FIXED_MUL(weight,
+                vl_abs_s (VL_INT_TO_FIXED(1 - dbint) - rbint)) ;
+
+
+/*
+              vl_sift_pix weight_float = VL_FIXED_TO_FLOAT(win)
+              * VL_FIXED_TO_FLOAT(mod)
+              * vl_abs_f (1 - dbinx - VL_FIXED_TO_FLOAT(rbinx))
+              * vl_abs_f (1 - dbiny - VL_FIXED_TO_FLOAT(rbiny))
+              * vl_abs_f (1 - dbint - VL_FIXED_TO_FLOAT(rbint)) ;
+
+              float abweichung = fabs(weight_float - VL_FIXED_TO_FLOAT(weight)/powf(2,BITS_SHIFT));
+              if(abweichung > 2)
+              {
+                VL_PRINTF("abweichung: fix:%f, float:%f", VL_FIXED_TO_FLOAT(weight), weight_float);
+              }
+              if(abweichung > abweichung_max)
+                abweichung_max = abweichung;
+              abweichung_sum += abweichung;
+
+              if(weight > max_result)
+                max_result = weight;*/
+
+
+              atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += VL_FIXED_TO_FLOAT(weight)/powf(2,BITS_SHIFT);
+              //atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight_float;
             }
           }
         }
       }
     }
   }
+  //VL_PRINTF("max_abweichung: %f, sum abweichung: %f, max_result: %f", abweichung_max, abweichung_sum, max_result);
   TIME_MEASURING_STOP_FUNC("VL_descr_loop");
 
   TIME_MEASURING_START_FUNC("VL_desc_norm");
@@ -2281,7 +2360,6 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
   }
 
   TIME_MEASURING_STOP_FUNC("VL_desc_norm");
-
 }
 
 /** ------------------------------------------------------------------

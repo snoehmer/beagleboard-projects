@@ -21,6 +21,7 @@ VL_EXPORT void vl_set_timemeasuring_stop_func(void (*func)  (char*));
 
 /** @brief SIFT filter pixel type */
 typedef float vl_sift_pix ;
+typedef short vl_sift_pix_fixed;
 
 /** ------------------------------------------------------------------
  ** @brief SIFT filter keypoint
@@ -86,6 +87,8 @@ typedef struct _VlSiftFilt
   double windowSize ;   /**< size of Gaussian window (in spatial bins) */
 
   vl_sift_pix *grad ;   /**< GSS gradient data. */
+  vl_sift_pix_fixed *fixed_grad ;   /**< GSS gradient data. */
+
   int grad_o ;          /**< GSS gradient data octave. */
 
 } VlSiftFilt ;
