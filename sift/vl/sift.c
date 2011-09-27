@@ -856,8 +856,11 @@ my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char*
 
 #define VL_FIXED_TO_FLOAT(A) (((float)(A))/128)
 #define VL_FLOAT_TO_FIXED(A) ((short)round((A)*128))
-#define VL_INT_TO_FIXED(A) ((short)(A)*128)
-#define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))/128)
+#define VL_INT_TO_FIXED(A) ((short)(A)<<7)
+#define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))>>7)
+#define VL_ANGLE_BIT_SHIFT 5
+#define VL_PI_FIXED ((short)(VL_PI * (128<<VL_ANGLE_BIT_SHIFT)))
+
 
 static vl_sift_pix_fixed* _vl_create_fixed_from_float(const float* src, int len)
 {
@@ -1937,6 +1940,37 @@ normalize_histogram
 }
 
 /** ------------------------------------------------------------------
+ ** @internal
+ ** the vector is normalized, so that the L_2 norm is 32767
+ ** @brief Normalizes in norm L_2 a descriptor
+ ** @param begin begin of histogram.
+ ** @param end   end of histogram.
+ **/
+
+VL_INLINE int
+normalize_histogram_fixed
+(int *begin, int *end)
+{
+  int* iter ;
+  float  norm = 0;
+
+  //TODO: optimize (remove floating point operations ...)
+
+  for (iter = begin ; iter != end ; ++ iter)
+    norm += ((float)*iter) * ((float)*iter);
+    //norm += VL_FIXED_MUL((*iter), (*iter));
+
+  norm = vl_fast_sqrt_f (norm) + VL_EPSILON_F ;
+
+  for (iter = begin; iter != end ; ++ iter)
+    *iter /= norm/32767 ;
+
+  return (int)(norm);
+}
+
+
+
+/** ------------------------------------------------------------------
  ** @brief Run the SIFT descriptor on raw data
  **
  ** @param f        SIFT filter.
@@ -2140,7 +2174,7 @@ vl_sift_calc_raw_descriptor (VlSiftFilt const *f,
 VL_EXPORT
 void
 vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
-                                  vl_sift_pix *descr,
+                                  int *descr,
                                   VlSiftKeypoint const* k,
                                   double angle0)
 {
@@ -2191,7 +2225,10 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
   int bin, dxi, dyi ;
   vl_sift_pix_fixed const *pt ;
   //vl_sift_pix const *pt ;
-  vl_sift_pix       *dpt ;
+  int       *dpt ;
+  //vl_sift_pix             *dpt_float ;
+
+  //vl_sift_pix* descr_float = vl_malloc(sizeof(float)*128);
 
 
 
@@ -2214,7 +2251,8 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
   /* VL_PRINTF("W = %d ; magnif = %g ; SBP = %g\n", W,magnif,SBP) ; */
 
   /* clear descriptor */
-  memset (descr, 0, sizeof(vl_sift_pix) * NBO*NBP*NBP) ;
+  memset (descr, 0, sizeof(int) * NBO*NBP*NBP) ;
+  //memset (descr_float, 0, sizeof(vl_sift_pix) * NBO*NBP*NBP) ;
 
 
 
@@ -2223,15 +2261,20 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
    */
   pt  = f->fixed_grad + xi*xo + yi*yo + (si - f->s_min - 1)*so ;
   dpt = descr + (NBP/2) * binyo + (NBP/2) * binxo ;
+  //dpt_float = descr_float + (NBP/2) * binyo + (NBP/2) * binxo ;
 
 #undef atd
 #define atd(dbinx,dbiny,dbint) *(dpt + (dbint)*binto + (dbiny)*binyo + (dbinx)*binxo)
+//#define atd_float(dbinx,dbiny,dbint) *(dpt_float + (dbint)*binto + (dbiny)*binyo + (dbinx)*binxo)
 
   TIME_MEASURING_START_FUNC("VL_descr_loop");
 
   static float abweichung_sum = 0;
   static float abweichung_max = 0;
   static float max_result = 0;
+
+
+  vl_sift_pix angle0_fixed = VL_FLOAT_TO_FIXED(angle0*powf(2,VL_ANGLE_BIT_SHIFT));
 
   /*
    * Process pixels in the intersection of the image rectangle
@@ -2245,23 +2288,24 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
 
       /* retrieve */
       vl_sift_pix_fixed mod   = (*( pt + dxi*xo + dyi*yo + 0 )) ;
-      vl_sift_pix_fixed angle = (*( pt + dxi*xo + dyi*yo + 1 )) ;
+      vl_sift_pix_fixed angle = (*( pt + dxi*xo + dyi*yo + 1 )) << VL_ANGLE_BIT_SHIFT;
 
 
       //VL_PRINTF("mod:%e, angle: %e, %d", mod, angle, *( pt + dxi*xo + dyi*yo + 0 ));
 
 
-      vl_sift_pix theta = vl_mod_2pi_f (VL_FIXED_TO_FLOAT(angle) - angle0) ;
+      vl_sift_pix_fixed theta = vl_mod_2pi_fixed (angle - angle0_fixed) ;
 
       /* fractional displacement */
-      vl_sift_pix dx = xi + dxi - x;
-      vl_sift_pix dy = yi + dyi - y;
+      vl_sift_pix_fixed dx = VL_INT_TO_FIXED(xi + dxi) - VL_FLOAT_TO_FIXED(x);
+      vl_sift_pix_fixed dy = VL_INT_TO_FIXED(yi + dyi) - VL_FLOAT_TO_FIXED(y);
 
       /* get the displacement normalized w.r.t. the keypoint
          orientation and extension */
-      vl_sift_pix nx = ( ct0 * dx + st0 * dy) / SBP ;
-      vl_sift_pix ny = (-st0 * dx + ct0 * dy) / SBP ;
-      vl_sift_pix nt = NBO * theta / (2 * VL_PI) ;
+      vl_sift_pix nx = VL_FIXED_TO_FLOAT(( VL_FLOAT_TO_FIXED(ct0) * (int)dx + VL_FLOAT_TO_FIXED(st0) * (int)dy) / VL_FLOAT_TO_FIXED(SBP)) ;
+      vl_sift_pix ny = VL_FIXED_TO_FLOAT((VL_FLOAT_TO_FIXED(-st0) * dx + VL_FLOAT_TO_FIXED(ct0) * dy) / VL_FLOAT_TO_FIXED(SBP)) ;
+      vl_sift_pix nt = NBO * VL_FIXED_TO_FLOAT(theta)/32 / (2 * VL_PI) ;
+
 
       /* Get the Gaussian weight of the sample. The Gaussian window
        * has a standard deviation equal to NBP/2. Note that dx and dy
@@ -2294,6 +2338,7 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
                 biny + dbiny <    (NBP/2) )
             {
               const int BITS_SHIFT = 8;
+              const int BACK_BITS_SHIFT = 1;
 
               int weight = VL_FIXED_MUL(win<<BITS_SHIFT,mod);
               weight = VL_FIXED_MUL(weight,
@@ -2323,15 +2368,18 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
               if(weight > max_result)
                 max_result = weight;*/
 
-
-              atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += VL_FIXED_TO_FLOAT(weight)/powf(2,BITS_SHIFT);
-              //atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight_float;
+              //VL_PRINTF("weight:%d", weight);
+              atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight>>BACK_BITS_SHIFT;
+              //atd_float(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight_float;
             }
           }
         }
       }
     }
   }
+
+  //VL_PRINTF("max:%f", max_result);
+
   //VL_PRINTF("max_abweichung: %f, sum abweichung: %f, max_result: %f", abweichung_max, abweichung_sum, max_result);
   TIME_MEASURING_STOP_FUNC("VL_descr_loop");
 
@@ -2340,10 +2388,11 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
   if(1) {
 
     /* Normalize the histogram to L2 unit length. */
-    vl_sift_pix norm = normalize_histogram (descr, descr + NBO*NBP*NBP) ;
+    int norm = normalize_histogram_fixed (descr, descr + NBO*NBP*NBP) ;
+
 
     /* Set the descriptor to zero if it is lower than our norm_threshold */
-    if(f-> norm_thresh && norm < f-> norm_thresh) {
+    if(f-> norm_thresh && norm < 32767*f-> norm_thresh) {
         for(bin = 0; bin < NBO*NBP*NBP ; ++ bin)
             descr [bin] = 0;
     }
@@ -2351,11 +2400,12 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
 
       /* Truncate at 0.2. */
       for(bin = 0; bin < NBO*NBP*NBP ; ++ bin) {
-        if (descr [bin] > 0.2) descr [bin] = 0.2;
+        if (descr [bin] > 32767*0.2) descr [bin] = 32767*0.2;
       }
 
       /* Normalize again. */
-      normalize_histogram (descr, descr + NBO*NBP*NBP) ;
+      norm = normalize_histogram_fixed (descr, descr + NBO*NBP*NBP) ;
+      //VL_PRINTF("norm_after:%d", norm);
     }
   }
 

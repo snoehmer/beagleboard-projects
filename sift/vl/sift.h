@@ -124,7 +124,7 @@ int   vl_sift_calc_keypoint_orientations (VlSiftFilt *f,
                                           VlSiftKeypoint const*k);
 VL_EXPORT
 void  vl_sift_calc_keypoint_descriptor   (VlSiftFilt *f,
-                                          vl_sift_pix *descr,
+                                          int *descr,
                                           VlSiftKeypoint const* k,
                                           double angle) ;
 

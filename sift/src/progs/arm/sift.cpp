@@ -735,7 +735,7 @@ main(int argc, char **argv)
 
         /* for each orientation ................................... */
         for (q = 0 ; q < (unsigned) nangles ; ++q) {
-          vl_sift_pix descr [128] ;
+          int descr [128] ;
 
           /* compute descriptor (if necessary) */
           if (out.active || dsc.active) {
@@ -750,7 +750,7 @@ main(int argc, char **argv)
             vl_file_meta_put_double (&out, k -> sigma ) ;
             vl_file_meta_put_double (&out, angles [q] ) ;
             for (l = 0 ; l < 128 ; ++l) {
-              vl_file_meta_put_uint8 (&out, (vl_uint8) (512.0 * descr [l])) ;
+              vl_file_meta_put_uint8 (&out, (vl_uint8) (descr [l])) ;
             }
             if (out.protocol == VL_PROT_ASCII) fprintf(out.file, "\n") ;
           }

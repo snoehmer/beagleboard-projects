@@ -20,7 +20,7 @@
 struct KeyPointDescriptor
 {
   VlSiftKeypoint keypoint;
-  vl_sift_pix descr [128] ;
+  int descr [128] ;
   double angle;
 };
 

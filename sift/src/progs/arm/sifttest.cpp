@@ -100,7 +100,7 @@ int main(int argc, char** argv)
 
     for (int l = 0 ; l < 128 ; ++l)
     {
-      vl_file_meta_put_uint8 (&out, (vl_uint8) (512.0 * k.descr [l])) ;
+      vl_file_meta_put_uint8 (&out, (vl_uint8) (k.descr [l]>>6)) ;
     }
     if (out.protocol == VL_PROT_ASCII) fprintf(out.file, "\n");
   }
