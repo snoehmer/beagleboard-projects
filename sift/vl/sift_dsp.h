@@ -14,13 +14,18 @@
 #include "convolutionkernel.h"
 #endif
 
+
+
 enum
 {
   DSP_CALC_IMCONVOL_VF = 1,
   DSP_CALC_GAUSSIAN_FIXEDPOINT,
+  DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN,
   DSP_CALC_IMCONVOL_VF_FINISHED = 100,
   DSP_CALC_GAUSSIAN_FIXEDPOINT_FINISHED,
-  DSP_CALC_IMCONVOL_VF_FAILED
+  DSP_CALC_IMCONVOL_VF_FAILED,
+  DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED,
+  DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED
 };
 
 typedef struct _imconvol_vf_params
@@ -53,6 +58,22 @@ typedef struct _filterImageGaussian_params
   ConvolutionKernelRef gauss;
 }filterImageGaussian_params;
 
+typedef struct
+{
+  short* inputImage;  //if inputImage == 0, then the last outputImage is used
+  int inputOutputImageSize;
+  short* outputImage;
+  int width;
+  int height;
+  ConvolutionKernelRef gauss;
+}filterImageGaussian_chained_params;
+
+typedef struct
+{
+  short* outputImage;
+  float sigma;
+}DestinationImage;
+
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
     float const* src,
     int src_width, int src_height, int src_stride,
@@ -69,6 +90,9 @@ void filterImageGaussian_on_dsp(short* inputOutputImage,
     int width, int height,
     ConvolutionKernel gauss);
 
+
+void filterMultipleTimes_on_dsp(short* imputImage,
+    int width, int height, DestinationImage destinations[], int numDestinations);
 
 #ifdef ARCH_DSP
 //defininition for DSP, to avoid including the whole vlfeat stuff...

@@ -64,6 +64,7 @@ unsigned int dsp_sift_execute(void *env)
 {
 	dsp_msg_t msg;
 	unsigned char done = 0;
+	short* gaussChain_inputImage = NULL;
 
 
 
@@ -134,6 +135,46 @@ unsigned int dsp_sift_execute(void *env)
 
 		    break;
 		  }
+
+
+    case DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN:
+      {
+        filterImageGaussian_chained_params * params = (filterImageGaussian_chained_params*) msg.arg_1;
+        int result;
+
+        BCACHE_inv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
+
+        if(params->inputImage)
+        {
+          BCACHE_inv((void*) params->inputImage, params->inputOutputImageSize, 1);
+          gaussChain_inputImage = params->inputImage;
+        }
+
+        BCACHE_inv((void*) params->gauss.data, params->gauss.width * sizeof(short), 1);
+        BCACHE_inv((void*) params->outputImage, params->inputOutputImageSize, 1);
+
+        if(gaussChain_inputImage != params->outputImage)
+          memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
+
+        gaussChain_inputImage = params->outputImage;
+
+        result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
+
+
+        BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
+        BCACHE_wbInv((void*) params->outputImage, params->inputOutputImageSize, 1);
+
+
+        if(result == 0)
+          msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED;
+        else
+          msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED;
+
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
 
 		case 0x80000000:
 			done = 1;

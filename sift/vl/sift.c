@@ -803,7 +803,7 @@ copy_and_upsample_rows
 /** @brief Save image on disk
  ** @internal
  **/
-static int
+int
 my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char* filename)
 {
   int i ;
@@ -1106,6 +1106,8 @@ vl_sift_new (int width, int height,
   f-> temp    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel    ) ;
   f-> octave  = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min + 1)  ) ;
+  f-> octave_fixed  = (vl_sift_pix_fixed*)vl_malloc (sizeof(vl_sift_pix_fixed) * nel
+                        * (f->s_max - f->s_min + 1)  ) ;
   f-> dog     = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min    )  ) ;
   f-> grad    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel * 2
@@ -1161,6 +1163,7 @@ vl_sift_delete (VlSiftFilt* f)
     if (f->fixed_grad) vl_free (f->fixed_grad) ;
     if (f->dog) vl_free (f->dog) ;
     if (f->octave) vl_free (f->octave) ;
+    if (f->octave_fixed) vl_free (f->octave_fixed) ;
     if (f->temp) vl_free (f->temp) ;
     if (f->gaussFilter) vl_free (f->gaussFilter) ;
     vl_free (f) ;
@@ -1258,9 +1261,25 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
 
 
 
+
+  _vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
+  my_write_pgm_image(f->octave, width, height, "tmp/bla.pgm");
+
+#ifdef ARCH_ARM
+  DestinationImage images[5];
+  int destImageCount = 0;
+#endif
+
+
   if (sa > sb) {
     double sd = sqrt (sa*sa - sb*sb) ;
+
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = f->octave_fixed;
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
+#endif
   }
 
   /* -----------------------------------------------------------------
@@ -1269,10 +1288,21 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
 
   for(s = s_min + 1 ; s <= s_max ; ++s) {
     double sd = dsigma0 * pow (sigmak, s) ;
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
                      vl_sift_get_octave(f, s - 1), w, h, sd) ;
+#endif
   }
 
+#ifdef ARCH_ARM
+  void filterMultipleTimes_on_dsp(shortImage,
+      w, h, images, destImageCount);
+#endif
+
+  _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
 
   return VL_ERR_OK ;
 }

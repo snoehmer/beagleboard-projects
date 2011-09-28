@@ -14,6 +14,78 @@
 
 #define UDSP
 
+
+int
+my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char* filename);
+
+
+void filterMultipleTimes_on_dsp(short* imputImage,
+    int width, int height, DestinationImage destinations[], int numDestinations)
+{
+  static int counter = 0;
+  char filenameafter[31];
+  int i;
+
+
+  if(numDestinations == 0)
+    return;
+
+
+
+
+  VL_PRINTF("filtering MultipleTimes on DSP");
+
+  filterImageGaussian_chained_params* params = vl_malloc(sizeof(filterImageGaussian_chained_params));
+
+  params->inputImage = (short*)vl_dsp_get_mapped_addr(imputImage);
+  params->inputOutputImageSize = (width * height + 23 - 1)*sizeof(short);
+  params->width = width;
+  params->height = height;
+
+  vl_dsp_dmm_buffer_begin((void*)imputImage);
+
+  ConvolutionKernel gaussKernel;
+  ConvolutionKernel preCalcedGaussKernel = createConvolutionKernel(destinations[0].sigma, 0, 15);
+
+
+  for(i = 0; i < numDestinations; i++)
+  {
+    gaussKernel = preCalcedGaussKernel;
+
+    params->outputImage = vl_dsp_get_mapped_addr(destinations[i].outputImage);
+    params->gauss = *gaussKernel;
+    params->gauss.data = (short*)vl_dsp_get_mapped_addr(gaussKernel->data);
+
+    vl_dsp_dmm_buffer_begin((void*)gaussKernel);
+    vl_dsp_dmm_buffer_begin((void*)gaussKernel->data);
+    vl_dsp_dmm_buffer_begin((void*)params);
+
+    vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
+
+    //while DSP calculates GAUSSIAN of image, precalculate newxt GaussKernel
+    if(i < numDestinations -1)
+    {
+      preCalcedGaussKernel = createConvolutionKernel(destinations[i+1].sigma, 0, 15);
+    }
+
+
+    //wait until previous gaussian smoothing is finished
+    vl_dsp_get_message();
+    vl_dsp_dmm_buffer_end((void*)params->outputImage);
+
+    params->inputImage = NULL;  //to use the last OutputImage as the next InputImage
+
+  }
+
+  for(i = 0; i < numDestinations; i++)
+  {
+    counter++;
+
+    snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
+    my_write_pgm_image(destinations[i].outputImage, width, height, filenameafter);
+  }
+}
+
 void filterImageGaussian_on_dsp(short* inputOutputImage,
     int width, int height,
     ConvolutionKernel gauss)
