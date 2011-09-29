@@ -41,8 +41,6 @@ typedef struct  {
 #include "../../../vl/sift_dsp.h"
 
 
-
-
 int filterImageGaussian(
   short* inputOutputImage,
   int width, int height,
@@ -154,7 +152,19 @@ unsigned int dsp_sift_execute(void *env)
         BCACHE_inv((void*) params->outputImage, params->inputOutputImageSize, 1);
 
         if(gaussChain_inputImage != params->outputImage)
-          memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
+        {
+          /*if(params->inputOutputImageSize%8 != 0)
+          {
+            msg.arg_2 = 123;
+            */
+            memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
+          /*}
+          else
+          {
+            msg.arg_2 = 456;
+            DSP_blk_move(gaussChain_inputImage, params->outputImage, params->inputOutputImageSize);
+          }*/
+        }
 
         gaussChain_inputImage = params->outputImage;
 
@@ -340,5 +350,4 @@ int filterImageGaussian(
 
   return 0;
 }
-
 

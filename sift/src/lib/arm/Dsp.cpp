@@ -248,6 +248,7 @@ void* dsp_malloc(size_t n)
   Logger::debug(Logger::DSP, "dsp_malloc(%d)", n);
 
   dmm_buffer* buf = dmm_buffer_new(Dsp::Instance().GetHandle(), Dsp::Instance().GetProc(), DMA_BIDIRECTIONAL);
+  //buf->alignment = 8;
   dmm_buffer_allocate(buf, n);
 
   dmmManager.Add(buf);
@@ -296,7 +297,7 @@ void* dsp_calloc(size_t n, size_t size)
   Logger::debug(Logger::DSP, "dsp_calloc(%d, %d)", n, size);
 
   dmm_buffer* buf = dmm_buffer_calloc(Dsp::Instance().GetHandle(), Dsp::Instance().GetProc(), n*size, DMA_BIDIRECTIONAL);
-
+  buf->alignment = 8;
   dmmManager.Add(buf);
 
   return buf->data;

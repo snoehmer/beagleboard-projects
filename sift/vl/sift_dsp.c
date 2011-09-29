@@ -16,12 +16,13 @@
 
 
 int
-my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char* filename);
+my_write_pgm_image_fixed (const vl_sift_pix_fixed* image, int width, int height, const char* filename);
 
 
 void filterMultipleTimes_on_dsp(short* imputImage,
     int width, int height, DestinationImage destinations[], int numDestinations)
 {
+  VL_PRINTF("calling filterMultipleTimes_on_dsp, numDestinations:%d", numDestinations);
   static int counter = 0;
   char filenameafter[31];
   int i;
@@ -32,8 +33,6 @@ void filterMultipleTimes_on_dsp(short* imputImage,
 
 
 
-
-  VL_PRINTF("filtering MultipleTimes on DSP");
 
   filterImageGaussian_chained_params* params = vl_malloc(sizeof(filterImageGaussian_chained_params));
 
@@ -50,6 +49,7 @@ void filterMultipleTimes_on_dsp(short* imputImage,
 
   for(i = 0; i < numDestinations; i++)
   {
+    VL_PRINTF("filterMultipleTimes_on_dsp: filtering image %d with sigma=%f", i, destinations[i].sigma);
     gaussKernel = preCalcedGaussKernel;
 
     params->outputImage = vl_dsp_get_mapped_addr(destinations[i].outputImage);
@@ -71,18 +71,20 @@ void filterMultipleTimes_on_dsp(short* imputImage,
 
     //wait until previous gaussian smoothing is finished
     vl_dsp_get_message();
-    vl_dsp_dmm_buffer_end((void*)params->outputImage);
+
 
     params->inputImage = NULL;  //to use the last OutputImage as the next InputImage
 
   }
 
+  vl_dsp_dmm_buffer_end((void*)destinations[0].outputImage);
+
   for(i = 0; i < numDestinations; i++)
   {
     counter++;
 
-    snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
-    my_write_pgm_image(destinations[i].outputImage, width, height, filenameafter);
+    //snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
+    //my_write_pgm_image_fixed(destinations[i].outputImage, width, height, filenameafter);
   }
 }
 
@@ -264,3 +266,5 @@ void debugParams(float* dst, int dst_stride,
   VL_PRINT("------------END OF DEBUGPARAMS----------");
 
 }
+
+
