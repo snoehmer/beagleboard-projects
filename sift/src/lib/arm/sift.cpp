@@ -109,13 +109,6 @@ Sift::~Sift()
     vl_free (fdata);
     fdata = 0;
   }
-
-  /* release image data */
-  if (data)
-  {
-    vl_free (data) ;
-    data = 0 ;
-  }
 }
 
 
@@ -182,8 +175,8 @@ void Sift::ReadImageFromFile(char* filename)
   /* allocate buffer */
   data  = (vl_uint8*)vl_malloc(vl_pgm_get_npixels (&pim) *
                  vl_pgm_get_bpp(&pim) * sizeof (vl_uint8)   ) ;
-  fdata = (vl_sift_pix*)vl_malloc(vl_pgm_get_npixels (&pim) *
-                 vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix)) ;
+  fdata = (vl_sift_pix_fixed*)vl_malloc(vl_pgm_get_npixels (&pim) *
+                 vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix_fixed)) ;
 
   if (!data || !fdata)
   {
@@ -202,13 +195,20 @@ void Sift::ReadImageFromFile(char* filename)
 
   /* convert data type */
   for (q = 0 ; q < (unsigned) (pim.width * pim.height) ; ++q) {
-    fdata [q] = data [q] ;
+    fdata [q] = VL_INT_TO_FIXED(data [q]);
   }
 
   /* close files */
   if (in) {
     fclose (in) ;
     in = 0 ;
+  }
+
+  /* release image data */
+  if (data)
+  {
+    vl_free (data) ;
+    data = 0 ;
   }
 }
 

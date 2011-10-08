@@ -18,7 +18,7 @@ GNU GPLv2, or (at your option) any later version.
 
 #define VL_FIXED_TO_FLOAT(A) (((float)(A))/128)
 #define VL_FLOAT_TO_FIXED(A) ((short)round((A)*128))
-#define VL_INT_TO_FIXED(A) ((short)(A)<<7)
+#define VL_INT_TO_FIXED(A) (((short)(A))<<7)
 #define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))>>7)
 #define VL_ANGLE_BIT_SHIFT 5
 #define VL_PI_FIXED ((short)(VL_PI * (128<<VL_ANGLE_BIT_SHIFT)))
@@ -118,7 +118,7 @@ void         vl_sift_delete (VlSiftFilt *f) ;
 
 VL_EXPORT
 int   vl_sift_process_first_octave       (VlSiftFilt *f,
-                                          vl_sift_pix const *im) ;
+                                      vl_sift_pix_fixed const *im) ;
 
 VL_EXPORT
 int   vl_sift_process_next_octave        (VlSiftFilt *f) ;

@@ -798,6 +798,44 @@ copy_and_upsample_rows
   }
 }
 
+/** ------------------------------------------------------------------
+ ** @internal
+ ** @brief Copy image, upsample rows and take transpose
+ **
+ ** @param dst     output image buffer.
+ ** @param src     input image buffer.
+ ** @param width   input image width.
+ ** @param height  input image height.
+ **
+ ** The output image has dimensions @a height by 2 @a width (so the
+ ** destination buffer must be at least as big as two times the
+ ** input buffer).
+ **
+ ** Upsampling is performed by linear interpolation.
+ **/
+
+static void
+copy_and_upsample_rows_fixed
+(vl_sift_pix_fixed       *dst,
+ vl_sift_pix_fixed const *src, int width, int height)
+{
+  int x, y ;
+  vl_sift_pix_fixed a, b ;
+
+  for(y = 0 ; y < height ; ++y) {
+    b = a = *src++ ;
+    for(x = 0 ; x < width - 1 ; ++x) {
+      b = *src++ ;
+      *dst = a ;             dst += height ;
+      *dst = ((int)a + (int)b)/2 ; dst += height ;
+      a = b ;
+    }
+    *dst = b ; dst += height ;
+    *dst = b ; dst += height ;
+    dst += 1 - width * 2 * height ;
+  }
+}
+
 
 /* ----------------------------------------------------------------- */
 /** @brief Save image on disk
@@ -1108,6 +1146,42 @@ copy_and_downsample
   }
 }
 
+
+/** ------------------------------------------------------------------
+ ** @internal
+ ** @brief Copy and downsample an image
+ **
+ ** @param dst    output imgae buffer.
+ ** @param src    input  image buffer.
+ ** @param width  input  image width.
+ ** @param height input  image height.
+ ** @param d      octaves (non negative).
+ **
+ ** The function downsamples the image @a d times, reducing it to @c
+ ** 1/2^d of its original size. The parameters @a width and @a height
+ ** are the size of the input image. The destination image @a dst is
+ ** assumed to be <code>floor(width/2^d)</code> pixels wide and
+ ** <code>floor(height/2^d)</code> pixels high.
+ **/
+
+static void
+copy_and_downsample_fixed
+(vl_sift_pix_fixed       *dst,
+ vl_sift_pix_fixed const *src,
+ int width, int height, int d)
+{
+  int x, y ;
+
+  d = 1 << d ; /* d = 2^d */
+  for(y = 0 ; y < height ; y+=d) {
+    vl_sift_pix_fixed const * srcrowp = src + y * width ;
+    for(x = 0 ; x < width - (d-1) ; x+=d) {
+      *dst++ = *srcrowp ;
+      srcrowp += d ;
+    }
+  }
+}
+
 /** ------------------------------------------------------------------
  ** @brief Create a new SIFT filter
  **
@@ -1238,11 +1312,12 @@ vl_sift_delete (VlSiftFilt* f)
 
 VL_EXPORT
 int
-vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
+vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
 {
   int o, s, h, w ;
   double sa, sb ;
   vl_sift_pix *octave ;
+  vl_sift_pix_fixed *octave_fixed ;
 
   /* shortcuts */
   vl_sift_pix *temp   = f-> temp ;
@@ -1277,27 +1352,28 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
    */
 
   octave = vl_sift_get_octave (f, s_min) ;
+  octave_fixed = vl_sift_get_octave_fixed (f, s_min) ;
 
   if (o_min < 0) {
     /* double once */
-    copy_and_upsample_rows (temp,   im,   width,      height) ;
-    copy_and_upsample_rows (octave, temp, height, 2 * width ) ;
+    copy_and_upsample_rows_fixed ((vl_sift_pix_fixed*)temp,   im,   width,      height) ;
+    copy_and_upsample_rows_fixed (octave_fixed, (vl_sift_pix_fixed*)temp, height, 2 * width ) ;
 
     /* double more */
     for(o = -1 ; o > o_min ; --o) {
-      copy_and_upsample_rows (temp, octave,
+      copy_and_upsample_rows_fixed ((vl_sift_pix_fixed*)temp, octave_fixed,
                               width << -o,      height << -o ) ;
-      copy_and_upsample_rows (octave, temp,
+      copy_and_upsample_rows_fixed (octave_fixed, (vl_sift_pix_fixed*)temp,
                               width << -o, 2 * (height << -o)) ;
     }
   }
   else if (o_min > 0) {
     /* downsample */
-    copy_and_downsample (octave, im, width, height, o_min) ;
+    copy_and_downsample_fixed (octave_fixed, im, width, height, o_min) ;
   }
   else {
     /* direct copy */
-    memcpy(octave, im, sizeof(vl_sift_pix) * width * height) ;
+    memcpy(octave_fixed, im, sizeof(vl_sift_pix_fixed) * width * height) ;
   }
 
   /*
@@ -1311,16 +1387,15 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
 
 
 
-
-
-
   VL_PRINTF("processing first octave...");
 #ifdef ARCH_ARM
   DestinationImage images[5];
   int destImageCount = 0;
 
-  _vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
+  //_vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
   //my_write_pgm_image_fixed(f->octave_fixed, w, h, "tmp/before_01.pgm");
+#else
+  _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
 #endif
 
 

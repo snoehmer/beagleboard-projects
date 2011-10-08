@@ -56,7 +56,7 @@ void filterMultipleTimes_on_dsp(short* imputImage,
     params->gauss = *gaussKernel;
     params->gauss.data = (short*)vl_dsp_get_mapped_addr(gaussKernel->data);
 
-    vl_dsp_dmm_buffer_begin((void*)gaussKernel);
+    //vl_dsp_dmm_buffer_begin((void*)gaussKernel);
     vl_dsp_dmm_buffer_begin((void*)gaussKernel->data);
     vl_dsp_dmm_buffer_begin((void*)params);
 
