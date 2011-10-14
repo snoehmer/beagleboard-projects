@@ -41,8 +41,6 @@ typedef struct  {
 #include "../../../vl/sift_dsp.h"
 
 
-
-
 int filterImageGaussian(
   short* inputOutputImage,
   int width, int height,
@@ -64,6 +62,7 @@ unsigned int dsp_sift_execute(void *env)
 {
 	dsp_msg_t msg;
 	unsigned char done = 0;
+	short* gaussChain_inputImage = NULL;
 
 
 
@@ -134,6 +133,58 @@ unsigned int dsp_sift_execute(void *env)
 
 		    break;
 		  }
+
+
+    case DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN:
+      {
+        filterImageGaussian_chained_params * params = (filterImageGaussian_chained_params*) msg.arg_1;
+        int result;
+
+        BCACHE_inv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
+
+        if(params->inputImage)
+        {
+          BCACHE_inv((void*) params->inputImage, params->inputOutputImageSize, 1);
+          gaussChain_inputImage = params->inputImage;
+        }
+
+        BCACHE_inv((void*) params->gauss.data, params->gauss.width * sizeof(short), 1);
+        BCACHE_inv((void*) params->outputImage, params->inputOutputImageSize, 1);
+
+        if(gaussChain_inputImage != params->outputImage)
+        {
+          /*if(params->inputOutputImageSize%8 != 0)
+          {
+            msg.arg_2 = 123;
+            */
+            memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
+          /*}
+          else
+          {
+            msg.arg_2 = 456;
+            DSP_blk_move(gaussChain_inputImage, params->outputImage, params->inputOutputImageSize);
+          }*/
+        }
+
+        gaussChain_inputImage = params->outputImage;
+
+        result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
+
+
+        BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
+        BCACHE_wbInv((void*) params->outputImage, params->inputOutputImageSize, 1);
+
+
+        if(result == 0)
+          msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED;
+        else
+          msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED;
+
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
 
 		case 0x80000000:
 			done = 1;
@@ -232,6 +283,14 @@ void vl_imconvcol_vf(float* dst, int dst_stride,
 
 }
 
+// img Transpose
+void DSP_mat_trans_slow(short *x, short rows, short columns, short *r)
+{
+  short i,j;
+    for(i=0; i<columns; i++)
+      for(j=0; j<rows; j++)
+        *(r+i*rows+j)=*(x+i+columns*j);
+}
 
 int filterImageGaussian(
   short* inputOutputImage,
@@ -292,12 +351,15 @@ int filterImageGaussian(
 
 
   // transpose image again
-  DSP_mat_trans(tmpSpace + (8-radius), width, height, inputOutputImage);
+  if(width%4 == 0 && height%4 == 0)
+    DSP_mat_trans(tmpSpace + (8-radius), width, height, inputOutputImage);
+  else
+    DSP_mat_trans_slow(tmpSpace + (8-radius), width, height, inputOutputImage);
+
 
   // vl_free temporary space
   free(tmpSpace);
 
   return 0;
 }
-
 

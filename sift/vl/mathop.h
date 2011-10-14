@@ -110,6 +110,28 @@ vl_mod_2pi_f (float x)
 }
 
 /** @brief Fast <code>mod(x, 2 * VL_PI)</code>
+ **
+ ** @param x input value.
+ ** @return <code>mod(x, 2 * VL_PI)</code>
+ **
+ ** The function is optimized for small absolute values of @a x.
+ **
+ ** The result is guaranteed to be not smaller than 0. However, due to
+ ** finite numerical precision and rounding errors, the result can be
+ ** equal to 2 * VL_PI (for instance, if @c x is a very small negative
+ ** number).
+ **/
+
+VL_INLINE short
+vl_mod_2pi_fixed (short x)
+{
+  const short VL_2PI_FIXED = (short)(2 * VL_PI * 128*32);
+  while (x > VL_2PI_FIXED) x -= VL_2PI_FIXED ;
+  while (x < 0) x += VL_2PI_FIXED;
+  return x ;
+}
+
+/** @brief Fast <code>mod(x, 2 * VL_PI)</code>
  ** @see vl_mod_2pi_f
  **/
 

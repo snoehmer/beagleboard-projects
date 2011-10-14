@@ -168,6 +168,7 @@ dsp_msg DspNode::GetMessage()
 
 void Dsp::Destroy()
 {
+  Logger::info(Logger::DSP, "Dsp::Destroy()");
   init = false;
 
   DestroyNode();

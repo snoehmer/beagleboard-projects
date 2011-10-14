@@ -1,5 +1,6 @@
 #include "convolutionkernel.h"
 #include "generic.h"
+#include <stdio.h>
 
 /************************************************************************/
 /*						GAUSS KERNEL STUFF 								*/
@@ -170,6 +171,7 @@ void filterImageGaussian(
 		kernelLen, 
 		width*height);
 
+	printf("radius:%d, height:%d, width:%d\n", radius, height, width);
 	// transpose ver.1 // CAUSES NO MORE BAD SHIFT ERRORS!!!
 	DSP_mat_trans(tmpSpace + (8-radius), height, width, inputOutputImage);
 

@@ -16,6 +16,13 @@ GNU GPLv2, or (at your option) any later version.
 #include <stdio.h>
 #include "generic.h"
 
+#define VL_FIXED_TO_FLOAT(A) (((float)(A))/128)
+#define VL_FLOAT_TO_FIXED(A) ((short)round((A)*128))
+#define VL_INT_TO_FIXED(A) (((short)(A))<<7)
+#define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))>>7)
+#define VL_ANGLE_BIT_SHIFT 5
+#define VL_PI_FIXED ((short)(VL_PI * (128<<VL_ANGLE_BIT_SHIFT)))
+
 VL_EXPORT void vl_set_timemeasuring_start_func(void (*func)  (char*));
 VL_EXPORT void vl_set_timemeasuring_stop_func(void (*func)  (char*));
 
@@ -68,6 +75,7 @@ typedef struct _VlSiftFilt
 
   vl_sift_pix *temp ;   /**< temporary pixel buffer. */
   vl_sift_pix *octave ; /**< current GSS data. */
+  vl_sift_pix_fixed *octave_fixed ; /**< current GSS data. in fixed point notation */
   vl_sift_pix *dog ;    /**< current DoG data. */
   int octave_width ;    /**< current octave width. */
   int octave_height ;   /**< current octave height. */
@@ -110,7 +118,7 @@ void         vl_sift_delete (VlSiftFilt *f) ;
 
 VL_EXPORT
 int   vl_sift_process_first_octave       (VlSiftFilt *f,
-                                          vl_sift_pix const *im) ;
+    vl_sift_pix_fixed const *im) ;
 
 VL_EXPORT
 int   vl_sift_process_next_octave        (VlSiftFilt *f) ;
@@ -256,6 +264,26 @@ vl_sift_get_octave (VlSiftFilt const *f, int s)
   int w = vl_sift_get_octave_width  (f) ;
   int h = vl_sift_get_octave_height (f) ;
   return f->octave + w * h * (s - f->s_min) ;
+}
+
+/** ------------------------------------------------------------------
+ ** @brief Get current octave data
+ ** @param f SIFT filter.
+ ** @param s level index.
+ **
+ ** The level index @a s ranges in the interval <tt>s_min = -1</tt>
+ ** and <tt> s_max = S + 2</tt>, where @c S is the number of levels
+ ** per octave.
+ **
+ ** @return pointer to the octave data for level @a s.
+ **/
+
+VL_INLINE vl_sift_pix_fixed *
+vl_sift_get_octave_fixed (VlSiftFilt const *f, int s)
+{
+  int w = vl_sift_get_octave_width  (f) ;
+  int h = vl_sift_get_octave_height (f) ;
+  return f->octave_fixed + w * h * (s - f->s_min) ;
 }
 
 /** ------------------------------------------------------------------

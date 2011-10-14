@@ -31,7 +31,7 @@ class Sift
 protected:
   VlPgmImage pim;
   vl_uint8 *data;
-  vl_sift_pix *fdata;
+  vl_sift_pix_fixed *fdata;
   std::vector<KeyPointDescriptor> detected_keypoints;
   Dsp* dsp;
 

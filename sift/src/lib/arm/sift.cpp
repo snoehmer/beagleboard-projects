@@ -110,12 +110,9 @@ Sift::~Sift()
     fdata = 0;
   }
 
-  /* release image data */
-  if (data)
-  {
-    vl_free (data) ;
-    data = 0 ;
-  }
+#ifdef ARCH_ARM
+  dsp->Destroy();
+#endif
 }
 
 
@@ -182,8 +179,8 @@ void Sift::ReadImageFromFile(char* filename)
   /* allocate buffer */
   data  = (vl_uint8*)vl_malloc(vl_pgm_get_npixels (&pim) *
                  vl_pgm_get_bpp(&pim) * sizeof (vl_uint8)   ) ;
-  fdata = (vl_sift_pix*)vl_malloc(vl_pgm_get_npixels (&pim) *
-                 vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix)) ;
+  fdata = (vl_sift_pix_fixed*)vl_malloc(vl_pgm_get_npixels (&pim) *
+                 vl_pgm_get_bpp       (&pim) * sizeof (vl_sift_pix_fixed)) ;
 
   if (!data || !fdata)
   {
@@ -202,13 +199,20 @@ void Sift::ReadImageFromFile(char* filename)
 
   /* convert data type */
   for (q = 0 ; q < (unsigned) (pim.width * pim.height) ; ++q) {
-    fdata [q] = data [q] ;
+    fdata [q] = VL_INT_TO_FIXED(data [q]);
   }
 
   /* close files */
   if (in) {
     fclose (in) ;
     in = 0 ;
+  }
+
+  /* release image data */
+  if (data)
+  {
+    vl_free (data) ;
+    data = 0 ;
   }
 }
 
@@ -336,7 +340,7 @@ int Sift::Detect()
 
 
 
-    /* for each keypoint ........................................ */
+    // for each keypoint ........................................
     for (; i < nkeys ; ++i)
     {
       measure.startTimer("per_kpoint");
@@ -345,17 +349,17 @@ int Sift::Detect()
       //VlSiftKeypoint        ik ;
       VlSiftKeypoint const *k ;
 
-      /* obtain keypoint orientations ........................... */
+      // obtain keypoint orientations ...........................
       k = keys + i ;
       nangles = vl_sift_calc_keypoint_orientations
         (filt, angles, k) ;
 
-      /* for each orientation ................................... */
+      // for each orientation ...................................
       for (q = 0 ; q < (unsigned) nangles ; ++q)
       {
         KeyPointDescriptor newKeyPoint;
 
-        /* compute descriptor (if necessary) */
+        // compute descriptor (if necessary)
         //if (out.active || dsc.active) {
         vl_sift_calc_keypoint_descriptor(filt, newKeyPoint.descr, k, angles [q]) ;
         //}
@@ -378,7 +382,6 @@ int Sift::Detect()
   /* release filter */
   if (filt)
   {
-    Logger::debug(Logger::SIFT, "freeing filt: %x", filt);
     vl_sift_delete (filt) ;
     filt = 0 ;
   }

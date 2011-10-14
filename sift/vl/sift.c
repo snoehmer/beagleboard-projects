@@ -798,6 +798,44 @@ copy_and_upsample_rows
   }
 }
 
+/** ------------------------------------------------------------------
+ ** @internal
+ ** @brief Copy image, upsample rows and take transpose
+ **
+ ** @param dst     output image buffer.
+ ** @param src     input image buffer.
+ ** @param width   input image width.
+ ** @param height  input image height.
+ **
+ ** The output image has dimensions @a height by 2 @a width (so the
+ ** destination buffer must be at least as big as two times the
+ ** input buffer).
+ **
+ ** Upsampling is performed by linear interpolation.
+ **/
+
+static void
+copy_and_upsample_rows_fixed
+(vl_sift_pix_fixed       *dst,
+ vl_sift_pix_fixed const *src, int width, int height)
+{
+  int x, y ;
+  vl_sift_pix_fixed a, b ;
+
+  for(y = 0 ; y < height ; ++y) {
+    b = a = *src++ ;
+    for(x = 0 ; x < width - 1 ; ++x) {
+      b = *src++ ;
+      *dst = a ;             dst += height ;
+      *dst = ((int)a + (int)b)/2 ; dst += height ;
+      a = b ;
+    }
+    *dst = b ; dst += height ;
+    *dst = b ; dst += height ;
+    dst += 1 - width * 2 * height ;
+  }
+}
+
 
 /* ----------------------------------------------------------------- */
 /** @brief Save image on disk
@@ -854,10 +892,6 @@ my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char*
   return 0;
 }
 
-#define VL_FIXED_TO_FLOAT(A) (((float)(A))/128)
-#define VL_FLOAT_TO_FIXED(A) ((short)round((A)*128))
-#define VL_INT_TO_FIXED(A) ((short)(A)*128)
-#define VL_FIXED_MUL(A,B) ((((int)(A))*((int)(B)))/128)
 
 static vl_sift_pix_fixed* _vl_create_fixed_from_float(const float* src, int len)
 {
@@ -906,6 +940,14 @@ _vl_sift_smooth (VlSiftFilt * self,
   char filenamebefore[31];
   char filenameafter[31];
 
+  if(sigma > 2.5)
+  {
+    VL_PRINTF("replacing sigma=%f by sigma=%f,%f....", sigma, sigma/sqrtf(2), sigma/sqrtf(2));
+    _vl_sift_smooth(self, tempImage, outputImage, inputImage, width, height, sigma / sqrtf(2));
+    _vl_sift_smooth(self, outputImage, 0, tempImage, width, height, sigma / sqrtf(2));
+    return;
+  }
+
   counter++;
 
   snprintf(filenamebefore, sizeof(filenamebefore), "tmp/before_%02d.pgm", counter);
@@ -913,7 +955,7 @@ _vl_sift_smooth (VlSiftFilt * self,
 
   my_write_pgm_image(inputImage, width, height, filenamebefore);
 
-  VL_PRINTF("smoothing with sigma %lf, width: %d, height: %d", sigma, width, height);
+  VL_PRINTF("smoothing with sigma %lf, width: %d, height: %d, saving as:%s", sigma, width, height, filenameafter);
 
 #define FIXEDPOINT
 #ifdef FIXEDPOINT
@@ -928,8 +970,11 @@ _vl_sift_smooth (VlSiftFilt * self,
   /*short* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
   for(i = 0; i < width*height; i++) // beware, we stay in the signed range!
     shortImage[i] = ((short)round(inputImage[i]*128));*/
-  vl_sift_pix_fixed* shortImage = _vl_create_fixed_from_float(inputImage, ((width*height)+MAX_KERNEL_WIDTH_DEF-1));
 
+  vl_sift_pix_fixed* shortImage = (short*)vl_malloc(((width*height)+MAX_KERNEL_WIDTH_DEF-1)*sizeof(short));
+  _vl_convert_float_to_fixed(inputImage, shortImage, ((width*height)));
+  //set the border to 0
+  memset((void*)(shortImage + width*height), 0, (MAX_KERNEL_WIDTH_DEF-1)*sizeof(vl_sift_pix_fixed));
 
 #ifdef ARCH_ARM
   filterImageGaussian_on_dsp(shortImage, width, height, gausskernel);
@@ -1056,6 +1101,41 @@ copy_and_downsample
 }
 
 /** ------------------------------------------------------------------
+ ** @internal
+ ** @brief Copy and downsample an image
+ **
+ ** @param dst    output imgae buffer.
+ ** @param src    input  image buffer.
+ ** @param width  input  image width.
+ ** @param height input  image height.
+ ** @param d      octaves (non negative).
+ **
+ ** The function downsamples the image @a d times, reducing it to @c
+ ** 1/2^d of its original size. The parameters @a width and @a height
+ ** are the size of the input image. The destination image @a dst is
+ ** assumed to be <code>floor(width/2^d)</code> pixels wide and
+ ** <code>floor(height/2^d)</code> pixels high.
+ **/
+
+static void
+copy_and_downsample_fixed
+(vl_sift_pix_fixed       *dst,
+ vl_sift_pix_fixed const *src,
+ int width, int height, int d)
+{
+  int x, y ;
+
+  d = 1 << d ; /* d = 2^d */
+  for(y = 0 ; y < height ; y+=d) {
+    vl_sift_pix_fixed const * srcrowp = src + y * width ;
+    for(x = 0 ; x < width - (d-1) ; x+=d) {
+      *dst++ = *srcrowp ;
+      srcrowp += d ;
+    }
+  }
+}
+
+/** ------------------------------------------------------------------
  ** @brief Create a new SIFT filter
  **
  ** @param width    image width.
@@ -1103,12 +1183,21 @@ vl_sift_new (int width, int height,
   f-> temp    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel    ) ;
   f-> octave  = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min + 1)  ) ;
+  memset(f->octave, 0, sizeof(vl_sift_pix) * nel
+                        * (f->s_max - f->s_min + 1)  );//to make valgrind feel happy
+  f-> octave_fixed  = (vl_sift_pix_fixed*)vl_malloc (sizeof(vl_sift_pix_fixed) * nel
+                        * (f->s_max - f->s_min + 1)  ) ;
+
+
   f-> dog     = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min    )  ) ;
   f-> grad    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel * 2
                         * (f->s_max - f->s_min    )  ) ;
+  memset(f->grad, 0, sizeof(vl_sift_pix) * nel * 2
+                  * (f->s_max - f->s_min    )  ); //to make valgrind feel happy
   f-> fixed_grad = (vl_sift_pix_fixed*)vl_malloc (sizeof(vl_sift_pix_fixed) * nel * 2
                         * (f->s_max - f->s_min    )  ) ;
+
 
   f-> sigman  = 0.5 ;
   f-> sigmak  = pow (2.0, 1.0 / nlevels) ;
@@ -1152,12 +1241,17 @@ VL_EXPORT
 void
 vl_sift_delete (VlSiftFilt* f)
 {
+  int w   = VL_SHIFT_LEFT (f->width,  -f->o_min) ;
+  int h   = VL_SHIFT_LEFT (f->height, -f->o_min) ;
+  int nel = w * h ;
+
   if (f) {
     if (f->keys) vl_free (f->keys) ;
     if (f->grad) vl_free (f->grad) ;
     if (f->fixed_grad) vl_free (f->fixed_grad) ;
     if (f->dog) vl_free (f->dog) ;
     if (f->octave) vl_free (f->octave) ;
+    if (f->octave_fixed) vl_free (f->octave_fixed) ;
     if (f->temp) vl_free (f->temp) ;
     if (f->gaussFilter) vl_free (f->gaussFilter) ;
     vl_free (f) ;
@@ -1182,11 +1276,12 @@ vl_sift_delete (VlSiftFilt* f)
 
 VL_EXPORT
 int
-vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
+vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
 {
   int o, s, h, w ;
   double sa, sb ;
   vl_sift_pix *octave ;
+  vl_sift_pix_fixed *octave_fixed ;
 
   /* shortcuts */
   vl_sift_pix *temp   = f-> temp ;
@@ -1221,27 +1316,28 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
    */
 
   octave = vl_sift_get_octave (f, s_min) ;
+  octave_fixed = vl_sift_get_octave_fixed (f, s_min) ;
 
   if (o_min < 0) {
     /* double once */
-    copy_and_upsample_rows (temp,   im,   width,      height) ;
-    copy_and_upsample_rows (octave, temp, height, 2 * width ) ;
+    copy_and_upsample_rows_fixed ((vl_sift_pix_fixed*)temp,   im,   width,      height) ;
+    copy_and_upsample_rows_fixed (octave_fixed, (vl_sift_pix_fixed*)temp, height, 2 * width ) ;
 
     /* double more */
     for(o = -1 ; o > o_min ; --o) {
-      copy_and_upsample_rows (temp, octave,
+      copy_and_upsample_rows_fixed ((vl_sift_pix_fixed*)temp, octave_fixed,
                               width << -o,      height << -o ) ;
-      copy_and_upsample_rows (octave, temp,
+      copy_and_upsample_rows_fixed (octave_fixed, (vl_sift_pix_fixed*)temp,
                               width << -o, 2 * (height << -o)) ;
     }
   }
   else if (o_min > 0) {
     /* downsample */
-    copy_and_downsample (octave, im, width, height, o_min) ;
+    copy_and_downsample_fixed (octave_fixed, im, width, height, o_min) ;
   }
   else {
     /* direct copy */
-    memcpy(octave, im, sizeof(vl_sift_pix) * width * height) ;
+    memcpy(octave_fixed, im, sizeof(vl_sift_pix_fixed) * width * height) ;
   }
 
   /*
@@ -1255,9 +1351,27 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
 
 
 
+  VL_PRINTF("processing first octave...");
+#ifdef ARCH_ARM
+  DestinationImage images[5];
+  int destImageCount = 0;
+
+  //_vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
+  //my_write_pgm_image_fixed(f->octave_fixed, w, h, "tmp/before_01.pgm");
+#else
+  _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
+#endif
+
+
   if (sa > sb) {
     double sd = sqrt (sa*sa - sb*sb) ;
+
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = f->octave_fixed;
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
+#endif
   }
 
   /* -----------------------------------------------------------------
@@ -1266,9 +1380,25 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix const *im)
 
   for(s = s_min + 1 ; s <= s_max ; ++s) {
     double sd = dsigma0 * pow (sigmak, s) ;
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
                      vl_sift_get_octave(f, s - 1), w, h, sd) ;
+#endif
   }
+
+#ifdef ARCH_ARM
+
+  filterMultipleTimes_on_dsp(f->octave_fixed,
+      w, h, images, destImageCount);
+
+
+  time_measureing_start_func("conversion");
+  _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
+  time_measureing_stop_func("conversion");
+#endif
 
 
   return VL_ERR_OK ;
@@ -1331,9 +1461,22 @@ vl_sift_process_next_octave (VlSiftFilt *f)
   sa = sigma0 * powf (sigmak, s_min     ) ;
   sb = sigma0 * powf (sigmak, s_best - S) ;
 
+#ifdef ARCH_ARM
+  DestinationImage images[5];
+  int destImageCount = 0;
+
+  _vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
+
+#endif
+
   if (sa > sb) {
     double sd = sqrt (sa*sa - sb*sb) ;
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = f->octave_fixed;
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
+#endif
   }
 
   /* ------------------------------------------------------------------
@@ -1342,9 +1485,25 @@ vl_sift_process_next_octave (VlSiftFilt *f)
 
   for(s = s_min + 1 ; s <= s_max ; ++s) {
     double sd = dsigma0 * pow (sigmak, s) ;
+#ifdef ARCH_ARM
+    images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
+    images[destImageCount++].sigma = sd;
+#else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
                      vl_sift_get_octave(f, s - 1), w, h, sd) ;
+#endif
   }
+
+#ifdef ARCH_ARM
+
+  filterMultipleTimes_on_dsp(f->octave_fixed,
+      w, h, images, destImageCount);
+
+  time_measureing_start_func("conversion");
+  _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
+  time_measureing_stop_func("conversion");
+#endif
+
 
   return VL_ERR_OK ;
 }
@@ -2229,9 +2388,9 @@ vl_sift_calc_keypoint_descriptor (VlSiftFilt *f,
 
   TIME_MEASURING_START_FUNC("VL_descr_loop");
 
-  static float abweichung_sum = 0;
-  static float abweichung_max = 0;
-  static float max_result = 0;
+  //static float abweichung_sum = 0;
+  //static float abweichung_max = 0;
+  //static float max_result = 0;
 
   /*
    * Process pixels in the intersection of the image rectangle
