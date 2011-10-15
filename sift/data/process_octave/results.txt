@@ -1,212 +1,212 @@
-1.) fixed point filtering on ARM: (detection is invalid...)
+1,) fixed point filtering on ARM: (detection is invalid,,,)
 4 Wiederholungen:
 
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      5881.652832 |            1 |5881.652832
-   process_octave |      4521.729980 |            6 |753.621643
- process_f_octave |      3449.981934 |            1 |3449.981934
-       conversion |       202.606995 |            5 |40.521400
-      sift_detect |       801.635010 |            5 |160.326996
-           VL_DOG |       260.587006 |            5 |52.117401
- process_n_octave |      1071.718018 |            5 |214.343597
+   Sift::Detect() |      5881,652832 |            1 |5881,652832
+   process_octave |      4521,729980 |            6 |753,621643
+ process_f_octave |      3449,981934 |            1 |3449,981934
+       conversion |       202,606995 |            5 |40,521400
+      sift_detect |       801,635010 |            5 |160,326996
+           VL_DOG |       260,587006 |            5 |52,117401
+ process_n_octave |      1071,718018 |            5 |214,343597
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      6071.105957 |            1 |6071.105957
-   process_octave |      4514.222168 |            6 |752.370361
- process_f_octave |      3410.430908 |            1 |3410.430908
-       conversion |       202.727005 |            5 |40.545403
-      sift_detect |      1426.543945 |            5 |285.308777
-           VL_DOG |       254.699005 |            5 |50.939800
- process_n_octave |      1103.760010 |            5 |220.751999
+   Sift::Detect() |      6071,105957 |            1 |6071,105957
+   process_octave |      4514,222168 |            6 |752,370361
+ process_f_octave |      3410,430908 |            1 |3410,430908
+       conversion |       202,727005 |            5 |40,545403
+      sift_detect |      1426,543945 |            5 |285,308777
+           VL_DOG |       254,699005 |            5 |50,939800
+ process_n_octave |      1103,760010 |            5 |220,751999
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      5913.909180 |            1 |5913.909180
-   process_octave |      4517.424805 |            6 |752.904114
- process_f_octave |      3440.001953 |            1 |3440.001953
-       conversion |       212.738007 |            5 |42.547600
-      sift_detect |       829.591003 |            5 |165.918198
-           VL_DOG |       298.553009 |            5 |59.710602
- process_n_octave |      1077.331055 |            5 |215.466217
+   Sift::Detect() |      5913,909180 |            1 |5913,909180
+   process_octave |      4517,424805 |            6 |752,904114
+ process_f_octave |      3440,001953 |            1 |3440,001953
+       conversion |       212,738007 |            5 |42,547600
+      sift_detect |       829,591003 |            5 |165,918198
+           VL_DOG |       298,553009 |            5 |59,710602
+ process_n_octave |      1077,331055 |            5 |215,466217
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      5857.849121 |            1 |5857.849121
-   process_octave |      4497.770996 |            6 |749.628479
- process_f_octave |      3409.851074 |            1 |3409.851074
-       conversion |       198.487000 |            5 |39.697399
-      sift_detect |      1225.983032 |            5 |245.196609
-           VL_DOG |       260.772003 |            5 |52.154400
- process_n_octave |      1087.828979 |            5 |217.565796
+   Sift::Detect() |      5857,849121 |            1 |5857,849121
+   process_octave |      4497,770996 |            6 |749,628479
+ process_f_octave |      3409,851074 |            1 |3409,851074
+       conversion |       198,487000 |            5 |39,697399
+      sift_detect |      1225,983032 |            5 |245,196609
+           VL_DOG |       260,772003 |            5 |52,154400
+ process_n_octave |      1087,828979 |            5 |217,565796
  
 
  ___________________________________________________________________________
-2.) Das gleiche wie 1.) (nur 2x DSP_fir_gen weggelassen...):
+2,) Das gleiche wie 1,) (nur 2x DSP_fir_gen weggelassen,,,):
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1636.016968 |            1 |1636.016968
-   process_octave |       858.369995 |            6 |143.061661
- process_f_octave |       614.653992 |            1 |614.653992
-       conversion |       168.000000 |            5 |33.599998
-      sift_detect |       646.637024 |            5 |129.327408
-           VL_DOG |       193.052994 |            5 |38.610600
- process_n_octave |       243.684998 |            5 |48.737000
+   Sift::Detect() |      1636,016968 |            1 |1636,016968
+   process_octave |       858,369995 |            6 |143,061661
+ process_f_octave |       614,653992 |            1 |614,653992
+       conversion |       168,000000 |            5 |33,599998
+      sift_detect |       646,637024 |            5 |129,327408
+           VL_DOG |       193,052994 |            5 |38,610600
+ process_n_octave |       243,684998 |            5 |48,737000
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1636.628052 |            1 |1636.628052
-   process_octave |       866.731018 |            6 |144.455170
- process_f_octave |       614.562988 |            1 |614.562988
-       conversion |       166.718002 |            5 |33.343601
-      sift_detect |       640.655029 |            5 |128.131012
-           VL_DOG |       204.098999 |            5 |40.819801
- process_n_octave |       252.136993 |            5 |50.427399
+   Sift::Detect() |      1636,628052 |            1 |1636,628052
+   process_octave |       866,731018 |            6 |144,455170
+ process_f_octave |       614,562988 |            1 |614,562988
+       conversion |       166,718002 |            5 |33,343601
+      sift_detect |       640,655029 |            5 |128,131012
+           VL_DOG |       204,098999 |            5 |40,819801
+ process_n_octave |       252,136993 |            5 |50,427399
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1638.123047 |            1 |1638.123047
-   process_octave |       867.859009 |            6 |144.643173
- process_f_octave |       613.770020 |            1 |613.770020
-       conversion |       168.886002 |            5 |33.777199
-      sift_detect |       638.367004 |            5 |127.673401
-           VL_DOG |       193.177002 |            5 |38.635399
- process_n_octave |       254.059006 |            5 |50.811802
+   Sift::Detect() |      1638,123047 |            1 |1638,123047
+   process_octave |       867,859009 |            6 |144,643173
+ process_f_octave |       613,770020 |            1 |613,770020
+       conversion |       168,886002 |            5 |33,777199
+      sift_detect |       638,367004 |            5 |127,673401
+           VL_DOG |       193,177002 |            5 |38,635399
+ process_n_octave |       254,059006 |            5 |50,811802
  
  
  
  _____________________________________________________________________________
-3.) Das gleiche wie 1.) (nur 2x DSP_mat_transp weggelassen...):
+3,) Das gleiche wie 1,) (nur 2x DSP_mat_transp weggelassen,,,):
 
 identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      4848.969238 |            1 |4848.969238
-   process_octave |      4068.389893 |            6 |678.065002
- process_f_octave |      3048.125977 |            1 |3048.125977
-       conversion |       193.938995 |            5 |38.787800
-      sift_detect |       650.879028 |            5 |130.175812
-           VL_DOG |       215.302002 |            5 |43.060402
- process_n_octave |      1020.203003 |            5 |204.040604
-
-
-identifier        | totaltime(ms)    | callcount    | mean duration
------------------------------------------------------------------
-   Sift::Detect() |      4845.794922 |            1 |4845.794922
-   process_octave |      4057.615967 |            6 |676.269348
- process_f_octave |      3048.400879 |            1 |3048.400879
-       conversion |       195.283005 |            5 |39.056602
-      sift_detect |       642.366028 |            5 |128.473206
-           VL_DOG |       207.061996 |            5 |41.412399
- process_n_octave |      1009.094971 |            5 |201.819000
+   Sift::Detect() |      4848,969238 |            1 |4848,969238
+   process_octave |      4068,389893 |            6 |678,065002
+ process_f_octave |      3048,125977 |            1 |3048,125977
+       conversion |       193,938995 |            5 |38,787800
+      sift_detect |       650,879028 |            5 |130,175812
+           VL_DOG |       215,302002 |            5 |43,060402
+ process_n_octave |      1020,203003 |            5 |204,040604
 
 
 identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      4826.141113 |            1 |4826.141113
-   process_octave |      4047.729004 |            6 |674.621521
- process_f_octave |      3046.447998 |            1 |3046.447998
-       conversion |       202.942993 |            5 |40.588600
-      sift_detect |       636.992981 |            5 |127.398598
-           VL_DOG |       191.253998 |            5 |38.250801
- process_n_octave |      1001.250977 |            5 |200.250198
+   Sift::Detect() |      4845,794922 |            1 |4845,794922
+   process_octave |      4057,615967 |            6 |676,269348
+ process_f_octave |      3048,400879 |            1 |3048,400879
+       conversion |       195,283005 |            5 |39,056602
+      sift_detect |       642,366028 |            5 |128,473206
+           VL_DOG |       207,061996 |            5 |41,412399
+ process_n_octave |      1009,094971 |            5 |201,819000
+
+
+identifier        | totaltime(ms)    | callcount    | mean duration
+-----------------------------------------------------------------
+   Sift::Detect() |      4826,141113 |            1 |4826,141113
+   process_octave |      4047,729004 |            6 |674,621521
+ process_f_octave |      3046,447998 |            1 |3046,447998
+       conversion |       202,942993 |            5 |40,588600
+      sift_detect |       636,992981 |            5 |127,398598
+           VL_DOG |       191,253998 |            5 |38,250801
+ process_n_octave |      1001,250977 |            5 |200,250198
 
  _____________________________________________________________________________
- 4.) fixed point filtering on DSP: (detection is invalid...)
+ 4,) fixed point filtering on DSP: (detection is invalid,,,)
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2457.916016 |            1 |2457.916016
-   process_octave |      1523.987061 |            6 |253.997849
- process_f_octave |      1193.572998 |            1 |1193.572998
-       conversion |       194.854996 |            5 |38.971001
-      sift_detect |       803.312988 |            5 |160.662598
-           VL_DOG |       263.243988 |            5 |52.648796
- process_n_octave |       330.321991 |            5 |66.064400
+   Sift::Detect() |      2457,916016 |            1 |2457,916016
+   process_octave |      1523,987061 |            6 |253,997849
+ process_f_octave |      1193,572998 |            1 |1193,572998
+       conversion |       194,854996 |            5 |38,971001
+      sift_detect |       803,312988 |            5 |160,662598
+           VL_DOG |       263,243988 |            5 |52,648796
+ process_n_octave |       330,321991 |            5 |66,064400
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2508.544922 |            1 |2508.544922
-   process_octave |      1586.761963 |            6 |264.460327
- process_f_octave |      1197.692993 |            1 |1197.692993
-       conversion |       197.938004 |            5 |39.587601
-      sift_detect |       790.619995 |            5 |158.123993
-           VL_DOG |       260.528992 |            5 |52.105797
- process_n_octave |       389.007996 |            5 |77.801598
+   Sift::Detect() |      2508,544922 |            1 |2508,544922
+   process_octave |      1586,761963 |            6 |264,460327
+ process_f_octave |      1197,692993 |            1 |1197,692993
+       conversion |       197,938004 |            5 |39,587601
+      sift_detect |       790,619995 |            5 |158,123993
+           VL_DOG |       260,528992 |            5 |52,105797
+ process_n_octave |       389,007996 |            5 |77,801598
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2469.849121 |            1 |2469.849121
-   process_octave |      1543.119995 |            6 |257.186676
- process_f_octave |      1195.587036 |            1 |1195.587036
-       conversion |       203.610992 |            5 |40.722198
-      sift_detect |       796.783020 |            5 |159.356598
-           VL_DOG |       265.351013 |            5 |53.070202
- process_n_octave |       347.502991 |            5 |69.500595
+   Sift::Detect() |      2469,849121 |            1 |2469,849121
+   process_octave |      1543,119995 |            6 |257,186676
+ process_f_octave |      1195,587036 |            1 |1195,587036
+       conversion |       203,610992 |            5 |40,722198
+      sift_detect |       796,783020 |            5 |159,356598
+           VL_DOG |       265,351013 |            5 |53,070202
+ process_n_octave |       347,502991 |            5 |69,500595
  
   _____________________________________________________________________________
- 5.) fixed point filtering on DSP(nur 2x DSP_fir_gen weggelassen...): (detection is invalid...)
+ 5,) fixed point filtering on DSP(nur 2x DSP_fir_gen weggelassen,,,): (detection is invalid,,,)
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2048.279053 |            1 |2048.279053
-   process_octave |      1271.362061 |            6 |211.893677
- process_f_octave |       973.174988 |            1 |973.174988
-       conversion |       166.595001 |            5 |33.319000
-      sift_detect |       638.427002 |            5 |127.685402
-           VL_DOG |       202.209000 |            5 |40.441799
- process_n_octave |       298.187012 |            5 |59.637402
+   Sift::Detect() |      2048,279053 |            1 |2048,279053
+   process_octave |      1271,362061 |            6 |211,893677
+ process_f_octave |       973,174988 |            1 |973,174988
+       conversion |       166,595001 |            5 |33,319000
+      sift_detect |       638,427002 |            5 |127,685402
+           VL_DOG |       202,209000 |            5 |40,441799
+ process_n_octave |       298,187012 |            5 |59,637402
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2116.485107 |            1 |2116.485107
-   process_octave |      1349.760986 |            6 |224.960159
- process_f_octave |       992.065002 |            1 |992.065002
-       conversion |       166.350998 |            5 |33.270199
-      sift_detect |       636.017029 |            5 |127.203407
-           VL_DOG |       201.171005 |            5 |40.234200
- process_n_octave |       357.635010 |            5 |71.527000
+   Sift::Detect() |      2116,485107 |            1 |2116,485107
+   process_octave |      1349,760986 |            6 |224,960159
+ process_f_octave |       992,065002 |            1 |992,065002
+       conversion |       166,350998 |            5 |33,270199
+      sift_detect |       636,017029 |            5 |127,203407
+           VL_DOG |       201,171005 |            5 |40,234200
+ process_n_octave |       357,635010 |            5 |71,527000
  
  identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      2084.532959 |            1 |2084.532959
-   process_octave |      1308.104980 |            6 |218.017502
- process_f_octave |       982.085999 |            1 |982.085999
-       conversion |       177.399002 |            5 |35.479801
-      sift_detect |       645.994995 |            5 |129.199005
-           VL_DOG |       200.408005 |            5 |40.081600
- process_n_octave |       325.928009 |            5 |65.185600
+   Sift::Detect() |      2084,532959 |            1 |2084,532959
+   process_octave |      1308,104980 |            6 |218,017502
+ process_f_octave |       982,085999 |            1 |982,085999
+       conversion |       177,399002 |            5 |35,479801
+      sift_detect |       645,994995 |            5 |129,199005
+           VL_DOG |       200,408005 |            5 |40,081600
+ process_n_octave |       325,928009 |            5 |65,185600
  
    _____________________________________________________________________________
-6.) fixed point filtering on DSP(nur 2x DSP_mat_trans weggelassen...): (detection is invalid...)
+6,) fixed point filtering on DSP(nur 2x DSP_mat_trans weggelassen,,,): (detection is invalid,,,)
 identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1666.656006 |            1 |1666.656006
-   process_octave |       878.601013 |            6 |146.433502
- process_f_octave |       573.669006 |            1 |573.669006
-       conversion |       203.307999 |            5 |40.661598
-      sift_detect |       649.841003 |            5 |129.968201
-           VL_DOG |       206.848007 |            5 |41.369602
- process_n_octave |       304.841003 |            5 |60.968201
+   Sift::Detect() |      1666,656006 |            1 |1666,656006
+   process_octave |       878,601013 |            6 |146,433502
+ process_f_octave |       573,669006 |            1 |573,669006
+       conversion |       203,307999 |            5 |40,661598
+      sift_detect |       649,841003 |            5 |129,968201
+           VL_DOG |       206,848007 |            5 |41,369602
+ process_n_octave |       304,841003 |            5 |60,968201
 
 identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1708.495972 |            1 |1708.495972
-   process_octave |       932.343018 |            6 |155.390503
- process_f_octave |       605.622009 |            1 |605.622009
-       conversion |       194.761993 |            5 |38.952400
-      sift_detect |       644.776001 |            5 |128.955200
-           VL_DOG |       192.533997 |            5 |38.506798
- process_n_octave |       326.628998 |            5 |65.325798
+   Sift::Detect() |      1708,495972 |            1 |1708,495972
+   process_octave |       932,343018 |            6 |155,390503
+ process_f_octave |       605,622009 |            1 |605,622009
+       conversion |       194,761993 |            5 |38,952400
+      sift_detect |       644,776001 |            5 |128,955200
+           VL_DOG |       192,533997 |            5 |38,506798
+ process_n_octave |       326,628998 |            5 |65,325798
 
 identifier        | totaltime(ms)    | callcount    | mean duration
 -----------------------------------------------------------------
-   Sift::Detect() |      1640.076050 |            1 |1640.076050
-   process_octave |       817.473022 |            6 |136.245499
- process_f_octave |       565.307983 |            1 |565.307983
-       conversion |       201.233002 |            5 |40.246601
-      sift_detect |       683.471008 |            5 |136.694199
-           VL_DOG |       239.809006 |            5 |47.961800
- process_n_octave |       252.044006 |            5 |50.408802
+   Sift::Detect() |      1640,076050 |            1 |1640,076050
+   process_octave |       817,473022 |            6 |136,245499
+ process_f_octave |       565,307983 |            1 |565,307983
+       conversion |       201,233002 |            5 |40,246601
+      sift_detect |       683,471008 |            5 |136,694199
+           VL_DOG |       239,809006 |            5 |47,961800
+ process_n_octave |       252,044006 |            5 |50,408802
 
  
