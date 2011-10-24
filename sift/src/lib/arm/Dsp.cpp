@@ -35,6 +35,7 @@ Dsp& Dsp::Instance()
 Dsp::Dsp()
 {
   init = false;
+  proc = 0;
 }
 
 Dsp::~Dsp()

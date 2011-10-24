@@ -120,33 +120,52 @@ using namespace std;
 class DmmManager
 {
   map<void*, dmm_buffer*> allocated_mem;
+
+
 public:
+
+  DmmManager()
+  {
+    allocated_mem.clear();
+  }
+
   void Add(dmm_buffer* buf)
   {
-    Logger::debug(Logger::DMMMANGER, "DmmManager::Add(buf->data:%x)", buf->data);
+    Logger::debug(Logger::DMMMANGER, "DmmManager::Add(buf:%x buf->data:%x) numel:%d", buf, buf->data, allocated_mem.size());
+
     allocated_mem[buf->data] = buf;
+
   }
 
   void Remove(void* addr)
   {
-    Logger::debug(Logger::DMMMANGER, "DmmManager::Remove(buf->data:%x)", addr);
-    allocated_mem.erase(addr);
+    Logger::debug(Logger::DMMMANGER, "DmmManager::Remove(buf->data:%x) numel:%d", addr, allocated_mem.size());
+
+    if(!allocated_mem.erase(addr))
+      Logger::warn(Logger::DMMMANGER, "DmmManager::Remove, element not found!!!");
+
   }
 
   dmm_buffer* GetDMMBuffer(void* addr)
   {
-    Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x)", addr);
+    Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) numel:%d", addr, allocated_mem.size());
 
-    dmm_buffer* buf =  allocated_mem[addr];
 
-    if(buf)
-      return buf;
+    if(allocated_mem.count(addr))
+    {
+      return allocated_mem[addr];
+    }
+
 
     Logger::warn(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) not found -> searching", addr);
 
-    map<void*,dmm_buffer*>::iterator iter;
+
+
+    map<void*,dmm_buffer*>::const_iterator iter;
     for( iter = allocated_mem.begin(); iter != allocated_mem.end(); iter++ )
     {
+      if(iter->first == 0)
+        Logger::error(Logger::DMMMANGER, "lol???");
       if(((unsigned)addr >= (unsigned)iter->first) && (unsigned)addr <= ((unsigned)iter->first + (unsigned)iter->second->size))
       {
         Logger::debug(Logger::DMMMANGER, "DmmManager::GetDMMBuffer(buf->data:%x) search succeeded: found %x, (end: %x)", addr, iter->first, (int)iter->first + iter->second->size);

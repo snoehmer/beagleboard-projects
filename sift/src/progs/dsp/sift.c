@@ -292,6 +292,28 @@ void DSP_mat_trans_slow(short *x, short rows, short columns, short *r)
         *(r+i*rows+j)=*(x+i+columns*j);
 }
 
+void DSP_fir_gen_slow
+(
+  short     * x,  // Input ('nr + nh - 1' samples)
+  short     * h,  // Filter coefficients (nh taps)
+  short       * r,  // Output array ('nr' samples)
+  int          nh, // Length of filter (nh >= 5)
+  int          nr  // Length of output (nr >= 1)
+)
+{
+  int i, j, sum;
+  for (j = 0; j < nr; j++)
+  {
+    sum = 0;
+    for (i = 0; i < nh; i++)
+    {
+      sum += x[i + j] * h[i];
+    }
+    r[j] = sum >> 15;
+  }
+}
+
+
 int filterImageGaussian(
   short* inputOutputImage,
   int width, int height,
@@ -323,7 +345,7 @@ int filterImageGaussian(
   //inputOutputImage[0] = 0;
 
   // TO MAKE EVERYTHING WELL DEFINED!?!?!?!?
-  memset(inputOutputImage + width*height,0x00,(kernelLen - 1)*sizeof(short));
+  //memset(inputOutputImage + width*height,0x00,(kernelLen - 1)*sizeof(short));
 
 
 
@@ -335,8 +357,12 @@ int filterImageGaussian(
     kernelLen,
     width*height);
 
-  // transpose ver.1 // CAUSES NO MORE BAD SHIFT ERRORS!!!
-  DSP_mat_trans(tmpSpace + (8-radius), height, width, inputOutputImage);
+
+  if(width%4 == 0 && height%4 == 0 || 1)
+    DSP_mat_trans(tmpSpace + (8-radius), height, width, inputOutputImage);
+  else
+    DSP_mat_trans_slow(tmpSpace + (8-radius), height, width, inputOutputImage);
+
 
   // set output zero
   memset(tmpSpace,0x00,(8 + width*height + kernelLen - 1)*sizeof(short));

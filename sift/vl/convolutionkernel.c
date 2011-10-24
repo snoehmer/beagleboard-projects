@@ -162,7 +162,7 @@ void filterImageGaussian(
 	memset(tmpSpace,0x00,(8 + width*height + kernelLen - 1)*sizeof(short));
 
 	// TO MAKE EVERYTHING WELL DEFINED!?!?!?!?
-	memset(inputOutputImage + width*height,0x00,(kernelLen - 1)*sizeof(short));
+	//memset(inputOutputImage + width*height,0x00,(kernelLen - 1)*sizeof(short));
 
 	// filter horizontally
 	DSP_fir_gen(inputOutputImage,

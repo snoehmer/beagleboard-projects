@@ -893,6 +893,62 @@ my_write_pgm_image (const vl_sift_pix* image, int width, int height, const char*
 }
 
 
+/* ----------------------------------------------------------------- */
+/** @brief Save image on disk
+ ** @internal
+ **/
+int
+my_write_pgm_image_fixed (const vl_sift_pix_fixed* image, int width, int height, const char* filename)
+{
+  int i ;
+  int err = 0 ;
+  VlPgmImage pim ;
+  vl_uint8 *buffer = 0 ;
+  FILE* file;
+
+  pim.width     = width ;
+  pim.height    = height ;
+  pim.max_value = 255 ;
+  pim.is_raw    = 1 ;
+
+  buffer = (vl_uint8*)vl_malloc (sizeof(vl_uint8) * width * height) ;
+  if (! buffer)
+  {
+    return -1;
+  }
+
+  //conversion
+  for (i = 0 ; i < width * height ; ++i)
+  {
+    buffer [i] = (vl_uint8) VL_FIXED_TO_FLOAT(image [i]);
+  }
+
+  file = fopen(filename, "wb");
+
+  if (!file)
+  {
+    vl_free(buffer);
+    return -1;
+  }
+
+  //write data to file...
+
+  err = vl_pgm_insert (file, &pim, buffer);
+
+  if (err)
+  {
+    vl_free(buffer);
+    fclose(file);
+    return -1;
+  }
+
+  vl_free(buffer);
+  fclose(file);
+
+  return 0;
+}
+
+
 static vl_sift_pix_fixed* _vl_create_fixed_from_float(const float* src, int len)
 {
   short* shortImage = (short*)vl_malloc(len*sizeof(short));
@@ -1241,10 +1297,6 @@ VL_EXPORT
 void
 vl_sift_delete (VlSiftFilt* f)
 {
-  int w   = VL_SHIFT_LEFT (f->width,  -f->o_min) ;
-  int h   = VL_SHIFT_LEFT (f->height, -f->o_min) ;
-  int nel = w * h ;
-
   if (f) {
     if (f->keys) vl_free (f->keys) ;
     if (f->grad) vl_free (f->grad) ;

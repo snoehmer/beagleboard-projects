@@ -51,12 +51,14 @@ void filterMultipleTimes_on_dsp(short* inputImage,
   }
 
 
-
+  snprintf(filenameafter, sizeof(filenameafter), "tmp/input_%02d.pgm", counter);
+  my_write_pgm_image_fixed(inputImage, width, height, filenameafter);
 
   filterImageGaussian_chained_params* params = vl_malloc(sizeof(filterImageGaussian_chained_params));
 
   params->inputImage = (short*)vl_dsp_get_mapped_addr(inputImage);
-  params->inputOutputImageSize = (width * height + 23 - 1)*sizeof(short);
+  //params->inputOutputImageSize = (width * height + 23 - 1)*sizeof(short);
+  params->inputOutputImageSize = (width * height)*sizeof(short);
   params->width = width;
   params->height = height;
 
@@ -70,6 +72,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
   {
 
     VL_PRINTF("filterMultipleTimes_on_dsp: filtering image %d with sigma=%f, width:%d, height:%d", i, destinations[i].sigma, width, height);
+    VL_PRINTF("inputimage:%x, outputImage:%x", inputImage, destinations[i].outputImage);
 
     gaussKernel = preCalcedGaussKernel;
 
@@ -77,11 +80,14 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     params->gauss = *gaussKernel;
     params->gauss.data = (short*)vl_dsp_get_mapped_addr(gaussKernel->data);
 
-    //vl_dsp_dmm_buffer_begin((void*)gaussKernel);
     vl_dsp_dmm_buffer_begin((void*)gaussKernel->data);
     vl_dsp_dmm_buffer_begin((void*)params);
-
+//#undef UDSP
 #ifdef UDSP
+
+    //if(destinations[i].outputImage != inputImage)
+    //  memcpy(destinations[i].outputImage, inputImage, params->inputOutputImageSize);
+
     vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
 
     //while DSP calculates GAUSSIAN of image, precalculate newxt GaussKernel
@@ -111,14 +117,16 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     params->inputImage = NULL;  //to use the last OutputImage as the next InputImage
   }
 
+#ifdef UDSP
   vl_dsp_dmm_buffer_end((void*)destinations[0].outputImage);
+#endif
 
   for(i = 0; i < numDestinations; i++)
   {
     counter++;
 
-    //snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
-    //my_write_pgm_image_fixed(destinations[i].outputImage, width, height, filenameafter);
+    snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
+    my_write_pgm_image_fixed(destinations[i].outputImage, width, height, filenameafter);
   }
 }
 
