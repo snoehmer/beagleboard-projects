@@ -63,7 +63,7 @@ unsigned int dsp_sift_execute(void *env)
 	dsp_msg_t msg;
 	unsigned char done = 0;
 	short* gaussChain_inputImage = NULL;
-
+	int i;
 
 
 	while (!done) {
@@ -167,6 +167,7 @@ unsigned int dsp_sift_execute(void *env)
         }
 
         gaussChain_inputImage = params->outputImage;
+
 
         result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
 
@@ -358,7 +359,7 @@ int filterImageGaussian(
     width*height);
 
 
-  if(width%4 == 0 && height%4 == 0 || 1)
+  if(width%4 == 0 && height%4 == 0)
     DSP_mat_trans(tmpSpace + (8-radius), height, width, inputOutputImage);
   else
     DSP_mat_trans_slow(tmpSpace + (8-radius), height, width, inputOutputImage);

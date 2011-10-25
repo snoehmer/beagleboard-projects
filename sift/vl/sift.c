@@ -1442,7 +1442,6 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
   }
 
 #ifdef ARCH_ARM
-
   filterMultipleTimes_on_dsp(f->octave_fixed,
       w, h, images, destImageCount);
 

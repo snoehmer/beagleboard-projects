@@ -13,7 +13,7 @@
 #include <string.h>
 
 #define UDSP
-
+//#define WRITE_OUTIMAGES
 
 int
 my_write_pgm_image_fixed (const vl_sift_pix_fixed* image, int width, int height, const char* filename);
@@ -23,8 +23,10 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     int width, int height, DestinationImage destinations[], int numDestinations)
 {
   VL_PRINTF("calling filterMultipleTimes_on_dsp, numDestinations:%d", numDestinations);
+#ifdef WRITE_OUTIMAGES
   static int counter = 0;
   char filenameafter[31];
+#endif
   int i;
 
 
@@ -51,8 +53,10 @@ void filterMultipleTimes_on_dsp(short* inputImage,
   }
 
 
+#ifdef WRITE_OUTIMAGES
   snprintf(filenameafter, sizeof(filenameafter), "tmp/input_%02d.pgm", counter);
   my_write_pgm_image_fixed(inputImage, width, height, filenameafter);
+#endif
 
   filterImageGaussian_chained_params* params = vl_malloc(sizeof(filterImageGaussian_chained_params));
 
@@ -70,11 +74,12 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
   for(i = 0; i < numDestinations; i++)
   {
-
-    VL_PRINTF("filterMultipleTimes_on_dsp: filtering image %d with sigma=%f, width:%d, height:%d", i, destinations[i].sigma, width, height);
-    VL_PRINTF("inputimage:%x, outputImage:%x", inputImage, destinations[i].outputImage);
-
     gaussKernel = preCalcedGaussKernel;
+
+    VL_PRINTF("filterMultipleTimes_on_dsp: filtering image %d with sigma=%f, width:%d, height:%d, kernelsize:%d", i, destinations[i].sigma, width, height, gaussKernel->width);
+    VL_PRINTF("inputimage:%x, outputImage:%x", params->inputImage, destinations[i].outputImage);
+
+
 
     params->outputImage = vl_dsp_get_mapped_addr(destinations[i].outputImage);
     params->gauss = *gaussKernel;
@@ -82,7 +87,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     vl_dsp_dmm_buffer_begin((void*)gaussKernel->data);
     vl_dsp_dmm_buffer_begin((void*)params);
-//#undef UDSP
+
 #ifdef UDSP
 
     //if(destinations[i].outputImage != inputImage)
@@ -106,7 +111,9 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     else
       input = inputImage;
 
-    memcpy(destinations[i].outputImage, input, width*height*sizeof(short));
+    if(input != destinations[i].outputImage)
+      memcpy(destinations[i].outputImage, input, width*height*sizeof(short));
+
     filterImageGaussian(destinations[i].outputImage, width, height, gaussKernel);
     if(i < numDestinations -1)
     {
@@ -121,13 +128,16 @@ void filterMultipleTimes_on_dsp(short* inputImage,
   vl_dsp_dmm_buffer_end((void*)destinations[0].outputImage);
 #endif
 
+#ifdef WRITE_OUTIMAGES
   for(i = 0; i < numDestinations; i++)
   {
     counter++;
 
     snprintf(filenameafter, sizeof(filenameafter), "tmp/after_%02d.pgm", counter);
     my_write_pgm_image_fixed(destinations[i].outputImage, width, height, filenameafter);
+    VL_PRINTF("writing outputImage(%s):%x", filenameafter, destinations[i].outputImage);
   }
+#endif
 }
 
 void filterImageGaussian_on_dsp(short* inputOutputImage,
