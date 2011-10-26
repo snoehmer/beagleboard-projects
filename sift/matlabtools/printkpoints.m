@@ -1,6 +1,6 @@
 %run('../toolbox/vl_setup')
 
-kpoints = load('../bin/glx/pic2_3.sift_dsp');
+kpoints = load('../bin/glx/pic2_3.sift');
 pic = imread('../bin/glx/pic2_3.jpg');
 
 kpoints = kpoints(:,1:4)';

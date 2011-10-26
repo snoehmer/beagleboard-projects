@@ -327,7 +327,7 @@ int Sift::Detect()
              vl_sift_get_octave_index (filt));
 
 
-    /*
+
     // run detector .............................................
     measure.startTimer("sift_detect");
     vl_sift_detect (filt) ;
@@ -373,7 +373,7 @@ int Sift::Detect()
 
       measure.stopTimer("per_kpoint");
     }
-    */
+
   }
 
   /* ...............................................................

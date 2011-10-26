@@ -2,7 +2,7 @@
 %kpointsB = load('../bin/glx/b_calc_desc/pic1_2.sift');
 
 kpointsA = load('../bin/glx/pic2_3.sift');
-kpointsB = load('../bin/glx/pic2_3.sift_dsp');
+kpointsB = load('../bin/glx/pic2_3.sift_ref');
 
 
 %kpointsA = load('../bin/glx/circle.sift');
