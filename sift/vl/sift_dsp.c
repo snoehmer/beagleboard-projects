@@ -77,13 +77,17 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     gaussKernel = preCalcedGaussKernel;
 
     VL_PRINTF("filterMultipleTimes_on_dsp: filtering image %d with sigma=%f, width:%d, height:%d, kernelsize:%d", i, destinations[i].sigma, width, height, gaussKernel->width);
-    VL_PRINTF("inputimage:%x, outputImage:%x", params->inputImage, destinations[i].outputImage);
+    VL_PRINTF("inputimage:%x, outputImage:%x, dogOutImage:%x", params->inputImage, destinations[i].outputImage, destinations[i].dogOutImage);
 
 
 
     params->outputImage = vl_dsp_get_mapped_addr(destinations[i].outputImage);
     params->gauss = *gaussKernel;
     params->gauss.data = (short*)vl_dsp_get_mapped_addr(gaussKernel->data);
+    if(destinations[i].dogOutImage)
+      params->dogOutImage = (short*)vl_dsp_get_mapped_addr(destinations[i].dogOutImage);
+    else
+      params->dogOutImage = 0;
 
     vl_dsp_dmm_buffer_begin((void*)gaussKernel->data);
     vl_dsp_dmm_buffer_begin((void*)params);
@@ -122,6 +126,9 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 #endif
 
     params->inputImage = NULL;  //to use the last OutputImage as the next InputImage
+
+    if(destinations[i].dogOutImage)
+      vl_dsp_dmm_buffer_end((void*)destinations[i].dogOutImage);
   }
 
 #ifdef UDSP

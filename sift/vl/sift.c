@@ -1247,6 +1247,10 @@ vl_sift_new (int width, int height,
 
   f-> dog     = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel
                         * (f->s_max - f->s_min    )  ) ;
+
+  f-> dog_fixed     = (vl_sift_pix_fixed*)vl_malloc (sizeof(vl_sift_pix_fixed) * nel
+                        * (f->s_max - f->s_min    )  ) ;
+
   f-> grad    = (vl_sift_pix*)vl_malloc (sizeof(vl_sift_pix) * nel * 2
                         * (f->s_max - f->s_min    )  ) ;
   memset(f->grad, 0, sizeof(vl_sift_pix) * nel * 2
@@ -1302,6 +1306,7 @@ vl_sift_delete (VlSiftFilt* f)
     if (f->grad) vl_free (f->grad) ;
     if (f->fixed_grad) vl_free (f->fixed_grad) ;
     if (f->dog) vl_free (f->dog) ;
+    if (f->dog_fixed) vl_free (f->dog_fixed) ;
     if (f->octave) vl_free (f->octave) ;
     if (f->octave_fixed) vl_free (f->octave_fixed) ;
     if (f->temp) vl_free (f->temp) ;
@@ -1420,6 +1425,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
 
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = f->octave_fixed;
+    images[destImageCount].dogOutImage = 0;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
@@ -1434,6 +1440,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
     double sd = dsigma0 * pow (sigmak, s) ;
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
+    images[destImageCount].dogOutImage = (s-1-f->s_min)*w*h + f->dog_fixed;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
@@ -1524,6 +1531,7 @@ vl_sift_process_next_octave (VlSiftFilt *f)
     double sd = sqrt (sa*sa - sb*sb) ;
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = f->octave_fixed;
+    images[destImageCount].dogOutImage = 0;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
@@ -1538,6 +1546,7 @@ vl_sift_process_next_octave (VlSiftFilt *f)
     double sd = dsigma0 * pow (sigmak, s) ;
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
+    images[destImageCount].dogOutImage = (s-1-f->s_min)*w*h + f->dog_fixed;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
@@ -1574,12 +1583,14 @@ void
 vl_sift_detect (VlSiftFilt * f)
 {
   vl_sift_pix* dog   = f-> dog ;
+  vl_sift_pix_fixed* dog_fixed   = f-> dog_fixed ;
   int          s_min = f-> s_min ;
   int          s_max = f-> s_max ;
   int          w     = f-> octave_width ;
   int          h     = f-> octave_height ;
   double       te    = f-> edge_thresh ;
   double       tp    = f-> peak_thresh ;
+  vl_sift_pix_fixed tp_fixed = VL_FLOAT_TO_FIXED(tp*0.8);
 
   int const    xo    = 1 ;      /* x-stride */
   int const    yo    = w ;      /* y-stride */
@@ -1589,13 +1600,15 @@ vl_sift_detect (VlSiftFilt * f)
 
   int x, y, s, i, ii, jj ;
   vl_sift_pix *pt, v ;
+  vl_sift_pix_fixed *pt_fixed, v_fixed ;
   VlSiftKeypoint *k ;
 
   /* clear current list */
   f-> nkeys = 0 ;
 
+  /*
   TIME_MEASURING_START_FUNC("VL_DOG");
-  /* compute difference of gaussian (DoG) */
+  // compute difference of gaussian (DoG)
   pt = f-> dog ;
   for (s = s_min ; s <= s_max - 1 ; ++s) {
     vl_sift_pix* src_a = vl_sift_get_octave (f, s    ) ;
@@ -1605,51 +1618,71 @@ vl_sift_detect (VlSiftFilt * f)
       *pt++ = *src_b++ - *src_a++ ;
     }
   }
-  TIME_MEASURING_STOP_FUNC("VL_DOG");
+  TIME_MEASURING_STOP_FUNC("VL_DOG");*/
+
+/*
+  TIME_MEASURING_START_FUNC("VL_DOG_fixed");
+  // compute difference of gaussian (DoG)
+  pt_fixed = f-> dog_fixed ;
+  for (s = s_min ; s <= s_max - 1 ; ++s) {
+    vl_sift_pix_fixed* src_a = vl_sift_get_octave_fixed (f, s    ) ;
+    vl_sift_pix_fixed* src_b = vl_sift_get_octave_fixed (f, s + 1) ;
+    vl_sift_pix_fixed* end_a = src_a + w * h ;
+    while (src_a != end_a) {
+      *pt_fixed++ = *src_b++ - *src_a++ ;
+    }
+  }
+  TIME_MEASURING_STOP_FUNC("VL_DOG_fixed");*/
+
+  static int counter = 0;
+  counter++;
+  char filenameafter[31];
+  snprintf(filenameafter, sizeof(filenameafter), "tmp/dog_%02d.pgm", counter);
+  my_write_pgm_image_fixed(f->dog_fixed, f->octave_width, f->octave_height*(s_max-s_min), filenameafter);
 
   /* -----------------------------------------------------------------
    *                                          Find local maxima of DoG
    * -------------------------------------------------------------- */
-
+  TIME_MEASURING_START_FUNC("VL_Detect_finding");
   /* start from dog [1,1,s_min+1] */
-  pt  = dog + xo + yo + so ;
+  pt_fixed  = dog_fixed + xo + yo + so ;
 
   for(s = s_min + 1 ; s <= s_max - 2 ; ++s) {
     for(y = 1 ; y < h - 1 ; ++y) {
       for(x = 1 ; x < w - 1 ; ++x) {
-        v = *pt ;
+        v_fixed = *pt_fixed ;
 
 #define CHECK_NEIGHBORS(CMP,SGN)                    \
-        ( v CMP ## = SGN 0.8 * tp &&                \
-          v CMP *(pt + xo) &&                       \
-          v CMP *(pt - xo) &&                       \
-          v CMP *(pt + so) &&                       \
-          v CMP *(pt - so) &&                       \
-          v CMP *(pt + yo) &&                       \
-          v CMP *(pt - yo) &&                       \
+        ( v_fixed CMP ## = SGN tp_fixed &&                \
+          v_fixed CMP *(pt_fixed + xo) &&                       \
+          v_fixed CMP *(pt_fixed - xo) &&                       \
+          v_fixed CMP *(pt_fixed + so) &&                       \
+          v_fixed CMP *(pt_fixed - so) &&                       \
+          v_fixed CMP *(pt_fixed + yo) &&                       \
+          v_fixed CMP *(pt_fixed - yo) &&                       \
                                                     \
-          v CMP *(pt + yo + xo) &&                  \
-          v CMP *(pt + yo - xo) &&                  \
-          v CMP *(pt - yo + xo) &&                  \
-          v CMP *(pt - yo - xo) &&                  \
+          v_fixed CMP *(pt_fixed + yo + xo) &&                  \
+          v_fixed CMP *(pt_fixed + yo - xo) &&                  \
+          v_fixed CMP *(pt_fixed - yo + xo) &&                  \
+          v_fixed CMP *(pt_fixed - yo - xo) &&                  \
                                                     \
-          v CMP *(pt + xo      + so) &&             \
-          v CMP *(pt - xo      + so) &&             \
-          v CMP *(pt + yo      + so) &&             \
-          v CMP *(pt - yo      + so) &&             \
-          v CMP *(pt + yo + xo + so) &&             \
-          v CMP *(pt + yo - xo + so) &&             \
-          v CMP *(pt - yo + xo + so) &&             \
-          v CMP *(pt - yo - xo + so) &&             \
+          v_fixed CMP *(pt_fixed + xo      + so) &&             \
+          v_fixed CMP *(pt_fixed - xo      + so) &&             \
+          v_fixed CMP *(pt_fixed + yo      + so) &&             \
+          v_fixed CMP *(pt_fixed - yo      + so) &&             \
+          v_fixed CMP *(pt_fixed + yo + xo + so) &&             \
+          v_fixed CMP *(pt_fixed + yo - xo + so) &&             \
+          v_fixed CMP *(pt_fixed - yo + xo + so) &&             \
+          v_fixed CMP *(pt_fixed - yo - xo + so) &&             \
                                                     \
-          v CMP *(pt + xo      - so) &&             \
-          v CMP *(pt - xo      - so) &&             \
-          v CMP *(pt + yo      - so) &&             \
-          v CMP *(pt - yo      - so) &&             \
-          v CMP *(pt + yo + xo - so) &&             \
-          v CMP *(pt + yo - xo - so) &&             \
-          v CMP *(pt - yo + xo - so) &&             \
-          v CMP *(pt - yo - xo - so) )
+          v_fixed CMP *(pt_fixed + xo      - so) &&             \
+          v_fixed CMP *(pt_fixed - xo      - so) &&             \
+          v_fixed CMP *(pt_fixed + yo      - so) &&             \
+          v_fixed CMP *(pt_fixed - yo      - so) &&             \
+          v_fixed CMP *(pt_fixed + yo + xo - so) &&             \
+          v_fixed CMP *(pt_fixed + yo - xo - so) &&             \
+          v_fixed CMP *(pt_fixed - yo + xo - so) &&             \
+          v_fixed CMP *(pt_fixed - yo - xo - so) )
 
         if (CHECK_NEIGHBORS(>,+) ||
             CHECK_NEIGHBORS(<,-) ) {
@@ -1673,13 +1706,13 @@ vl_sift_detect (VlSiftFilt * f)
           k-> iy = y ;
           k-> is = s ;
         }
-        pt += 1 ;
+        pt_fixed += 1 ;
       }
-      pt += 2 ;
+      pt_fixed += 2 ;
     }
-    pt += 2 * yo ;
+    pt_fixed += 2 * yo ;
   }
-
+  TIME_MEASURING_STOP_FUNC("VL_Detect_finding");
   /* -----------------------------------------------------------------
    *                                               Refine local maxima
    * -------------------------------------------------------------- */

@@ -340,7 +340,7 @@ int Sift::Detect()
     Logger::debug(Logger::SIFT, "sift: detected %d (unoriented) keypoints", nkeys) ;
 
 
-
+/*
     // for each keypoint ........................................
     for (; i < nkeys ; ++i)
     {
@@ -372,7 +372,7 @@ int Sift::Detect()
       }
 
       measure.stopTimer("per_kpoint");
-    }
+    }*/
 
   }
 

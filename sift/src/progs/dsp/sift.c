@@ -151,30 +151,33 @@ unsigned int dsp_sift_execute(void *env)
         BCACHE_inv((void*) params->gauss.data, params->gauss.width * sizeof(short), 1);
         BCACHE_inv((void*) params->outputImage, params->inputOutputImageSize, 1);
 
+
         if(gaussChain_inputImage != params->outputImage)
         {
-          /*if(params->inputOutputImageSize%8 != 0)
-          {
-            msg.arg_2 = 123;
-            */
-            memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
-          /*}
-          else
-          {
-            msg.arg_2 = 456;
-            DSP_blk_move(gaussChain_inputImage, params->outputImage, params->inputOutputImageSize);
-          }*/
+          memcpy(params->outputImage, gaussChain_inputImage, params->inputOutputImageSize);
         }
 
-        gaussChain_inputImage = params->outputImage;
 
-
+        //Gaussian Filtering:
         result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
 
+
+        //DOG
+        if(params->dogOutImage)
+        {
+          //memset(params->dogOutImage, 0xff, params->inputOutputImageSize);
+          for(i = 0; i < params->inputOutputImageSize/2; i++)
+            params->dogOutImage[i] = params->outputImage[i] - gaussChain_inputImage[i];
+
+          BCACHE_wbInv((void*) params->dogOutImage, params->inputOutputImageSize, 1);
+        }
 
         BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
         BCACHE_wbInv((void*) params->outputImage, params->inputOutputImageSize, 1);
 
+
+        //remember last output (to use it as an input image the next time:
+        gaussChain_inputImage = params->outputImage;
 
         if(result == 0)
           msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED;

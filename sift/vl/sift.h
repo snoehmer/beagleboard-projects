@@ -77,6 +77,7 @@ typedef struct _VlSiftFilt
   vl_sift_pix *octave ; /**< current GSS data. */
   vl_sift_pix_fixed *octave_fixed ; /**< current GSS data. in fixed point notation */
   vl_sift_pix *dog ;    /**< current DoG data. */
+  vl_sift_pix_fixed *dog_fixed ;    /**< current DoG data. in fixed point notation */
   int octave_width ;    /**< current octave width. */
   int octave_height ;   /**< current octave height. */
 

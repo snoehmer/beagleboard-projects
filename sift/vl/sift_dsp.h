@@ -61,6 +61,7 @@ typedef struct _filterImageGaussian_params
 typedef struct
 {
   short* inputImage;  //if inputImage == 0, then the last outputImage is used
+  short* dogOutImage; //if dogOutImage == 0, no Dog calculation is performed!
   int inputOutputImageSize;
   short* outputImage;
   int width;
@@ -72,6 +73,7 @@ typedef struct
 {
   short* outputImage;
   float sigma;
+  short* dogOutImage; //Difference is calced to previous image, if 0, then no Dog is calculated...
 }DestinationImage;
 
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
