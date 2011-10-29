@@ -19,6 +19,9 @@ int
 my_write_pgm_image_fixed (const vl_sift_pix_fixed* image, int width, int height, const char* filename);
 
 
+extern void (*time_measureing_start_func)  (char*);
+extern void (*time_measureing_stop_func)  (char*);
+
 void filterMultipleTimes_on_dsp(short* inputImage,
     int width, int height, DestinationImage destinations[], int numDestinations)
 {
@@ -41,13 +44,8 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
       VL_PRINTF("replacing index %d with sigma=%f by sigma=%f and %f", i, destinations[i].sigma, newsigma, newsigma);
 
-      for(int j = numDestinations; j > i; j--)
-        destinations[j] = destinations[j-1];
-
       destinations[i].sigma = newsigma;
-      destinations[i+1].sigma = newsigma;
-
-      numDestinations++;
+      destinations[i].filterCount++;
       i--; // check again if its still greater than the threshold
     }
   }
@@ -84,6 +82,8 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     params->outputImage = vl_dsp_get_mapped_addr(destinations[i].outputImage);
     params->gauss = *gaussKernel;
     params->gauss.data = (short*)vl_dsp_get_mapped_addr(gaussKernel->data);
+    params->filterCount = destinations[i].filterCount;
+
     if(destinations[i].dogOutImage)
       params->dogOutImage = (short*)vl_dsp_get_mapped_addr(destinations[i].dogOutImage);
     else
@@ -99,7 +99,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
 
-    //while DSP calculates GAUSSIAN of image, precalculate newxt GaussKernel
+    //while DSP calculates GAUSSIAN of image, precalculate next GaussKernel
     if(i < numDestinations -1)
     {
       preCalcedGaussKernel = createConvolutionKernel(destinations[i+1].sigma, 0, 15);
@@ -108,6 +108,14 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     //wait until previous gaussian smoothing is finished
     vl_dsp_get_message();
+
+    vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, 0, 0);
+    TIME_MEASURING_START_FUNC("DOG_DSP");
+
+    //wait until DOG Calculation is finished
+    vl_dsp_get_message();
+    TIME_MEASURING_STOP_FUNC("DOG_DSP");
+
 #else
     void* input;
     if(i != 0)

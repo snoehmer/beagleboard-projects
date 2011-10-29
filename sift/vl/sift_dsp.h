@@ -67,6 +67,7 @@ typedef struct
   int width;
   int height;
   ConvolutionKernelRef gauss;
+  int filterCount; //how many times the gaussian filter should be applied ...
 }filterImageGaussian_chained_params;
 
 typedef struct
@@ -74,6 +75,7 @@ typedef struct
   short* outputImage;
   float sigma;
   short* dogOutImage; //Difference is calced to previous image, if 0, then no Dog is calculated...
+  int filterCount;//how many times the gaussian filter should be applied ...
 }DestinationImage;
 
 void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,

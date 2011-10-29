@@ -16,6 +16,7 @@
 
 #include <stdlib.h> /* for calloc, free */
 #include <string.h> /* for memset */
+#include <malloc.h>
 
 #include "dsp_bridge.h"
 

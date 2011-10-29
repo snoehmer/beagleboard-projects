@@ -700,8 +700,8 @@ double expn_tab [EXPN_SZ+1] ; /**< ::fast_expn table      @internal */
 #define log2(x) (log(x)/VL_LOG_OF_2)
 
 
-static void (*time_measureing_start_func)  (char*) = NULL;
-static void (*time_measureing_stop_func)  (char*) = NULL;
+void (*time_measureing_start_func)  (char*) = NULL;
+void (*time_measureing_stop_func)  (char*) = NULL;
 
 void vl_set_timemeasuring_start_func(void (*func)  (char*))
 {
@@ -713,8 +713,8 @@ void vl_set_timemeasuring_stop_func(void (*func)  (char*))
   time_measureing_stop_func = func;
 }
 
-#define TIME_MEASURING_START_FUNC(ABC); if(time_measureing_start_func) { time_measureing_start_func(ABC); }
-#define TIME_MEASURING_STOP_FUNC(ABC); if(time_measureing_stop_func) { time_measureing_stop_func(ABC); }
+//#define TIME_MEASURING_START_FUNC(ABC); if(time_measureing_start_func) { time_measureing_start_func(ABC); }
+//#define TIME_MEASURING_STOP_FUNC(ABC); if(time_measureing_stop_func) { time_measureing_stop_func(ABC); }
 
 
 
@@ -1426,6 +1426,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = f->octave_fixed;
     images[destImageCount].dogOutImage = 0;
+    images[destImageCount].filterCount = 1;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
@@ -1441,6 +1442,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
     images[destImageCount].dogOutImage = (s-1-f->s_min)*w*h + f->dog_fixed;
+    images[destImageCount].filterCount = 1;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
@@ -1532,6 +1534,7 @@ vl_sift_process_next_octave (VlSiftFilt *f)
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = f->octave_fixed;
     images[destImageCount].dogOutImage = 0;
+    images[destImageCount].filterCount = 1;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, octave, temp, octave, w, h, sd) ;
@@ -1547,6 +1550,7 @@ vl_sift_process_next_octave (VlSiftFilt *f)
 #ifdef ARCH_ARM
     images[destImageCount].outputImage = vl_sift_get_octave_fixed(f, s);
     images[destImageCount].dogOutImage = (s-1-f->s_min)*w*h + f->dog_fixed;
+    images[destImageCount].filterCount = 1;
     images[destImageCount++].sigma = sd;
 #else
     _vl_sift_smooth (f, vl_sift_get_octave(f, s), temp,
@@ -1606,7 +1610,7 @@ vl_sift_detect (VlSiftFilt * f)
   /* clear current list */
   f-> nkeys = 0 ;
 
-  /*
+
   TIME_MEASURING_START_FUNC("VL_DOG");
   // compute difference of gaussian (DoG)
   pt = f-> dog ;
@@ -1618,7 +1622,7 @@ vl_sift_detect (VlSiftFilt * f)
       *pt++ = *src_b++ - *src_a++ ;
     }
   }
-  TIME_MEASURING_STOP_FUNC("VL_DOG");*/
+  TIME_MEASURING_STOP_FUNC("VL_DOG");
 
 /*
   TIME_MEASURING_START_FUNC("VL_DOG_fixed");

@@ -46,6 +46,8 @@ int filterImageGaussian(
   int width, int height,
   ConvolutionKernel gauss);
 
+void calcDOG(short * dst, const short* a, const short* b, int len);
+
 unsigned int dsp_sift_create(void)
 {
   return 0x8000;
@@ -159,18 +161,11 @@ unsigned int dsp_sift_execute(void *env)
 
 
         //Gaussian Filtering:
-        result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
+        for(i = 0; i < params->filterCount; i++)
+          result = filterImageGaussian(params->outputImage, params->width, params->height, &params->gauss);
 
 
-        //DOG
-        if(params->dogOutImage)
-        {
-          //memset(params->dogOutImage, 0xff, params->inputOutputImageSize);
-          for(i = 0; i < params->inputOutputImageSize/2; i++)
-            params->dogOutImage[i] = params->outputImage[i] - gaussChain_inputImage[i];
 
-          BCACHE_wbInv((void*) params->dogOutImage, params->inputOutputImageSize, 1);
-        }
 
         BCACHE_wbInv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
         BCACHE_wbInv((void*) params->outputImage, params->inputOutputImageSize, 1);
@@ -185,8 +180,30 @@ unsigned int dsp_sift_execute(void *env)
           msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED;
 
 
-        NODE_putMsg(env, NULL, &msg, 0);
+        NODE_putMsg(env, NULL, &msg, 0);// gaussian smoothing finished
 
+        NODE_getMsg(env, &msg, (unsigned) -1); //wait for start signal of DOG
+
+        //DOG
+        if(params->dogOutImage)
+        {
+          //calcDOG(params->dogOutImage, params->outputImage, gaussChain_inputImage, params->inputOutputImageSize/2);
+          //memset(params->dogOutImage, 0xff, params->inputOutputImageSize);
+          /*for(i = 0; i < params->inputOutputImageSize/2; i++)
+            //params->dogOutImage[i] = params->outputImage[i] - gaussChain_inputImage[i];
+            params->dogOutImage[i] = 20;*/
+
+          /*short* tmpSpace = (short*) memalign(8,params->inputOutputImageSize);
+
+          memcpy(tmpSpace, gaussChain_inputImage, params->inputOutputImageSize);
+          DSP_w_vec(tmpSpace, params->outputImage, 1<<14, params->dogOutImage, params->inputOutputImageSize/2);
+
+          free(tmpSpace);*/
+
+          BCACHE_wbInv((void*) params->dogOutImage, params->inputOutputImageSize, 1);
+        }
+
+        NODE_putMsg(env, NULL, &msg, 0); //DOG finished ...
         break;
       }
 
@@ -393,3 +410,10 @@ int filterImageGaussian(
   return 0;
 }
 
+void calcDOG(short * dst, const short* a, const short* b, int len)
+{
+  int i;
+  //#pragma MUST_ITERATE(8,,8)
+  for(i = 0; i < len; i++)
+    dst[i] = a[i] - b[i];
+}

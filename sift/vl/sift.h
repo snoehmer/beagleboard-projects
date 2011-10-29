@@ -26,6 +26,12 @@ GNU GPLv2, or (at your option) any later version.
 VL_EXPORT void vl_set_timemeasuring_start_func(void (*func)  (char*));
 VL_EXPORT void vl_set_timemeasuring_stop_func(void (*func)  (char*));
 
+#define TIME_MEASURING_START_FUNC(ABC); if(time_measureing_start_func) { time_measureing_start_func(ABC); }
+#define TIME_MEASURING_STOP_FUNC(ABC); if(time_measureing_stop_func) { time_measureing_stop_func(ABC); }
+
+
+
+
 /** @brief SIFT filter pixel type */
 typedef float vl_sift_pix ;
 typedef short vl_sift_pix_fixed;
