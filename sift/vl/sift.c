@@ -1636,8 +1636,8 @@ vl_sift_detect (VlSiftFilt * f)
       *pt_fixed++ = *src_b++ - *src_a++ ;
     }
   }
-  TIME_MEASURING_STOP_FUNC("VL_DOG_fixed");*/
-
+  TIME_MEASURING_STOP_FUNC("VL_DOG_fixed");
+*/
   static int counter = 0;
   counter++;
   char filenameafter[31];

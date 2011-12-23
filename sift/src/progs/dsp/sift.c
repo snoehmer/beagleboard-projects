@@ -171,9 +171,6 @@ unsigned int dsp_sift_execute(void *env)
         BCACHE_wbInv((void*) params->outputImage, params->inputOutputImageSize, 1);
 
 
-        //remember last output (to use it as an input image the next time:
-        gaussChain_inputImage = params->outputImage;
-
         if(result == 0)
           msg.cmd = DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED;
         else
@@ -187,23 +184,15 @@ unsigned int dsp_sift_execute(void *env)
         //DOG
         if(params->dogOutImage)
         {
-          //calcDOG(params->dogOutImage, params->outputImage, gaussChain_inputImage, params->inputOutputImageSize/2);
-          //memset(params->dogOutImage, 0xff, params->inputOutputImageSize);
-          /*for(i = 0; i < params->inputOutputImageSize/2; i++)
-            //params->dogOutImage[i] = params->outputImage[i] - gaussChain_inputImage[i];
-            params->dogOutImage[i] = 20;*/
-
-          /*short* tmpSpace = (short*) memalign(8,params->inputOutputImageSize);
-
-          memcpy(tmpSpace, gaussChain_inputImage, params->inputOutputImageSize);
-          DSP_w_vec(tmpSpace, params->outputImage, 1<<14, params->dogOutImage, params->inputOutputImageSize/2);
-
-          free(tmpSpace);*/
+          calcDOG(params->dogOutImage, params->outputImage, gaussChain_inputImage, params->inputOutputImageSize/2);
 
           BCACHE_wbInv((void*) params->dogOutImage, params->inputOutputImageSize, 1);
         }
 
         NODE_putMsg(env, NULL, &msg, 0); //DOG finished ...
+
+        //remember last output (to use it as an input image the next time:
+        gaussChain_inputImage = params->outputImage;
         break;
       }
 
@@ -410,10 +399,15 @@ int filterImageGaussian(
   return 0;
 }
 
-void calcDOG(short * dst, const short* a, const short* b, int len)
+void calcDOG(short * restrict dst, const short* restrict a, const short* restrict b, int len)
 {
   int i;
-  //#pragma MUST_ITERATE(8,,8)
+
+  _nassert((int) dst % 4 == 0); // output is 4-byte aligned
+  _nassert((int) a % 4 == 0); // input2 is 4-byte aligned
+  _nassert((int) b % 4 == 0); // input1 is 4-byte aligned
+
+  #pragma MUST_ITERATE(4,,4)
   for(i = 0; i < len; i++)
     dst[i] = a[i] - b[i];
 }

@@ -99,7 +99,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, (uint32_t)vl_dsp_get_mapped_addr(params), 0);
 
-    //while DSP calculates GAUSSIAN of image, precalculate next GaussKernel
+    //while DSP calculates GAUSSIAN of image, precalculate newxt GaussKernel
     if(i < numDestinations -1)
     {
       preCalcedGaussKernel = createConvolutionKernel(destinations[i+1].sigma, 0, 15);
@@ -136,7 +136,9 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     params->inputImage = NULL;  //to use the last OutputImage as the next InputImage
 
     if(destinations[i].dogOutImage)
+    {
       vl_dsp_dmm_buffer_end((void*)destinations[i].dogOutImage);
+    }
   }
 
 #ifdef UDSP
