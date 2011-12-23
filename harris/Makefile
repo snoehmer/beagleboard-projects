@@ -20,6 +20,10 @@ CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c
 
 # source files, TODO
 CPP_SRCS = \
+./src/util/Logger.cpp \
+./src/util/ConsoleLogger.cpp \
+./src/util/FileLogger.cpp \
+./src/util/TimeMeasureBase.cpp \
 ./src/util/HarrisCornerPoint.cpp \
 ./src/pure_arm/ImageBitstream.cpp \
 ./src/util/FeatureDescriptor.cpp \
@@ -30,7 +34,12 @@ CPP_SRCS = \
 ./src/pure_arm/HarrisCornerDetector.cpp \
 ./src/main.cpp 
 
+
 OBJS = \
+./bin/Logger.o \
+./bin/ConsoleLogger.o \
+./bin/FileLogger.o \
+./bin/TimeMeasureBase.o \
 ./bin/HarrisCornerPoint.o \
 ./bin/ImageBitstream.o \
 ./bin/FeatureDescriptor.o \
@@ -59,7 +68,19 @@ HarrisCornerDetectorARM: $(OBJS)
 
 
 # build targets for ARM only version
-./bin/main.o: ./src/main.cpp ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/FeatureDetector.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h 
+./bin/main.o: ./src/main.cpp $(CPP_SRCS)
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/ConsoleLogger.o: ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/FileLogger.o: ./src/util/FileLogger.cpp ./src/util/FileLogger.h
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/Logger.o: ./src/util/Logger.cpp ./src/util/Logger.h ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h ./src/util/FileLogger.cpp ./src/util/FileLogger.h ./src/util/Logger.h ./src/util/Logger.cpp
+	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/TimeMeasureBase.o: ./src/util/TimeMeasureBase.cpp ./src/util/TimeMeasureBase.h ./src/util/SystemTimeMeasure.h
 	$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
