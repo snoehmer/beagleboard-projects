@@ -26,16 +26,6 @@
 using namespace std;
 using namespace Magick;
 
-inline void startTimer(char *id)
-{
-  TimeMeasureBase::getInstance()->startTimer(id);
-}
-
-inline void stopTimer(char *id)
-{
-  TimeMeasureBase::getInstance()->stopTimer(id);
-}
-
 
 int main(int argc, char **argv)
 {
@@ -120,7 +110,7 @@ int main(int argc, char **argv)
 
     ImageBitstream currentImg;
 
-    Logger::debug(Logger::MAIN, "initializing standard feature detector with feature threshold $d\%, NCC threshold %f", NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    Logger::debug(Logger::MAIN, "initializing standard feature detector with feature threshold %d\%, NCC threshold %f", NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
     FeatureDetector featureDet(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
 
     Logger::debug(Logger::MAIN, "initializing features of feature detector");
@@ -129,7 +119,7 @@ int main(int argc, char **argv)
     for(int i = 2; i < argc; i++)
     {
     	//cout << "detecting features in file #" << (i-1) << " ('" << argv[i] << "')" << endl;
-      Logger::debug(Logger::MAIN, "detecting features in file # %d ('%s')", i-1, argv[i]);
+      Logger::debug(Logger::MAIN, "detecting features in file #%d ('%s')", i-1, argv[i]);
 
     	try
     	{
@@ -138,23 +128,23 @@ int main(int argc, char **argv)
     	catch(Exception &e)
     	{
     		//cout << "Error: opening image failed, reason: " << e.what() << endl;
-    	  Logger::error(Logger::MAIN, "error detecting features in file # %d ('%s'), reason: %s", i-1, argv[i], e.what());
+    	  Logger::error(Logger::MAIN, "error detecting features in file #%d ('%s'), reason: %s", i-1, argv[i], e.what());
     		return -1;
     	}
 
-    	startTimer("ncc_std_match_arm");
+    	startTimer("ncc_match_arm");
     	bool result = featureDet.match(currentImg);
-    	stopTimer("ncc_std_match_arm");
+    	stopTimer("ncc_match_arm");
 
     	if(result)
     	{
     		//cout << "image #" << (i-1) << " ('" << argv[i] << "') is a match!" << endl;
-    		Logger::info(Logger::MAIN, "image # %d ('%s') is a match!", i-1, argv[i]);
+    		Logger::info(Logger::MAIN, "image #%d ('%s') is a match!", i-1, argv[i]);
     	}
     	else
     	{
     		//cout << "image #" << (i-1) << " ('" << argv[i] << "') is no match!" << endl;
-    	  Logger::info(Logger::MAIN, "image # %d ('%s') is no match!", i-1, argv[i]);
+    	  Logger::info(Logger::MAIN, "image #%d ('%s') is no match!", i-1, argv[i]);
     	}
     }
 

@@ -7,6 +7,7 @@
 
 #include "NonMaxSuppressor.h"
 #include "ImageBitstream.h"
+#include "../util/TimeMeasureBase.h"
 #include <cmath>
 
 
@@ -41,6 +42,8 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 
 	float *extInput = ImageBitstream::extend(input, width, height, offset);
 
+	startTimer("_nonmax_conv_arm");
+
 	// again, convolve HCR with derive to get edges
 	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
 	{
@@ -68,11 +71,15 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 		}
 	}
 
+	stopTimer("_nonmax_conv_arm");
+
 	delete[] extInput;
 
 	// now find maxima
 	int irow, icol;
 	float dX, dY, a1, a2, A, b1, b2, B, P;
+
+	startTimer("_nonmax_nonmax_arm");
 
 	for(row = 1; row < height - 1; row++)
 	{
@@ -130,6 +137,8 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 			}
 		}
 	}
+
+	stopTimer("_nonmax_nonmax_arm");
 
 	return output;
 }

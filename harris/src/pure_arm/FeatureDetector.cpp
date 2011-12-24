@@ -6,6 +6,7 @@
  */
 
 #include "FeatureDetector.h"
+#include "../util/TimeMeasureBase.h"
 #include <Magick++.h>
 
 
@@ -38,10 +39,14 @@ void FeatureDetector::setFeatures(vector<FeatureDescriptor> features)
 	features_ = features;
 	featureData_.resize(features_.size());  // pre-allocate for performance
 
+	startTimer("_ncc_patchdata_arm");
+
 	for(i = 0; i < features_.size(); i++)
 	{
 		featureData_[i] = calculatePatchData(features_[i].get());
 	}
+
+	stopTimer("_ncc_patchdata_arm");
 }
 
 
@@ -72,7 +77,6 @@ bool FeatureDetector::match(ImageBitstream image)
 	int *imageAvg = new int[image.getWidth() * image.getHeight()];
 
 	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum, imageAvg);
-
 
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
@@ -189,6 +193,8 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 
 	//cout << "calculating image data...";
 
+	startTimer("_ncc_imagedata_single_arm");
+
 	// initialize integral arrays
 	for(col = 0; col < width + 1; col++)  // fill 1st row with zeros
 	{
@@ -233,6 +239,8 @@ void FeatureDetector::calculateImageData(unsigned char *image, unsigned int widt
 		}
 	}
 
+	stopTimer("_ncc_imagedata_single_arm");
+
 	//cout << "finished" << endl;
 }
 
@@ -246,6 +254,8 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
 	int patchSqSum;
 
 	//cout << "calculating patch data...";
+
+	startTimer("_ncc_patchdata_single_arm");
 
 	// calculate average of feature patch
 	int psum = 0;
@@ -277,6 +287,8 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
 	}
 
 	patchSqSum = (int) sqrt(sqSum);
+
+	stopTimer("_ncc_patchdata_single_arm");
 
 	//cout << "finished" << endl;
 	//cout << "patch average is " << patchAvg << ", patch normalization sum is " << testPatchNorm << endl;
