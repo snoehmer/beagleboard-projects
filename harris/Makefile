@@ -18,6 +18,7 @@ CC_FLAGS = -I/usr/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall `Grap
 LD_FLAGS_ARM = -Lopt/lib -lGraphicsMagick++ -lGraphicsMagick -llcms -ltiff -lfreetype -ljasper -ljpeg -lpng -lwmflite -lXext -lSM -lICE -lX11 -lbz2 -lxml2 -lz -lm -lgomp -lpthread -lltdl -luuid -lxcb -lXau -lXdmcp
 CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c -fmessage-length=0
 
+
 # source files, TODO
 CPP_SRCS = \
 ./src/util/Logger.cpp \
@@ -50,20 +51,36 @@ OBJS = \
 ./bin/HarrisCornerDetector.o \
 ./bin/main.o 
 
+
 BIN = ./bin/HarrisDetector
 
+
+DEPLOYDIR = ./bin/deploy
+
+
+# quick targets
 all: HarrisCornerDetectorHost
 
+arm: HarrisCornerDetectorARM
+
+
+# platform targets
+HarrisCornerDetectorHost: buildHarrisCornerDetectorHost
+
+HarrisCornerDetectorARM: buildHarrisCornerDetectorARM deploybeagleboard
+
+
 # compile for host machine
-HarrisCornerDetectorHost: CCC = $(CC)
-HarrisCornerDetectorHost: $(OBJS)
+buildHarrisCornerDetectorHost: CCC = $(CC)
+buildHarrisCornerDetectorHost: $(OBJS)
 	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
+
 # compile using cross compiler (for ARM)
-HarrisCornerDetectorARM: CCC = $(CROSS_PREFIX)$(CC)
-HarrisCornerDetectorARM: LD_FLAGS = $(LD_FLAGS_ARM)
-HarrisCornerDetectorARM: CC_FLAGS = $(CC_FLAGS_ARM)
-HarrisCornerDetectorARM: $(OBJS)
+buildHarrisCornerDetectorARM: CCC = $(CROSS_PREFIX)$(CC)
+buildHarrisCornerDetectorARM: LD_FLAGS = $(LD_FLAGS_ARM)
+buildHarrisCornerDetectorARM: CC_FLAGS = $(CC_FLAGS_ARM)
+buildHarrisCornerDetectorARM: $(OBJS)
 	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
 
@@ -106,6 +123,14 @@ HarrisCornerDetectorARM: $(OBJS)
 
 ./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
 	$(CCC) $(CC_FLAGS) -o"$@" $<
+
+
+.PHONY: deploybeagleboard
+
+deploybeagleboard:
+	cp $(BIN) $(DEPLOYDIR)
+	@echo deploying files to beagleboard...
+	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@10.1.0.66:/home/ubuntu/harris
 
 
 .PHONY: clean

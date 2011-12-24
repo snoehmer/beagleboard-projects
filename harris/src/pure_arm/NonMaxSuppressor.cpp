@@ -8,11 +8,14 @@
 #include "NonMaxSuppressor.h"
 #include "ImageBitstream.h"
 #include "../util/TimeMeasureBase.h"
+#include "../util/Logger.h"
 #include <cmath>
 
 
 NonMaxSuppressor::NonMaxSuppressor()
 {
+  Logger::debug(Logger::NONMAX, "initializing Non-Maximum-suppressor");
+
 	devKernelX_[0] = -1; devKernelX_[1] =  0; devKernelX_[2] =  1;
 	devKernelX_[3] = -1; devKernelX_[4] =  0; devKernelX_[5] =  1;
 	devKernelX_[6] = -1; devKernelX_[7] =  0; devKernelX_[8] =  1;
@@ -39,6 +42,8 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 	int extHeight = height + 2 * offset;
 
 	int row, col, krow, kcol, imgrow, imgcol;
+
+	Logger::debug(Logger::NONMAX, "step 1: convolving with derived kernels");
 
 	float *extInput = ImageBitstream::extend(input, width, height, offset);
 
@@ -78,6 +83,8 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 	// now find maxima
 	int irow, icol;
 	float dX, dY, a1, a2, A, b1, b2, B, P;
+
+	Logger::debug(Logger::NONMAX, "step 2: calculating maxima");
 
 	startTimer("_nonmax_nonmax_arm");
 

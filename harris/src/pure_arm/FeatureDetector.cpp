@@ -7,11 +7,14 @@
 
 #include "FeatureDetector.h"
 #include "../util/TimeMeasureBase.h"
+#include "../util/Logger.h"
 #include <Magick++.h>
 
 
 FeatureDetector::FeatureDetector(unsigned int featuresThreshold, float nccThreshold)
 {
+  Logger::debug(Logger::NCC, "initializing standard NCC detector with features threshold %d\%, NCC threshold %f", featuresThreshold, nccThreshold);
+
 	featuresThreshold_ = featuresThreshold;
 	nccThreshold_ = nccThreshold;
 }
@@ -34,6 +37,8 @@ FeatureDetector::~FeatureDetector()
 
 void FeatureDetector::setFeatures(vector<FeatureDescriptor> features)
 {
+  Logger::debug(Logger::NCC, "reading %d features", features.size());
+
 	unsigned int i;
 
 	features_ = features;
@@ -60,6 +65,8 @@ bool FeatureDetector::match(Image image)
 
 bool FeatureDetector::match(ImageBitstream image)
 {
+  Logger::debug(Logger::NCC, "matching image (size %dx%d)", image.getWidth(), image.getHeight());
+
 	unsigned int i;
 	unsigned int matchCount = 0;
 	unsigned int nFeatures = features_.size();

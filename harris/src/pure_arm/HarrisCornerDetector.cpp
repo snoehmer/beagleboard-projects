@@ -11,6 +11,7 @@
 #include "../util/HarrisCornerPoint.h"
 #include "NonMaxSuppressor.h"
 #include "../util/TimeMeasureBase.h"
+#include "../util/Logger.h"
 #include <cmath>
 #include <Magick++.h>
 
@@ -18,6 +19,8 @@ using namespace std;
 
 HarrisCornerDetector::HarrisCornerDetector(float threshold, float k, float dSigma, int dKernelSize, float gSigma, int gKernelSize)
 {
+  Logger::debug(Logger::HARRIS, "initializing Harris Corner Detector with threshold=%f, k=%f, dSigma=%f, dKSize=%d, gSigma=%f, gKSize=%d", threshold, k, dSigma, dKernelSize, gSigma, gKernelSize);
+
 	devSigma_ = dSigma;
 	devKernelSize_ = dKernelSize;
 	gaussSigma_ = gSigma;
@@ -55,6 +58,8 @@ void HarrisCornerDetector::init()
     float sumX = 0; // needed for normalization
     float sumY = 0;
     float sumGauss = 0;
+
+    Logger::debug(Logger::HARRIS, "calculating kernels");
 
     devKernelX_ = new float[devKernelSize_ * devKernelSize_];
     devKernelY_ = new float[devKernelSize_ * devKernelSize_];
@@ -158,6 +163,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	extWidth = width_ + 2 * offset;
 	extHeight = height_ + 2 * offset;
 
+	Logger::debug(Logger::HARRIS, "step 1: convolving with derivates of Gaussians");
+
 	ImageBitstream extendedImg = input_.extend(offset);
 
 	float *diffXX = new float[width_ * height_];
@@ -213,6 +220,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	extWidth = width_ + 2 * offset;
 	extHeight = height_ + 2 * offset;
 
+	Logger::debug(Logger::HARRIS, "step 2: applying Gauss filters to convolved image");
+
 	float *extDiffXX = ImageBitstream::extend(diffXX, width_, height_, offset);
 	float *extDiffYY = ImageBitstream::extend(diffYY, width_, height_, offset);
 	float *extDiffXY = ImageBitstream::extend(diffXY, width_, height_, offset);
@@ -264,6 +273,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 
 	// step 3: calculate Harris corner response
+	Logger::debug(Logger::HARRIS, "step 3: calculating Harris response");
+
 	float *hcrIntern = new float[width_ * height_];
 	float Ixx;
 	float Iyy;
@@ -296,6 +307,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 
 	// step 4: perform non-maximum-suppression
+	Logger::debug(Logger::HARRIS, "step 4: performing Non-Maximum-suppression");
+
 	NonMaxSuppressor nonMax;
 	float *hcrNonMax;
 
@@ -310,6 +323,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 
 	// step 5: normalize the image to a range 0...1 and threshold
+	Logger::debug(Logger::HARRIS, "step 5: normalizing and thresholding image");
+
 	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrNonMax, width_ * height_, 1.0f, threshold_);
 
 #ifdef DEBUG_OUTPUT_PICS

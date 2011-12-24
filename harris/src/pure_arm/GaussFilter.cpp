@@ -6,6 +6,7 @@
  */
 
 #include "GaussFilter.h"
+#include "../util/Logger.h"
 #include <cmath>
 
 GaussFilter::GaussFilter(int kernelSize, float sigma)
@@ -16,6 +17,8 @@ GaussFilter::GaussFilter(int kernelSize, float sigma)
 		kernelSize_ = kernelSize - 1;
 
 	sigma_ = sigma;
+
+	Logger::debug(Logger::GAUSS, "initializing Gauss filter with kSize=%d, sigma=%f", kernelSize_, sigma_);
 
 	kernel_ = 0;
 }
@@ -29,6 +32,8 @@ GaussFilter::GaussFilter(ImageBitstream original, int kernelSize, float sigma)
 		kernelSize_ = kernelSize - 1;
 
 	sigma_ = sigma;
+
+	Logger::debug(Logger::GAUSS, "initializing Gauss filter with kSize=%d, sigma=%f", kernelSize_, sigma_);
 
 	inputImage(original);
 
@@ -53,6 +58,8 @@ void GaussFilter::generateKernel()
 	float sigma2 = sigma_ * sigma_;
 
 	float sum = 0; // needed for normalization
+
+	Logger::debug(Logger::GAUSS, "calculating Gauss kernel");
 
 	kernel_ = new float[kernelSize_ * kernelSize_];
 
@@ -97,6 +104,8 @@ ImageBitstream GaussFilter::calculate()
 
 	if(!input_.isLoaded())
 		return output;
+
+	Logger::debug(Logger::GAUSS, "convolving");
 
 	// perform convolution
 	return input_.convolve(kernel_, kernelSize_);

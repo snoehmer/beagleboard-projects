@@ -20,6 +20,7 @@
 //#define DEBUG_OUTPUT_CORNERS
 
 //parameters for NCC matching
+#define HARRIS_THRESH 0.7f  //threshold for Harris Corner Detector
 #define NCC_STD_FEAT_THRESH 80  //threshold for matched features in percent for standard NCC
 #define NCC_STD_NCC_THRESH 0.8f //threshold for NCC score for standard NCC
 
@@ -31,8 +32,8 @@ int main(int argc, char **argv)
 {
 	if(argc < 3)
 	{
-		//cout << "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]" << endl;
-		//cout << "HCD searches for features in <reference image> und checks if they are contained in the input images" << endl << endl;
+		cout << "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]" << endl;
+		cout << "HCD searches for features in <reference image> und checks if they are contained in the input images" << endl << endl;
 		Logger::error(Logger::MAIN, "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]");
 	  return -1;
 	}
@@ -44,14 +45,12 @@ int main(int argc, char **argv)
 
     try
     {
-    	//cout << "reading reference image ('" << argv[1] << "')" << endl;
     	Logger::debug(Logger::MAIN, "reading reference image ('%s')", argv[1]);
     	inputImg = ImageBitstream(argv[1]);
     }
     catch(Exception &e)
     {
-    	//cout << "Error reading reference image, reason: " << e.what() << endl;
-      Logger::error(Logger::MAIN, "error reading reference image ('%s'), reason: %s", argv[1], e.what());
+    	Logger::error(Logger::MAIN, "error reading reference image ('%s'), reason: %s", argv[1], e.what());
     	return -1;
     }
 
@@ -64,25 +63,22 @@ int main(int argc, char **argv)
      * variant a: on ARM only
      */
 
-    HarrisCornerDetector hcd(0.7f);
+    HarrisCornerDetector hcd(HARRIS_THRESH);
     vector<HarrisCornerPoint> cornerPoints;
     float *hcr;
 
-    //cout << "initializing Harris corner detector" << endl;
     Logger::debug(Logger::MAIN, "initializing Harris Corner Detector on ARM");
 
     startTimer("harris_init_arm");
     hcd.init();  // generates kernels
     stopTimer("harris_init_arm");
 
-    //cout << "searching for corners" << endl;
-    Logger::debug(Logger::MAIN, "searching for corners on ARM");
+    Logger::debug(Logger::MAIN, "searching for corners on ARM with threshold %f", HARRIS_THRESH);
 
     startTimer("harris_detect_arm");
     cornerPoints = hcd.detectCorners(inputImg, &hcr);
     stopTimer("harris_detect_arm");
 
-    //cout << "found " << cornerPoints.size() << " corners" << endl;
     Logger::debug(Logger::MAIN, "found %d corners", cornerPoints.size());
 
 
@@ -94,7 +90,6 @@ int main(int argc, char **argv)
     FeatureGenerator featureGen;
     vector<FeatureDescriptor> features;
 
-    //cout << "generating feature descriptors" << endl;
     Logger::debug(Logger::MAIN, "generating feature descriptors");
 
     features = featureGen.generateFeatures(inputImg, cornerPoints);
@@ -118,8 +113,7 @@ int main(int argc, char **argv)
 
     for(int i = 2; i < argc; i++)
     {
-    	//cout << "detecting features in file #" << (i-1) << " ('" << argv[i] << "')" << endl;
-      Logger::debug(Logger::MAIN, "detecting features in file #%d ('%s')", i-1, argv[i]);
+    	Logger::debug(Logger::MAIN, "detecting features in file #%d ('%s')", i-1, argv[i]);
 
     	try
     	{
@@ -127,8 +121,7 @@ int main(int argc, char **argv)
     	}
     	catch(Exception &e)
     	{
-    		//cout << "Error: opening image failed, reason: " << e.what() << endl;
-    	  Logger::error(Logger::MAIN, "error detecting features in file #%d ('%s'), reason: %s", i-1, argv[i], e.what());
+    		Logger::error(Logger::MAIN, "error detecting features in file #%d ('%s'), reason: %s", i-1, argv[i], e.what());
     		return -1;
     	}
 
@@ -138,13 +131,11 @@ int main(int argc, char **argv)
 
     	if(result)
     	{
-    		//cout << "image #" << (i-1) << " ('" << argv[i] << "') is a match!" << endl;
     		Logger::info(Logger::MAIN, "image #%d ('%s') is a match!", i-1, argv[i]);
     	}
     	else
     	{
-    		//cout << "image #" << (i-1) << " ('" << argv[i] << "') is no match!" << endl;
-    	  Logger::info(Logger::MAIN, "image #%d ('%s') is no match!", i-1, argv[i]);
+    		Logger::info(Logger::MAIN, "image #%d ('%s') is no match!", i-1, argv[i]);
     	}
     }
 
@@ -157,7 +148,7 @@ int main(int argc, char **argv)
 
     for(unsigned int i = 0; i < cornerPoints.size(); i++)
     {
-    	cout << "corner # " << i << " at (" << cornerPoints[i].getCol() << "," << cornerPoints[i].getRow() << ") with strength " << cornerPoints[i].getStrength() << endl;
+    	Logger::debug(Logger::MAIN, "corner #%d at (%d,%d) with strength %f", i, cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getStrength());
     	input.draw(DrawableCircle(cornerPoints[i].getCol(), cornerPoints[i].getRow(), cornerPoints[i].getCol() + 1, cornerPoints[i].getRow()));
     }
 
