@@ -5,6 +5,19 @@
 
 OPTIMIZATION_LEVEL = 3
 
+
+# pretty print
+ifndef V
+QUIET_CC    = @echo '   CC         '$@;
+QUIET_LINK  = @echo '   LINK       '$@;
+QUIET_CLEAN = @echo '   CLEAN      '$@;
+QUIET_DLL   = @echo '   DLLCREATE  '$@;
+endif
+
+
+# -------------------------------------------------------------------------------
+# ARM compilation stuff
+
 # ubuntu version
 #CROSS_PREFIX = arm-linux-gnueabi-
 
@@ -13,10 +26,50 @@ CROSS_PREFIX = /opt/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-
 
 CC = g++
 LD_FLAGS = `GraphicsMagick++-config --libs`
-CC_FLAGS = -I/usr/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall `GraphicsMagick++-config --cppflags` -c -fmessage-length=0
+CC_FLAGS = -I/usr/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall `GraphicsMagick++-config --cppflags` -c -fmessage-length=0 -D_GNU_SOURCE -DDSP_API=$(DSP_API)
 
 LD_FLAGS_ARM = -Lopt/lib -lGraphicsMagick++ -lGraphicsMagick -llcms -ltiff -lfreetype -ljasper -ljpeg -lpng -lwmflite -lXext -lSM -lICE -lX11 -lbz2 -lxml2 -lz -lm -lgomp -lpthread -lltdl -luuid -lxcb -lXau -lXdmcp
-CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c -fmessage-length=0
+CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c -fmessage-length=0 -D_GNU_SOURCE -DDSP_API=$(DSP_API)
+
+
+# -------------------------------------------------------------------------------
+# DSP compilation stuff
+
+DSP_API := 2
+
+DSP_TOOLS := /opt/TI/C6000CGT7.2.2
+DSP_DOFFBUILD := /opt/doffbuild
+CL6X := $(DSP_TOOLS)/bin/cl6x
+LNK6X := $(DSP_TOOLS)/bin/lnk6x
+DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
+
+DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
+DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P
+DSP_INCLUDES := -I$(DSP_TOOLS)/include/
+
+DSP_OUT_DIR := ./bin/dsp
+
+
+# build rules for DSP stuff
+./bin/dsp/harris_bridge.o64P: ./src/arm_dsp/dsp/harris_bridge.s
+	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+
+./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
+	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+
+./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
+	$(QUIET_LINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
+
+./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
+	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
+
+# DSP target
+dsp: $(DSP_OUT_DIR)/harris_dsp.dll64P
+
+
+
+# -------------------------------------------------------------------------------
+# other targets of Makefile
 
 
 # source files, TODO
@@ -73,7 +126,7 @@ HarrisCornerDetectorARM: buildHarrisCornerDetectorARM deploybeagleboard
 # compile for host machine
 buildHarrisCornerDetectorHost: CCC = $(CC)
 buildHarrisCornerDetectorHost: $(OBJS)
-	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
+	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
 
 # compile using cross compiler (for ARM)
@@ -81,60 +134,60 @@ buildHarrisCornerDetectorARM: CCC = $(CROSS_PREFIX)$(CC)
 buildHarrisCornerDetectorARM: LD_FLAGS = $(LD_FLAGS_ARM)
 buildHarrisCornerDetectorARM: CC_FLAGS = $(CC_FLAGS_ARM)
 buildHarrisCornerDetectorARM: $(OBJS)
-	$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
+	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
 
 
 # build targets for ARM only version
 ./bin/main.o: ./src/main.cpp $(CPP_SRCS)
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/ConsoleLogger.o: ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/FileLogger.o: ./src/util/FileLogger.cpp ./src/util/FileLogger.h
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/Logger.o: ./src/util/Logger.cpp ./src/util/Logger.h ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h ./src/util/FileLogger.cpp ./src/util/FileLogger.h ./src/util/Logger.h ./src/util/Logger.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/TimeMeasureBase.o: ./src/util/TimeMeasureBase.cpp ./src/util/TimeMeasureBase.h ./src/util/SystemTimeMeasure.h
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp ./src/pure_arm/GaussFilter.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/NonMaxSuppressor.o: ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/FeatureDescriptor.o: ./src/util/FeatureDescriptor.cpp ./src/util/FeatureDescriptor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/FeatureGenerator.o: ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
-	$(CCC) $(CC_FLAGS) -o"$@" $<
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 
 .PHONY: deploybeagleboard
 
 deploybeagleboard:
-	cp $(BIN) $(DEPLOYDIR)
 	@echo deploying files to beagleboard...
+	cp $(BIN) $(DEPLOYDIR)
 	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@10.1.0.66:/home/ubuntu/harris
 
 
 .PHONY: clean
 
 clean:
-	rm -rf $(BIN) $(OBJS)
-
+	$(QUIET_CLEAN)rm -rf $(BIN) $(OBJS)
+	$(QUIET_CLEAN)rm -rf ./bin/dsp/*
