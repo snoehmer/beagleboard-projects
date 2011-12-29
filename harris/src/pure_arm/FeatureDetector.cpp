@@ -94,7 +94,7 @@ bool FeatureDetector::match(ImageBitstream image)
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
-		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, features_[i].get(), featureData_[i]))
+		if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, featureData_[i]))
 			matchCount++;
 
 		if(matchCount >= featuresToMatch)
@@ -110,7 +110,7 @@ bool FeatureDetector::match(ImageBitstream image)
 }
 
 
-bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *patch, PatchData patchData)
+bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData)
 {
 	unsigned int row, col;
 	unsigned int prow, pcol;
@@ -122,13 +122,11 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
   int *patchNormSq = patchData.patchNormSq_;
 
 	// calculate NCC
-	float iavg;
-	float pavg;
-	float inorm;
-	float pnorm;
-	float sumIP;
-	float sumPP;
-	float sumII;
+	int iavg;
+	int inorm;
+	int sumIP;
+	int sumPP;
+	int sumII;
 	float ncc = 0.0f;
 
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
@@ -137,19 +135,16 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 		{
 		  // calculate average of image at current patch
 		  iavg = 0;
-		  pavg = 0;
 
 		  for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
       {
         for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
         {
           iavg += image[irow * width + icol];
-          pavg += patch[prow * patchSize + pcol];
         }
       }
 
 		  iavg = iavg / (patchSize * patchSize);
-		  pavg = pavg / (patchSize * patchSize);
 
 
 		  // calculate NCC
@@ -162,12 +157,9 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
         for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
         {
           inorm = image[irow * width + icol] - iavg;
-          pnorm = patch[prow * patchSize + pcol] - pavg;
 
-          //sumIP += patchNorm[prow * patchSize + pcol] * inorm;
-          sumIP += pnorm * inorm;
-          //sumPP += patchNormSq[prow * patchSize + pcol];
-          sumPP += pnorm * pnorm;
+          sumIP += patchNorm[prow * patchSize + pcol] * inorm;
+          sumPP += patchNormSq[prow * patchSize + pcol];
           sumII += inorm * inorm;
         }
       }

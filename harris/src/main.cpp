@@ -18,7 +18,7 @@
 #include <vector>
 #include <iostream>
 
-#define DEBUG_OUTPUT_CORNERS
+//#define DEBUG_OUTPUT_CORNERS
 
 
 //parameters for NCC matching
