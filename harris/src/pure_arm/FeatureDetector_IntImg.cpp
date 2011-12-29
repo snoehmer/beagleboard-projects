@@ -90,8 +90,8 @@ bool FeatureDetectorIntImg::match(ImageBitstream image)
 	// calculate image parameters once per image
 	int *imageIntegral = new int[(extWidth + 1) * (extHeight + 1)];
 	int *imageIntegral2 = new int[(extWidth + 1) * (extHeight + 1)];
-	int *imageSqSum = new int[image.getWidth() * image.getHeight()];
-	int *imageAvg = new int[image.getWidth() * image.getHeight()];
+	float *imageSqSum = new float[image.getWidth() * image.getHeight()];
+	float *imageAvg = new float[image.getWidth() * image.getHeight()];
 
 	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum, imageAvg);
 
@@ -118,7 +118,7 @@ bool FeatureDetectorIntImg::match(ImageBitstream image)
 }
 
 
-bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, int* imageSqSum, int *imageAvg)
+bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, float *imageSqSum, float *imageAvg)
 {
 	unsigned int row, col;
 	unsigned int prow, pcol;
@@ -128,11 +128,11 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 
 
 	// calculate patch parameters once per patch
-	int *patchNorm = patchData.patchNorm_;
-	int patchSqSum = patchData.patchSqSum_;
+	float *patchNorm = patchData.patchNorm_;
+	float patchSqSum = patchData.patchSqSum_;
 
 	// calculate NCC
-	int sumIP = 0;
+	float sumIP = 0;
 	float ncc = 0.0f;
 
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
@@ -151,7 +151,7 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 				{
 					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 					{
-						sumIP += patchNorm[prow * patchSize + pcol] * (image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
+						sumIP += patchNorm[prow * patchSize + pcol] * ((float)image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
 						//sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol]; //TODO
 					}
 				}
@@ -174,7 +174,7 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 }
 
 
-void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum, int *imageAvg)
+void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, float *imageSqSum, float *imageAvg)
 {
 	unsigned int row, col;
 
@@ -221,8 +221,8 @@ void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned in
 			A = imageIntegral2[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral2[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 			B = imageIntegral[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 
-			imageSqSum[(row - offset) * imageWidth + (col - offset)] = sqrt(A - (B * B) / (patchSize * patchSize));
-			imageAvg[(row - offset) * imageWidth + (col - offset)] = B / (patchSize * patchSize);
+			imageSqSum[(row - offset) * imageWidth + (col - offset)] = sqrt((float)A - ((float)(B * B)) / ((float)(patchSize * patchSize)));
+			imageAvg[(row - offset) * imageWidth + (col - offset)] = B / (float(patchSize * patchSize));
 		}
 	}
 
@@ -236,9 +236,9 @@ PatchData FeatureDetectorIntImg::calculatePatchData(unsigned char *patch)
 	int row, col;
 	int patchSize = FeatureDescriptor::patchSize_;
 
-	int patchAvg;
-	int *patchNorm = new int[patchSize * patchSize];
-	int patchSqSum;
+	float patchAvg;
+	float *patchNorm = new float[patchSize * patchSize];
+	float patchSqSum;
 
 	//cout << "calculating patch data...";
 
@@ -255,25 +255,25 @@ PatchData FeatureDetectorIntImg::calculatePatchData(unsigned char *patch)
 		}
 	}
 
-	patchAvg = psum / (patchSize * patchSize);
+	patchAvg = (float)psum / ((float)(patchSize * patchSize));
 
 
 	// now calculate normalized patch and sqSum
-	int sqSum = 0;
+	float sqSum = 0;
 	//int testPatchNorm = 0;
 
 	for(row = 0; row < patchSize; row++)
 	{
 		for(col = 0; col < patchSize; col++)
 		{
-			patchNorm[row * patchSize + col] = patch[row * patchSize + col] - patchAvg;
+			patchNorm[row * patchSize + col] = (float)patch[row * patchSize + col] - patchAvg;
 
 			sqSum += patchNorm[row * patchSize + col] * patchNorm[row * patchSize + col];
 			//testPatchNorm += patchNorm[row * patchSize + col];
 		}
 	}
 
-	patchSqSum = (int) sqrt(sqSum);
+	patchSqSum = sqrt(sqSum);
 
 	stopTimer("_ncc_patchdata_single_arm");
 

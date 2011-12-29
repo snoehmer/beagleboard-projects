@@ -19,10 +19,10 @@ using namespace std;
 
 struct PatchData
 {
-	int patchAvg_;
-	int *patchNorm_;
-	int *patchNormSq_;
-	int patchSqSum_;
+	float patchAvg_;
+	float *patchNorm_;
+	float *patchNormSq_;
+	float patchSqSum_;
 };
 
 

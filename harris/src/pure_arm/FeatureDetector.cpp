@@ -118,15 +118,15 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 
 	unsigned int patchSize = FeatureDescriptor::patchSize_;
 
-	int *patchNorm = patchData.patchNorm_;
-  int *patchNormSq = patchData.patchNormSq_;
+	float *patchNorm = patchData.patchNorm_;
+  float *patchNormSq = patchData.patchNormSq_;
 
 	// calculate NCC
-	int iavg;
-	int inorm;
-	int sumIP;
-	int sumPP;
-	int sumII;
+	float iavg;
+	float inorm;
+	float sumIP;
+	float sumPP;
+	float sumII;
 	float ncc = 0.0f;
 
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
@@ -144,7 +144,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
         }
       }
 
-		  iavg = iavg / (patchSize * patchSize);
+		  iavg = iavg / ((float)(patchSize * patchSize));
 
 
 		  // calculate NCC
@@ -156,7 +156,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
       {
         for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
         {
-          inorm = image[irow * width + icol] - iavg;
+          inorm = (float)image[irow * width + icol] - iavg;
 
           sumIP += patchNorm[prow * patchSize + pcol] * inorm;
           sumPP += patchNormSq[prow * patchSize + pcol];
@@ -193,9 +193,9 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
   int row, col;
   int patchSize = FeatureDescriptor::patchSize_;
 
-  int patchAvg;
-  int *patchNorm = new int[patchSize * patchSize];
-  int *patchNormSq = new int[patchSize * patchSize];
+  float patchAvg;
+  float *patchNorm = new float[patchSize * patchSize];
+  float *patchNormSq = new float[patchSize * patchSize];
 
   startTimer("_ncc_patchdata_single_arm");
 
@@ -210,7 +210,7 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
     }
   }
 
-  patchAvg = psum / (patchSize * patchSize);
+  patchAvg = ((float)psum) / ((float)(patchSize * patchSize));
 
 
   // now calculate normalized patch and squared normalized patch
@@ -218,7 +218,7 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
   {
     for(col = 0; col < patchSize; col++)
     {
-      patchNorm[row * patchSize + col] = patch[row * patchSize + col] - patchAvg;
+      patchNorm[row * patchSize + col] = (float)patch[row * patchSize + col] - patchAvg;
 
       patchNormSq[row * patchSize + col] = patchNorm[row * patchSize + col] * patchNorm[row * patchSize + col];
     }
