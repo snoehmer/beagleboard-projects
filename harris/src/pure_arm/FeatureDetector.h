@@ -51,7 +51,7 @@ protected:
 
 private:
 
-	virtual bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData);
+	virtual bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, unsigned char *patch, PatchData patchData);
 	virtual PatchData calculatePatchData(unsigned char *patch);
 };
 

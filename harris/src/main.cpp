@@ -23,8 +23,8 @@
 
 //parameters for NCC matching
 #define HARRIS_THRESH 0.7f  //threshold for Harris Corner Detector
-#define NCC_STD_FEAT_THRESH 50  //threshold for matched features in percent for standard NCC
-#define NCC_STD_NCC_THRESH 0.5f //threshold for NCC score for standard NCC
+#define NCC_STD_FEAT_THRESH 80  //threshold for matched features in percent for standard NCC
+#define NCC_STD_NCC_THRESH 0.8f //threshold for NCC score for standard NCC
 
 using namespace std;
 using namespace Magick;
