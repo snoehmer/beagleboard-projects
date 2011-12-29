@@ -9,6 +9,7 @@
 #include "pure_arm/ImageBitstream.h"
 #include "pure_arm/HarrisCornerDetector.h"
 #include "pure_arm/FeatureDetector.h"
+#include "pure_arm/FeatureDetector_IntImg.h"
 #include "util/FeatureGenerator.h"
 #include "util/FeatureDescriptor.h"
 #include "util/HarrisCornerPoint.h"
@@ -17,12 +18,13 @@
 #include <vector>
 #include <iostream>
 
-//#define DEBUG_OUTPUT_CORNERS
+#define DEBUG_OUTPUT_CORNERS
+
 
 //parameters for NCC matching
 #define HARRIS_THRESH 0.7f  //threshold for Harris Corner Detector
-#define NCC_STD_FEAT_THRESH 80  //threshold for matched features in percent for standard NCC
-#define NCC_STD_NCC_THRESH 0.8f //threshold for NCC score for standard NCC
+#define NCC_STD_FEAT_THRESH 50  //threshold for matched features in percent for standard NCC
+#define NCC_STD_NCC_THRESH 0.5f //threshold for NCC score for standard NCC
 
 using namespace std;
 using namespace Magick;
@@ -57,10 +59,6 @@ int main(int argc, char **argv)
 
     /* ============================================================================
      * part 1: Harris Corner Detection
-     */
-
-    /* ----------------------------------------------------------------------------
-     * variant a: on ARM only
      */
 
     HarrisCornerDetector hcd(HARRIS_THRESH);
@@ -99,17 +97,39 @@ int main(int argc, char **argv)
      * part 3: find features in other images
      */
 
-    /* ----------------------------------------------------------------------------
-     * variant a: on ARM only
-     */
-
     ImageBitstream currentImg;
 
     Logger::debug(Logger::MAIN, "initializing standard feature detector with feature threshold %d\%, NCC threshold %f", NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
-    FeatureDetector featureDet(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    FeatureDetector *featureDet;
+
+#ifndef USE_DSP
+#if defined FEATDET_USE_NCCSTD
+    featureDet = new FeatureDetector(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCINTIMG
+    featureDet = new FeatureDetectorIntImg(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCHARRISSTD
+    featureDet = new FeatureDetectorHarrisStd(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCHARRISINTIMG
+    featureDet = new FeatureDetectorHarrisIntImg(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#else
+#error You must choose a Feature Detector!
+#endif
+#else
+#if defined FEATDET_USE_NCCSTD
+    featureDet = new FeatureDetectorDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCINTIMG
+    featureDet = new FeatureDetectorIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCHARRISSTD
+    featureDet = new FeatureDetectorHarrisStdDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#elif defined FEATDET_USE_NCCHARRISINTIMG
+    featureDet = new FeatureDetectorHarrisIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+#else
+#error You must choose a Feature Detector!
+#endif
+#endif
 
     Logger::debug(Logger::MAIN, "initializing features of feature detector");
-    featureDet.setFeatures(features);
+    featureDet->setFeatures(features);
 
     for(int i = 2; i < argc; i++)
     {
@@ -126,7 +146,7 @@ int main(int argc, char **argv)
     	}
 
     	startTimer("ncc_match_arm");
-    	bool result = featureDet.match(currentImg);
+    	bool result = featureDet->match(currentImg);
     	stopTimer("ncc_match_arm");
 
     	if(result)
@@ -141,6 +161,9 @@ int main(int argc, char **argv)
 
     TimeMeasureBase::getInstance()->printStatistic();
 
+    delete featureDet;
+
+
 #ifdef DEBUG_OUTPUT_CORNERS
     // mark corners in output image
     Image input = inputImg.getImage();
@@ -153,7 +176,7 @@ int main(int argc, char **argv)
     }
 
     // convert raw pixel data back to image
-    input.write("../output/corners.png");
+    input.write("./output/corners.png");
 #endif
 
     return 0;

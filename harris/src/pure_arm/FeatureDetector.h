@@ -21,23 +21,27 @@ struct PatchData
 {
 	int patchAvg_;
 	int *patchNorm_;
+	int *patchNormSq_;
 	int patchSqSum_;
 };
 
 
+/**
+ * Base class for feature detectors, standard and slow NCC-based detector
+ */
 class FeatureDetector
 {
 public:
 	FeatureDetector(unsigned int featuresThreshold = 75, float nccThreshold = 0.8f);
 	virtual ~FeatureDetector();
 
-	void setFeatures(vector<FeatureDescriptor> features);
+	virtual void setFeatures(vector<FeatureDescriptor> features);
 
-	bool match(ImageBitstream image);
-	bool match(Image image);
+	virtual bool match(ImageBitstream image);
+	virtual bool match(Image image);
 
 
-private:
+protected:
 
 	unsigned int featuresThreshold_;
 	float nccThreshold_;
@@ -45,11 +49,10 @@ private:
 	vector<PatchData> featureData_;
 
 
-	bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, int* imageSqSum, int *imageAvg);
-	float getNCC(ImageBitstream image, int x, int y, FeatureDescriptor feature, int patchAvg, int *patchNorm, int patchSqSum, int *imageIntegral, int *imageIntegral2, int* imageSqSum);
+private:
 
-	PatchData calculatePatchData(unsigned char *patch);
-	void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, int *imageSqSum, int *imageAvg);
+	virtual bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData);
+	virtual PatchData calculatePatchData(unsigned char *patch);
 };
 
 #endif /* FEATUREDETECTOR_H_ */

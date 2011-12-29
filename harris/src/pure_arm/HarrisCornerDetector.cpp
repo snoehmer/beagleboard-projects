@@ -207,11 +207,11 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
-	tempImg.write("../output/diffXX.png");
+	tempImg.write("./output/diffXX.png");
 	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
-	tempImg.write("../output/diffYY.png");
+	tempImg.write("./output/diffYY.png");
 	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
-	tempImg.write("../output/diffXY.png");
+	tempImg.write("./output/diffXY.png");
 #endif
 
 
@@ -264,11 +264,11 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
-	tempImg.write("../output/diffXX-gauss.png");
+	tempImg.write("./output/diffXX-gauss.png");
 	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
-	tempImg.write("../output/diffYY-gauss.png");
+	tempImg.write("./output/diffYY-gauss.png");
 	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
-	tempImg.write("../output/diffXY-gauss.png");
+	tempImg.write("./output/diffXY-gauss.png");
 #endif
 
 
@@ -302,7 +302,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);
-	tempImg.write("../output/hcrIntern.png");
+	tempImg.write("./output/hcrIntern.png");
 #endif
 
 
@@ -318,7 +318,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
-	tempImg.write("../output/hcrNonMax.png");
+	tempImg.write("./output/hcrNonMax.png");
 #endif
 
 
@@ -329,7 +329,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
-	tempImg.write("../output/hcrNonMax-tresh.png");
+	tempImg.write("./output/hcrNonMax-tresh.png");
 #endif
 
 

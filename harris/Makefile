@@ -2,8 +2,21 @@
 # can compile HCD for the host system using the standard g++ compiler
 # or cross-compile HCD for another platform (ARM)
 # also compiles the sources for the DSP
+#
+# possible targets:
+#	arm-slow			builds the pure ARM version without optimizations (very slow)
+#	arm-intimg			builds the pure ARM version with integral image
+#	arm-harris			builds the pure ARM version with Harris-based NCC, but without optimizations
+#	arm-harris-intimg	builds the pure ARM version with Harris-based NCC and with integral image
+#	dsp-slow			builds the ARM+DSP version without optimizations (slow)
+#	dsp-intimg			builds the ARM+DSP version with integral image
+#	dsp-harris			builds the ARM+DSP version with Harris-based NCC, but without optimizations
+#	dsp-harris-intimg	builds the ARM+DSP version with Harris-based NCC and with integral image
+#	dsp-generic			builds the DSP only library
+#
 
-OPTIMIZATION_LEVEL = 3
+
+OPTIMIZATION_LEVEL = 0
 
 
 # pretty print
@@ -51,29 +64,28 @@ DSP_OUT_DIR := ./bin/dsp
 
 
 # build rules for DSP stuff
-./bin/dsp/harris_bridge.o64P: ./src/arm_dsp/dsp/harris_bridge.s
-	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
-
-./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
-	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
-
-./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
-	$(QUIET_LINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
-
-./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
-	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
-
+#./bin/dsp/harris_bridge.o64P: ./src/arm_dsp/dsp/harris_bridge.s
+#	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+#
+#./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
+#	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+#
+#./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
+#	$(QUIET_LINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
+#
+#./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
+#	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
+#
 # DSP target
-dsp: $(DSP_OUT_DIR)/harris_dsp.dll64P
-
+#dsp-generic: $(DSP_OUT_DIR)/harris_dsp.dll64P
 
 
 # -------------------------------------------------------------------------------
 # other targets of Makefile
 
 
-# source files, TODO
-CPP_SRCS = \
+# source files, for ARM-only version
+CPP_SRCS_ARM = \
 ./src/util/Logger.cpp \
 ./src/util/ConsoleLogger.cpp \
 ./src/util/FileLogger.cpp \
@@ -82,14 +94,14 @@ CPP_SRCS = \
 ./src/pure_arm/ImageBitstream.cpp \
 ./src/util/FeatureDescriptor.cpp \
 ./src/pure_arm/FeatureDetector.cpp \
+./src/pure_arm/FeatureDetector_IntImg.cpp \
 ./src/util/FeatureGenerator.cpp \
 ./src/pure_arm/GaussFilter.cpp \
 ./src/pure_arm/NonMaxSuppressor.cpp \
 ./src/pure_arm/HarrisCornerDetector.cpp \
 ./src/main.cpp 
 
-
-OBJS = \
+OBJS_ARM = \
 ./bin/Logger.o \
 ./bin/ConsoleLogger.o \
 ./bin/FileLogger.o \
@@ -98,6 +110,7 @@ OBJS = \
 ./bin/ImageBitstream.o \
 ./bin/FeatureDescriptor.o \
 ./bin/FeatureDetector.o \
+./bin/FeatureDetector_IntImg.o \
 ./bin/FeatureGenerator.o \
 ./bin/GaussFilter.o \
 ./bin/NonMaxSuppressor.o \
@@ -114,31 +127,49 @@ DEPLOYDIR = ./bin/deploy
 # quick targets
 all: HarrisCornerDetectorHost
 
-arm: HarrisCornerDetectorARM
+# quick targets for ARM platform without DSP
+arm-slow: CC_FLAGS_ARM += -DFEATDET_USE_NCCSTD
+arm-slow: hcd-nondsp
+
+arm-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCINTIMG
+arm-intimg: hcd-nondsp
+
+#arm-harris: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISSTD
+#arm-harris: hcd-nondsp
+
+#arm-harris-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISINTIMG
+#arm-harris-intimg: hcd-nondsp
+
+# quick targets for host platform (x86) (mainly for testing)
+host-slow: CC_FLAGS += -DFEATDET_USE_NCCSTD
+host-slow: HarrisCornerDetectorHost
+
+host-intimg: CC_FLAGS += -DFEATDET_USE_NCCINTIMG
+host-intimg: HarrisCornerDetectorHost
 
 
 # platform targets
 HarrisCornerDetectorHost: buildHarrisCornerDetectorHost
 
-HarrisCornerDetectorARM: buildHarrisCornerDetectorARM deploybeagleboard
+hcd-nondsp: buildHarrisCornerDetectorARM deploybeagleboard
 
 
 # compile for host machine
 buildHarrisCornerDetectorHost: CCC = $(CC)
-buildHarrisCornerDetectorHost: $(OBJS)
-	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
+buildHarrisCornerDetectorHost: $(OBJS_ARM)
+	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS_ARM)
 
 
 # compile using cross compiler (for ARM)
 buildHarrisCornerDetectorARM: CCC = $(CROSS_PREFIX)$(CC)
 buildHarrisCornerDetectorARM: LD_FLAGS = $(LD_FLAGS_ARM)
 buildHarrisCornerDetectorARM: CC_FLAGS = $(CC_FLAGS_ARM)
-buildHarrisCornerDetectorARM: $(OBJS)
-	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS)
+buildHarrisCornerDetectorARM: $(OBJS_ARM)
+	$(QUIET_LINK)$(CCC) $(LD_FLAGS) -o"$(BIN)" $(OBJS_ARM)
 
 
 # build targets for ARM only version
-./bin/main.o: ./src/main.cpp $(CPP_SRCS)
+./bin/main.o: ./src/main.cpp $(CPP_SRCS_ARM)
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/ConsoleLogger.o: ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h
@@ -177,6 +208,9 @@ buildHarrisCornerDetectorARM: $(OBJS)
 ./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
+./bin/FeatureDetector_IntImg.o: ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
+
 
 .PHONY: deploybeagleboard
 
@@ -189,5 +223,5 @@ deploybeagleboard:
 .PHONY: clean
 
 clean:
-	$(QUIET_CLEAN)rm -rf $(BIN) $(OBJS)
+	$(QUIET_CLEAN)rm -rf $(BIN) $(OBJS_ARM)
 	$(QUIET_CLEAN)rm -rf ./bin/dsp/*
