@@ -151,8 +151,8 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 				{
 					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 					{
-						sumIP += patchNorm[prow * patchSize + pcol] * ((float)image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
-						//sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol]; //TODO
+						//sumIP += patchNorm[prow * patchSize + pcol] * ((float)image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
+						sumIP += patchNorm[prow * patchSize + pcol] * (float)image[irow * width + icol];
 					}
 				}
 
