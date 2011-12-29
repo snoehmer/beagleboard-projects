@@ -48,7 +48,7 @@ public:
       if(q_ > q)
         ret.value_ = value_ << (q_ - q);
       else
-        ret.value_ = value_ >> (q_ - q_);
+        ret.value_ = value_ >> (q - q_);
 
       ret.q_ = q;
 
@@ -82,14 +82,14 @@ public:
   inline Fixed operator *(Fixed right)
   {
     Fixed ret = right.convert(q_);
-    ret.value_ = (value_ * ret.value_) >> q_;
+    ret.value_ = (int) (((long)value_ * (long)ret.value_) >> q_);
     return ret;
   }
 
   inline Fixed operator /(Fixed right)
   {
     Fixed ret = right.convert(q_);
-    ret.value_ = (value_ << q_) / ret.value_;
+    ret.value_ = (int) ((((long)value_) << q_) / ((long)ret.value_));
     return ret;
   }
 
@@ -107,13 +107,13 @@ public:
 
   inline Fixed operator *=(Fixed right)
   {
-    value_ = (value_ * right.convert(q_).value_) >> q_;
+    value_ = (int) (((long)value_ * (long)right.convert(q_).value_) >> q_);
     return *this;
   }
 
   inline Fixed operator /=(Fixed right)
   {
-    value_ = (value_ << q_) / right.convert(q_).value_;
+    value_ = (int) ((((long)value_) << q_) / ((long)right.convert(q_).value_));
     return *this;
   }
 
@@ -246,7 +246,7 @@ public:
   inline Fixed sqrt()
   {
     Fixed ret = *this;
-    ret.value_ = isqr(value_ << (q_));
+    ret.value_ = ::sqrt(((long)value_) << q_);
     return ret;
   }
 
