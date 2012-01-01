@@ -89,11 +89,13 @@ deploy: all
 #	scp -P 23456 -r $(arch_bins)  ubuntu@bierwg.no-ip.org:/home/ubuntu/tom/
 #	rsync -avze ssh -P 23456 $(arch_bins) ubuntu@bierwg.no-ip.org:/home/ubuntu/tom
 #	rsync -avze --progress --inplace --rsh='ssh -p23456' $(arch_bins) ubuntu@bierwg.no-ip.org:/home/ubuntu/tom
-	rsync -avze --progress --inplace --rsh='ssh' $(arch_bins) ubuntu@beagleboard:/home/ubuntu/tom
+# rsync -avze --progress --inplace --rsh='ssh' $(arch_bins) ubuntu@beagleboard:/home/ubuntu/tom
+	rsync -avze --progress --inplace --rsh='ssh' $(arch_bins) ubuntu@noehmer.no-ip.org:/home/ubuntu/tom
 
 deploy_src:
 #	rsync -avze --progress --inplace --rsh='ssh -p23456' src/ ubuntu@bierwg.no-ip.org:/home/ubuntu/tom/src
-	rsync -avze --progress --inplace --rsh='ssh -p23456' src/ ubuntu@beagleboard:/home/ubuntu/tom/src
+#	rsync -avze --progress --inplace --rsh='ssh -p23456' src/ ubuntu@beagleboard:/home/ubuntu/tom/src
+	rsync -avze --progress --inplace --rsh='ssh' src/ ubuntu@noehmer.no-ip.org:/home/ubuntu/tom/src
 
 
 # Local variables:
