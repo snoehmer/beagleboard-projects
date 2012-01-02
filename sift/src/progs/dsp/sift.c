@@ -46,7 +46,8 @@ int filterImageGaussian(
   int width, int height,
   ConvolutionKernel gauss);
 
-void calcDOG(short * dst, const short* a, const short* b, int len);
+void calcDOG(short * restrict dst, const short* restrict a, const short * restrict b, int len);
+int detectKeypoints(const short* dog_fixed, int w, int h, int nscales, short tp_fixed, VlSiftKeypoint* keys, int* nkeys, int max_nkeys);
 
 unsigned int dsp_sift_create(void)
 {
@@ -66,6 +67,8 @@ unsigned int dsp_sift_execute(void *env)
 	unsigned char done = 0;
 	short* gaussChain_inputImage = NULL;
 	int i;
+  int nkeys = 0;
+  int result;
 
 
 	while (!done) {
@@ -140,7 +143,7 @@ unsigned int dsp_sift_execute(void *env)
     case DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN:
       {
         filterImageGaussian_chained_params * params = (filterImageGaussian_chained_params*) msg.arg_1;
-        int result;
+
 
         BCACHE_inv((void*) params, sizeof(filterImageGaussian_chained_params), 1);
 
@@ -178,7 +181,7 @@ unsigned int dsp_sift_execute(void *env)
 
 
         NODE_putMsg(env, NULL, &msg, 0);// gaussian smoothing finished
-
+/*
         NODE_getMsg(env, &msg, (unsigned) -1); //wait for start signal of DOG
 
         //DOG
@@ -190,9 +193,56 @@ unsigned int dsp_sift_execute(void *env)
         }
 
         NODE_putMsg(env, NULL, &msg, 0); //DOG finished ...
+*/
 
         //remember last output (to use it as an input image the next time:
         gaussChain_inputImage = params->outputImage;
+        break;
+      }
+
+    case DSP_CALC_DETECT_KEYS:
+      {
+        dspdetect_params * params = (dspdetect_params*) msg.arg_1;
+
+        BCACHE_inv((void*) params, sizeof(dspdetect_params), 1);
+
+        BCACHE_inv((void*) params->octave_smin, params->nscales*params->w*params->h*sizeof(short), 1);
+        //BCACHE_inv((void*) params->dog_fixed, params->nscales*params->w*params->h*sizeof(short), 1);
+        //BCACHE_inv((void*) params->keys, params->max_nkeys*sizeof(VlSiftKeypoint), 1);
+
+        int const    so = params->w * params->h ;     // s-stride
+
+
+
+        for(i = 0; i < params->nscales - 1; i++)
+        {
+          calcDOG(params->dog_fixed + i*so, params->octave_smin + (i+1)*so, params->octave_smin + i*so, so);
+        }
+
+
+
+        BCACHE_wbInv((void*) params, sizeof(dspdetect_params), 1);
+        BCACHE_wbInv((void*) params->dog_fixed, (params->nscales-1)*params->w*params->h*sizeof(short), 1);
+
+
+        msg.cmd = DSP_CALC_DETECT_KEYS_FINISHED;
+
+        NODE_putMsg(env, NULL, &msg, 0); //DOG finished ...
+
+        //now detect keypoints:
+
+        nkeys = 0;
+        result = detectKeypoints(params->dog_fixed, params->w, params->h, params->nscales, params->tp_fixed, params->keys, &nkeys, params->max_nkeys);
+
+        BCACHE_wbInv((void*) params->keys, params->max_nkeys*sizeof(VlSiftKeypoint), 1);
+
+        if(result == 0)
+          msg.arg_1 = DSP_CALC_DETECT_KEYS_FINISHED;
+        else
+          msg.arg_1 = DSP_CALC_DETECT_KEYS_FAILED;
+
+        msg.arg_2 = nkeys;
+        NODE_putMsg(env, NULL, &msg, 0); //detection finished ...
         break;
       }
 
@@ -399,7 +449,8 @@ int filterImageGaussian(
   return 0;
 }
 
-void calcDOG(short * restrict dst, const short* restrict a, const short* restrict b, int len)
+void calcDOG(short * restrict dst, const short* restrict a, const short * restrict b, int len)
+//void calcDOG(short * dst, const short* a, const short* b, int len)
 {
   int i;
 
@@ -410,4 +461,99 @@ void calcDOG(short * restrict dst, const short* restrict a, const short* restric
   #pragma MUST_ITERATE(4,,4)
   for(i = 0; i < len; i++)
     dst[i] = a[i] - b[i];
+}
+
+int detectKeypoints(const short* dog_fixed, int w, int h, int nscales, short tp_fixed, VlSiftKeypoint* keys, int* nkeys, int max_nkeys)
+{
+  int s, y, x;
+
+  int const xo    = 1 ;                         // x-stride
+  int const yo    = w ;                 // y-stride
+  int const    so = w * h ;     // s-stride
+
+  const short *pt_fixed;
+  short v_fixed;
+  VlSiftKeypoint* k;
+  int index;
+  short values [32] = {0};
+
+  *nkeys = 0;
+
+
+
+  pt_fixed  = dog_fixed + xo + yo + so ;
+
+
+
+#pragma MUST_ITERATE(3, 3, 3) //works only for 3 scales!!!!!!
+  for(s = 0 ; s < nscales - 3 ; ++s) {
+    #pragma MUST_ITERATE(2,,2)
+    for(y = 1 ; y < h - 1 ; ++y) {
+      #pragma MUST_ITERATE(2,,2)
+      for(x = 1 ; x < w - 1 ; ++x) {
+        v_fixed = *pt_fixed ;
+
+
+#define CHECK_NEIGHBORS(CMP,SGN)                    \
+        ( v_fixed CMP ## = SGN tp_fixed &&                \
+          v_fixed CMP *(pt_fixed + xo) &&                       \
+          v_fixed CMP *(pt_fixed - xo) &&                       \
+          v_fixed CMP *(pt_fixed + so) &&                       \
+          v_fixed CMP *(pt_fixed - so) &&                       \
+          v_fixed CMP *(pt_fixed + yo) &&                       \
+          v_fixed CMP *(pt_fixed - yo) &&                       \
+                                                    \
+          v_fixed CMP *(pt_fixed + yo + xo) &&                  \
+          v_fixed CMP *(pt_fixed + yo - xo) &&                  \
+          v_fixed CMP *(pt_fixed - yo + xo) &&                  \
+          v_fixed CMP *(pt_fixed - yo - xo) &&                  \
+                                                    \
+          v_fixed CMP *(pt_fixed + xo      + so) &&             \
+          v_fixed CMP *(pt_fixed - xo      + so) &&             \
+          v_fixed CMP *(pt_fixed + yo      + so) &&             \
+          v_fixed CMP *(pt_fixed - yo      + so) &&             \
+          v_fixed CMP *(pt_fixed + yo + xo + so) &&             \
+          v_fixed CMP *(pt_fixed + yo - xo + so) &&             \
+          v_fixed CMP *(pt_fixed - yo + xo + so) &&             \
+          v_fixed CMP *(pt_fixed - yo - xo + so) &&             \
+                                                    \
+          v_fixed CMP *(pt_fixed + xo      - so) &&             \
+          v_fixed CMP *(pt_fixed - xo      - so) &&             \
+          v_fixed CMP *(pt_fixed + yo      - so) &&             \
+          v_fixed CMP *(pt_fixed - yo      - so) &&             \
+          v_fixed CMP *(pt_fixed + yo + xo - so) &&             \
+          v_fixed CMP *(pt_fixed + yo - xo - so) &&             \
+          v_fixed CMP *(pt_fixed - yo + xo - so) &&             \
+          v_fixed CMP *(pt_fixed - yo - xo - so) )
+
+
+        if (CHECK_NEIGHBORS(>,+) ||
+            CHECK_NEIGHBORS(<,-) ) {
+
+
+          // make room for more keypoints
+          if (*nkeys >= max_nkeys) {
+            return -1;  //reallocation of keypoint-buffer not supported!
+          }
+
+
+
+          k = keys + ((*nkeys)++) ;
+
+          k-> ix = x ;
+          k-> iy = y ;
+          k-> is = s ;
+
+        }
+
+        pt_fixed += 1 ;
+
+      }
+      pt_fixed += 2 ;
+    }
+    pt_fixed += 2 * yo ;
+  }
+
+
+  return 0;
 }

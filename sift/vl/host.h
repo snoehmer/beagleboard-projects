@@ -276,6 +276,15 @@ GNU GPLv2, or (at your option) any later version.
 #endif
 /** @} */
 
+#ifdef UNUSED
+#elif defined(__GNUC__)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
+#endif
+
 #if defined(VL_COMPILER_MSC)
 #define VL_UNUSED
 #define VL_INLINE static __inline

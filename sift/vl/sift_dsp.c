@@ -11,6 +11,8 @@
 #include "imopv.h"
 
 #include <string.h>
+#include <stdlib.h>
+
 
 #define UDSP
 //#define WRITE_OUTIMAGES
@@ -108,14 +110,14 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     //wait until previous gaussian smoothing is finished
     vl_dsp_get_message();
-
+/*
     vl_dsp_send_message(DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN, 0, 0);
     TIME_MEASURING_START_FUNC("DOG_DSP");
 
     //wait until DOG Calculation is finished
     vl_dsp_get_message();
     TIME_MEASURING_STOP_FUNC("DOG_DSP");
-
+*/
 #else
     void* input;
     if(i != 0)
@@ -137,7 +139,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
 
     if(destinations[i].dogOutImage)
     {
-      vl_dsp_dmm_buffer_end((void*)destinations[i].dogOutImage);
+      //vl_dsp_dmm_buffer_end((void*)destinations[i].dogOutImage);
     }
   }
 
@@ -155,6 +157,7 @@ void filterMultipleTimes_on_dsp(short* inputImage,
     VL_PRINTF("writing outputImage(%s):%x", filenameafter, destinations[i].outputImage);
   }
 #endif
+  VL_PRINT("filtering finished");
 }
 
 void filterImageGaussian_on_dsp(short* inputOutputImage,
@@ -278,11 +281,62 @@ void vl_imconvcol_vf_on_dsp(float* dst, int dst_stride,
       step, flags);
 }
 
-void debugParams(float* dst, int dst_stride,
+int detect_dsp(short* octave_smin, short* dog_fixed, int nscales, int w, int h, VlSiftKeypoint* keys, int keys_res, int* nkeys, short tp_fixed)
+{
+  VL_PRINT("detect_dsp(%x, %x, %d, %d, %d, %x, %d, %d)", octave_smin, dog_fixed, nscales, w, h, keys, keys_res, *nkeys);
+  dspdetect_params* params = vl_malloc(sizeof(dspdetect_params));
+
+  if(!params)
+    return -1;
+
+  params->octave_smin = (short*)vl_dsp_get_mapped_addr(octave_smin);
+  params->dog_fixed = (short*)vl_dsp_get_mapped_addr(dog_fixed);
+  params->keys = (VlSiftKeypoint*)vl_dsp_get_mapped_addr(keys);
+  params->nscales = nscales;
+  params->w = w;
+  params->h = h;
+  params->max_nkeys = keys_res;
+  params->tp_fixed = tp_fixed;
+
+  vl_dsp_dmm_buffer_begin((void*)octave_smin);
+  vl_dsp_dmm_buffer_begin((void*)dog_fixed);
+  vl_dsp_dmm_buffer_begin((void*)keys);
+
+  vl_dsp_dmm_buffer_begin((void*)params);
+
+  TIME_MEASURING_START_FUNC("DOG_DSP");
+  vl_dsp_send_message(DSP_CALC_DETECT_KEYS, (int)vl_dsp_get_mapped_addr(params), 0);
+
+  //wait until DOG Calculation is finished
+  vl_dsp_get_message();
+  TIME_MEASURING_STOP_FUNC("DOG_DSP");
+  vl_dsp_dmm_buffer_end(dog_fixed);
+  TIME_MEASURING_START_FUNC("VL_Detect_finding_DSP");
+
+  //wait until detection is finished:
+  dsp_msg_t m = vl_dsp_get_message();
+  TIME_MEASURING_STOP_FUNC("VL_Detect_finding_DSP");
+
+  vl_dsp_dmm_buffer_end(keys);
+
+  if(m.arg_1 != DSP_CALC_DETECT_KEYS_FINISHED)
+  {
+    VL_PRINTF("ERROR: DSP detection of keypoints failed!");
+    return -1;
+  }
+  else
+    VL_PRINTF("detect: finished, %d keypoints found!", m.arg_2);
+
+  *nkeys = m.arg_2;
+
+  return 0;
+}
+
+void debugParams(float* dst, int UNUSED(dst_stride),
     float const* src,
-    int src_width, int src_height, int src_stride,
+    int src_width, int src_height, int UNUSED(src_stride),
     float const* filt, int filt_begin, int filt_end,
-    int step, unsigned int flags)
+    int UNUSED(step), unsigned int UNUSED(flags))
 {
   static int counter = 0;
   int x,y;

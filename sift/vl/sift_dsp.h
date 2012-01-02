@@ -14,6 +14,21 @@
 #include "convolutionkernel.h"
 #endif
 
+#ifdef ARCH_DSP
+typedef struct _VlSiftKeypoint
+{
+  int o ;           /**< o coordinate (octave). */
+
+  int ix ;          /**< Integer unnormalized x coordinate. */
+  int iy ;          /**< Integer unnormalized y coordinate. */
+  int is ;          /**< Integer s coordinate. */
+
+  float x ;     /**< x coordinate. */
+  float y ;     /**< y coordinate. */
+  float s ;     /**< s coordinate. */
+  float sigma ; /**< scale. */
+} VlSiftKeypoint ;
+#endif
 
 
 enum
@@ -21,12 +36,16 @@ enum
   DSP_CALC_IMCONVOL_VF = 1,
   DSP_CALC_GAUSSIAN_FIXEDPOINT,
   DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAIN,
+  DSP_CALC_DETECT_KEYS,
   DSP_CALC_IMCONVOL_VF_FINISHED = 100,
   DSP_CALC_GAUSSIAN_FIXEDPOINT_FINISHED,
   DSP_CALC_IMCONVOL_VF_FAILED,
   DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FINISHED,
-  DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED
+  DSP_CALC_GAUSSIAN_FIXEDPOINT_CHAINED_FAILED,
+  DSP_CALC_DETECT_KEYS_FINISHED,
+  DSP_CALC_DETECT_KEYS_FAILED
 };
+
 
 typedef struct _imconvol_vf_params
 {
@@ -73,9 +92,11 @@ typedef struct
 
 typedef struct
 {
-  short* a,b,dst;
-  int len;
-}filterImageDOG_params;
+  short* octave_smin,*dog_fixed;
+  VlSiftKeypoint* keys;
+  int w, h, max_nkeys, nscales;
+  short tp_fixed;
+}dspdetect_params;
 
 
 typedef struct
@@ -107,6 +128,9 @@ void filterImageGaussian_on_dsp(short* inputOutputImage,
 
 void filterMultipleTimes_on_dsp(short* imputImage,
     int width, int height, DestinationImage destinations[], int numDestinations);
+
+int detect_dsp(short* octave_smin, short* dog_fixed, int nscales, int w, int h, VlSiftKeypoint* keys, int keys_res, int* nkeys, short tp_fixed);
+
 
 #ifdef ARCH_DSP
 //defininition for DSP, to avoid including the whole vlfeat stuff...

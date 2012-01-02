@@ -128,13 +128,13 @@ int TimeMeasureBase::getCallCount(const char *identifier)
 
 void TimeMeasureBase::printStatistic()
 {
-  printf("identifier        | totaltime(ms)    | callcount    | mean duration\n");
+  printf("identifier             | totaltime(ms)    | callcount    | mean duration\n");
   printf("-----------------------------------------------------------------\n");
   for(unsigned i = 0; i < timers.size(); i++)
   {
     float test = timers[i].totalTime.tv_usec;
     float totalTime = timers[i].totalTime.tv_sec*1000 + test/1000.0;
-    printf("%17s |%17f |%13d |%f\n", timers[i].identifier, totalTime, (int)timers[i].callCount, totalTime/timers[i].callCount);
+    printf("%23s |%17f |%13d |%f\n", timers[i].identifier, totalTime, (int)timers[i].callCount, totalTime/timers[i].callCount);
   }
 }
 

@@ -1271,9 +1271,10 @@ vl_sift_new (int width, int height,
   f-> octave_width  = 0 ;
   f-> octave_height = 0 ;
 
-  f-> keys     = 0 ;
+  f-> keys_res = 2000;
+  f-> keys     = (VlSiftKeypoint*)vl_malloc(f-> keys_res*sizeof(VlSiftKeypoint));
   f-> nkeys    = 0 ;
-  f-> keys_res = 0 ;
+
 
   f-> peak_thresh = 0.0 ;
   f-> edge_thresh = 10.0 ;
@@ -1489,7 +1490,7 @@ vl_sift_process_next_octave (VlSiftFilt *f)
   vl_sift_pix *octave, *pt ;
 
   /* shortcuts */
-  vl_sift_pix *temp   = f-> temp ;
+  vl_sift_pix *UNUSED(temp)   = f-> temp ;
   int O               = f-> O ;
   int S               = f-> S ;
   int o_min           = f-> o_min ;
@@ -1603,7 +1604,7 @@ vl_sift_detect (VlSiftFilt * f)
   double       xper  = pow (2.0, f->o_cur) ;
 
   int x, y, s, i, ii, jj ;
-  vl_sift_pix *pt, v ;
+  vl_sift_pix *pt, UNUSED(v) ;
   vl_sift_pix_fixed *pt_fixed, v_fixed ;
   VlSiftKeypoint *k ;
 
@@ -1624,6 +1625,10 @@ vl_sift_detect (VlSiftFilt * f)
   }
   TIME_MEASURING_STOP_FUNC("VL_DOG");
 
+  detect_dsp(vl_sift_get_octave_fixed(f, s_min), dog_fixed, s_max - s_min + 1, w, h, f->keys, f->keys_res, &f->nkeys, tp_fixed);
+
+
+
 /*
   TIME_MEASURING_START_FUNC("VL_DOG_fixed");
   // compute difference of gaussian (DoG)
@@ -1637,18 +1642,19 @@ vl_sift_detect (VlSiftFilt * f)
     }
   }
   TIME_MEASURING_STOP_FUNC("VL_DOG_fixed");
-*/
-  static int counter = 0;
+/*
+  /*static int counter = 0;
   counter++;
   char filenameafter[31];
   snprintf(filenameafter, sizeof(filenameafter), "tmp/dog_%02d.pgm", counter);
-  my_write_pgm_image_fixed(f->dog_fixed, f->octave_width, f->octave_height*(s_max-s_min), filenameafter);
+  my_write_pgm_image_fixed(f->dog_fixed, f->octave_width, f->octave_height*(s_max-s_min), filenameafter);*/
 
   /* -----------------------------------------------------------------
    *                                          Find local maxima of DoG
    * -------------------------------------------------------------- */
-  TIME_MEASURING_START_FUNC("VL_Detect_finding");
-  /* start from dog [1,1,s_min+1] */
+  /*TIME_MEASURING_START_FUNC("VL_Detect_finding");
+   f-> nkeys = 0 ;
+  // start from dog [1,1,s_min+1]
   pt_fixed  = dog_fixed + xo + yo + so ;
 
   for(s = s_min + 1 ; s <= s_max - 2 ; ++s) {
@@ -1691,7 +1697,7 @@ vl_sift_detect (VlSiftFilt * f)
         if (CHECK_NEIGHBORS(>,+) ||
             CHECK_NEIGHBORS(<,-) ) {
 
-          /* make room for more keypoints */
+          // make room for more keypoints
           if (f->nkeys >= f->keys_res) {
             f->keys_res += 500 ;
             if (f->keys) {
@@ -1716,19 +1722,25 @@ vl_sift_detect (VlSiftFilt * f)
     }
     pt_fixed += 2 * yo ;
   }
-  TIME_MEASURING_STOP_FUNC("VL_Detect_finding");
+  TIME_MEASURING_STOP_FUNC("VL_Detect_finding");*/
   /* -----------------------------------------------------------------
    *                                               Refine local maxima
    * -------------------------------------------------------------- */
+
+
 
   /* this pointer is used to write the keypoints back */
   k = f->keys ;
 
   for (i = 0 ; i < f->nkeys ; ++i) {
-
     int x = f-> keys [i] .ix ;
     int y = f-> keys [i] .iy ;
     int s = f-> keys [i]. is ;
+
+
+    s += s_min + 1; //correction of a bug in detection on DSP :)
+
+
 
     double Dx=0,Dy=0,Ds=0,Dxx=0,Dyy=0,Dss=0,Dxy=0,Dxs=0,Dys=0 ;
     double A [3*3], b [3] ;
