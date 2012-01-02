@@ -10,6 +10,8 @@
 
 #include <math.h>
 
+#define FIXED_STD_Q 15
+
 /**
  * this header file provides some functions for handling
  * fixed point arithmetic, especially on the ARM
@@ -21,17 +23,17 @@ public:
 
   inline Fixed()
   {
-    q_ = 15;
+    q_ = FIXED_STD_Q;
     value_ = 0;
   }
 
-  inline Fixed(float f, int q = 15)
+  inline Fixed(float f, int q = FIXED_STD_Q)
   {
     q_ = q;
     value_ = (int) (f * (float)(1 << q));
   }
 
-  inline Fixed(int i, int q = 15)
+  inline Fixed(int i, int q = FIXED_STD_Q)
   {
     q_ = q;
     value_ = i * (1 << q);
@@ -58,6 +60,14 @@ public:
       return *this;
   }
 
+  inline Fixed operator -()
+  {
+    Fixed ret;
+    ret.value_ = - this->value_;
+    ret.q_ = this->q_;
+    return ret;
+  }
+
   inline Fixed operator =(Fixed right)
   {
     q_ = right.q_;
@@ -82,14 +92,14 @@ public:
   inline Fixed operator *(Fixed right)
   {
     Fixed ret = right.convert(q_);
-    ret.value_ = (int) (((long)value_ * (long)ret.value_) >> q_);
+    ret.value_ = (int) (((long long)value_ * (long long)ret.value_) >> q_);
     return ret;
   }
 
   inline Fixed operator /(Fixed right)
   {
     Fixed ret = right.convert(q_);
-    ret.value_ = (int) ((((long)value_) << q_) / ((long)ret.value_));
+    ret.value_ = (int) ((((long long)value_) << q_) / ((long long)ret.value_));
     return ret;
   }
 
@@ -107,13 +117,13 @@ public:
 
   inline Fixed operator *=(Fixed right)
   {
-    value_ = (int) (((long)value_ * (long)right.convert(q_).value_) >> q_);
+    value_ = (int) (((long long)value_ * (long long)right.convert(q_).value_) >> q_);
     return *this;
   }
 
   inline Fixed operator /=(Fixed right)
   {
-    value_ = (int) ((((long)value_) << q_) / ((long)right.convert(q_).value_));
+    value_ = (int) ((((long long)value_) << q_) / ((long long)right.convert(q_).value_));
     return *this;
   }
 
@@ -246,7 +256,12 @@ public:
   inline Fixed sqrt()
   {
     Fixed ret = *this;
-    ret.value_ = ::sqrt(((long)value_) << q_);
+
+    if(this->value_ >= 0)
+      ret.value_ = ::sqrt(((long long)value_) << q_);
+    else
+      printf("WARNING: FixedArithmetic.h: sqrt of negative number!\n");
+
     return ret;
   }
 
@@ -262,10 +277,234 @@ public:
   }
 
 
+  // relational operators
+  inline bool operator >(Fixed right)
+  {
+    if(this->value_ > right.convert(this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <(Fixed right)
+  {
+    if(this->value_ < right.convert(this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator >=(Fixed right)
+  {
+    if(this->value_ >= right.convert(this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <=(Fixed right)
+  {
+    if(this->value_ <= right.convert(this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator ==(Fixed right)
+  {
+    if((this->value_ - right.convert(this->q_).value_) <= 1)  // 1 is the smallest possible value (epsilon) for a Fixed
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator !=(Fixed right)
+  {
+    return !(*this == right);
+  }
+
+  inline bool operator >(int right)
+  {
+    if(this->value_ > Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <(int right)
+  {
+    if(this->value_ < Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator >=(int right)
+  {
+    if(this->value_ >= Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <=(int right)
+  {
+    if(this->value_ <= Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator ==(int right)
+  {
+    if((this->value_ - Fixed(right, this->q_).value_) <= 1)  // 1 is the smallest possible value (epsilon) for a Fixed
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator !=(int right)
+  {
+    return !(*this == right);
+  }
+
+  inline bool operator >(float right)
+  {
+    if(this->value_ > Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <(float right)
+  {
+    if(this->value_ < Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator >=(float right)
+  {
+    if(this->value_ >= Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator <=(float right)
+  {
+    if(this->value_ <= Fixed(right, this->q_).value_)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator ==(float right)
+  {
+    if((this->value_ - Fixed(right, this->q_).value_) <= 1)  // 1 is the smallest possible value (epsilon) for a Fixed
+      return true;
+    else
+      return false;
+  }
+
+  inline bool operator !=(float right)
+  {
+    return !(*this == right);
+  }
+
+
+  // friend operators
+  friend inline Fixed operator +(int left, Fixed right)
+  {
+    return right + left;
+  }
+
+  friend inline Fixed operator -(int left, Fixed right)
+  {
+    Fixed ret(left, right.q_);
+    ret -= right;
+    return ret;
+  }
+
+  friend inline Fixed operator *(int left, Fixed right)
+  {
+    return right * left;
+  }
+
+  friend inline Fixed operator /(int left, Fixed right)
+  {
+    Fixed ret(left, right.q_);
+    ret /= right;
+    return ret;
+  }
+
+  friend inline Fixed operator +(float left, Fixed right)
+  {
+    return right + left;
+  }
+
+  friend inline Fixed operator -(float left, Fixed right)
+  {
+    Fixed ret(left, right.q_);
+    ret -= right;
+    return ret;
+  }
+
+  friend inline Fixed operator *(float left, Fixed right)
+  {
+    return right * left;
+  }
+
+  friend inline Fixed operator /(float left, Fixed right)
+  {
+    Fixed ret(left, right.q_);
+    ret /= right;
+    return ret;
+  }
+
+
+  // special scale function to convert a uchar directly to a Fixed
+  friend inline Fixed scale_uchar(unsigned int i, unsigned int q = FIXED_STD_Q);
+  friend inline Fixed scale_uchar2(unsigned int i, unsigned int q = FIXED_STD_Q);
+
+
 private:
 
   int value_;
   int q_;
 };
+
+
+// special scale function to convert a uchar directly to a Fixed
+// a 0..255 uchar is converted to a 0..1 Fixed
+inline Fixed scale_uchar(unsigned int i, unsigned int q)
+{
+  Fixed ret;
+  ret.q_ = q;
+
+  if(q > 8)
+    ret.value_ = i << (q - 8);
+  else
+    ret.value_ = i >> (8 - q);
+
+  return ret;
+}
+
+// special scale function to convert a squared uchar directly to a Fixed
+// a (0..255)^2 uchar is converted to a 0..1 Fixed
+inline Fixed scale_uchar2(unsigned int i, unsigned int q)
+{
+  Fixed ret;
+  ret.q_ = q;
+
+  if(q > 16)
+    ret.value_ = i << (q - 16);
+  else
+    ret.value_ = i >> (16 - q);
+
+  return ret;
+}
+
 
 #endif /* FIXEDARITHMETIC_H_ */

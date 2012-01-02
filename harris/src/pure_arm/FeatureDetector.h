@@ -14,15 +14,16 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include "FixedArithmetic.h"
 
 using namespace std;
 
 struct PatchData
 {
-	float patchAvg_;
-	float *patchNorm_;
-	float *patchNormSq_;
-	float patchSqSum_;
+	Fixed patchAvg_;
+	Fixed *patchNorm_;
+	Fixed *patchNormSq_;
+	Fixed patchSqSum_;
 };
 
 

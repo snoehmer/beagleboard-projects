@@ -16,7 +16,7 @@
 #
 
 
-OPTIMIZATION_LEVEL = 2
+OPTIMIZATION_LEVEL = 0
 
 
 # pretty print

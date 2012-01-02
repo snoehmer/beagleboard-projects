@@ -118,16 +118,16 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 
 	unsigned int patchSize = FeatureDescriptor::patchSize_;
 
-	float *patchNorm = patchData.patchNorm_;
-  float *patchNormSq = patchData.patchNormSq_;
+	Fixed *patchNorm = patchData.patchNorm_;
+  Fixed *patchNormSq = patchData.patchNormSq_;
 
 	// calculate NCC
-	float iavg;
-	float inorm;
-	float sumIP;
-	float sumPP;
-	float sumII;
-	float ncc = 0.0f;
+	Fixed iavg;
+	Fixed inorm;
+	Fixed sumIP;
+	Fixed sumPP;
+	Fixed sumII;
+	Fixed ncc;
 
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
 	{
@@ -140,11 +140,11 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
       {
         for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
         {
-          iavg += image[irow * width + icol];
+          iavg += scale_uchar(image[irow * width + icol]);
         }
       }
 
-		  iavg = iavg / ((float)(patchSize * patchSize));
+		  iavg = iavg / ((int) (patchSize * patchSize));
 
 
 		  // calculate NCC
@@ -156,7 +156,7 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
       {
         for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
         {
-          inorm = (float)image[irow * width + icol] - iavg;
+          inorm = scale_uchar(image[irow * width + icol]) - iavg;
 
           sumIP += patchNorm[prow * patchSize + pcol] * inorm;
           sumPP += patchNormSq[prow * patchSize + pcol];
@@ -170,7 +170,8 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 			}
 			else
 			{
-			  ncc = sumIP / (sqrt(sumPP) * sqrt(sumII));
+			  //ncc = sumIP / (sqrt(sumPP) * sqrt(sumII));
+			  ncc = sumIP / ((sumPP * sumII).sqrt());
 			}
 
 			if(ncc >= nccThreshold_)  // match if one pixel has NCC >= threshold
@@ -193,24 +194,24 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
   int row, col;
   int patchSize = FeatureDescriptor::patchSize_;
 
-  float patchAvg;
-  float *patchNorm = new float[patchSize * patchSize];
-  float *patchNormSq = new float[patchSize * patchSize];
+  Fixed patchAvg;
+  Fixed *patchNorm = new Fixed[patchSize * patchSize];
+  Fixed *patchNormSq = new Fixed[patchSize * patchSize];
 
   startTimer("_ncc_patchdata_single_arm");
 
   // calculate average of feature patch
-  int psum = 0;
+  Fixed psum = 0;
 
   for(row = 0; row < patchSize; row++)
   {
     for(col = 0; col < patchSize; col++)
     {
-      psum += patch[row * patchSize + col];
+      psum += scale_uchar(patch[row * patchSize + col]);
     }
   }
 
-  patchAvg = ((float)psum) / ((float)(patchSize * patchSize));
+  patchAvg = psum / (patchSize * patchSize);
 
 
   // now calculate normalized patch and squared normalized patch
@@ -218,7 +219,7 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
   {
     for(col = 0; col < patchSize; col++)
     {
-      patchNorm[row * patchSize + col] = (float)patch[row * patchSize + col] - patchAvg;
+      patchNorm[row * patchSize + col] = scale_uchar(patch[row * patchSize + col]) - patchAvg;
 
       patchNormSq[row * patchSize + col] = patchNorm[row * patchSize + col] * patchNorm[row * patchSize + col];
     }

@@ -32,10 +32,10 @@ public:
 
 private:
 
-	bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, float *imageSqSum, float *imageAvg);
+	bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
 
 	PatchData calculatePatchData(unsigned char *patch);
-	void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, float *imageSqSum, float *imageAvg);
+	void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
 };
 
 #endif /* FEATUREDETECTOR_INTIMG_H_ */
