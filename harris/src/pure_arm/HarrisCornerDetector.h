@@ -11,6 +11,7 @@
 #include "ImageBitstream.h"
 #include "../util/HarrisCornerPoint.h"
 #include <vector>
+#include "FixedArithmetic.h"
 
 using namespace std;
 
@@ -52,7 +53,7 @@ public:
      * @param cornerList a list of the detected corners
      * @param corners a image with the corner strength
      */
-    vector<HarrisCornerPoint> detectCorners(ImageBitstream img, float **hcr = 0);
+    vector<HarrisCornerPoint> detectCorners(ImageBitstream img, Fixed **hcr = 0);
 
 
 private:
@@ -64,11 +65,13 @@ private:
     float harrisK_;
     float threshold_;
     ImageBitstream input_;
-    float *devKernelX_;
-    float *devKernelY_;
-    float *gaussKernel_;
+    Fixed *devKernelX_;
+    Fixed *devKernelY_;
+    Fixed *gaussKernel_;
     int width_;
     int height_;
+
+    static const unsigned int HARRIS_Q = 22;  //number of fractional bits for fixed-point numbers
 
 
     /**
@@ -83,11 +86,12 @@ private:
      * @param hcr a raw bit stream of the harris corner response
      * @param cornerStrength the thresholded corner strength
      */
-    vector<HarrisCornerPoint> performHarris(float **hcr);
+    vector<HarrisCornerPoint> performHarris(Fixed **hcr);
 
     void normalize(float *data, int n, float newMax = 1.0f);
     vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
     vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
+    vector<HarrisCornerPoint> normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold);
 };
 
 #endif /* HARRISCORNERDETECTOR_H_ */

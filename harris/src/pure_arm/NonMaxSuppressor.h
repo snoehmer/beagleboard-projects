@@ -8,6 +8,8 @@
 #ifndef NONMAXSUPPRESSOR_H_
 #define NONMAXSUPPRESSOR_H_
 
+#include "FixedArithmetic.h"
+
 class NonMaxSuppressor
 {
 public:
@@ -17,6 +19,7 @@ public:
 	virtual ~NonMaxSuppressor();
 
 	float* performNonMax(float *input, int width, int height);
+	Fixed* performNonMax(Fixed *input, int width, int height);
 
 private:
 	int devKernelX_[devKernelSize_ * devKernelSize_];

@@ -14,6 +14,7 @@
 #include "../util/Logger.h"
 #include <cmath>
 #include <Magick++.h>
+#include "FixedArithmetic.h"
 
 using namespace std;
 
@@ -55,15 +56,15 @@ void HarrisCornerDetector::init()
     float sigma2 = devSigma_ * devSigma_;
     float sigma2g = gaussSigma_ * gaussSigma_;
 
-    float sumX = 0; // needed for normalization
-    float sumY = 0;
-    float sumGauss = 0;
+    Fixed sumX(0, HARRIS_Q); // needed for normalization
+    Fixed sumY(0, HARRIS_Q);
+    Fixed sumGauss(0, HARRIS_Q);
 
     Logger::debug(Logger::HARRIS, "calculating kernels");
 
-    devKernelX_ = new float[devKernelSize_ * devKernelSize_];
-    devKernelY_ = new float[devKernelSize_ * devKernelSize_];
-    gaussKernel_ = new float[gaussKernelSize_ * gaussKernelSize_];
+    devKernelX_ = new Fixed[devKernelSize_ * devKernelSize_];
+    devKernelY_ = new Fixed[devKernelSize_ * devKernelSize_];
+    gaussKernel_ = new Fixed[gaussKernelSize_ * gaussKernelSize_];
 
     startTimer("_harris_kernels_arm");
 
@@ -77,8 +78,11 @@ void HarrisCornerDetector::init()
             xc2 = (col - center) * (col - center);
             yc2 = (row - center) * (row - center);
 
-            devKernelX_[row * devKernelSize_ + col] = -((float) col - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
-            devKernelY_[row * devKernelSize_ + col] = -((float) row - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
+            devKernelX_[row * devKernelSize_ + col] = Fixed(-((float) col - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2)), HARRIS_Q);  // initialization to 30 fractional bits
+            devKernelY_[row * devKernelSize_ + col] = Fixed(-((float) row - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2)), HARRIS_Q);
+
+            //devKernelX_[row * devKernelSize_ + col] = -((float) col - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
+            //devKernelY_[row * devKernelSize_ + col] = -((float) row - center) * exp(((float) -(xc2 + yc2)) / (2 * sigma2));
 
             sumX += abs(devKernelX_[row * devKernelSize_ + col]);
             sumY += abs(devKernelY_[row * devKernelSize_ + col]);
@@ -106,7 +110,9 @@ void HarrisCornerDetector::init()
             xc2 = (col - center) * (col - center);
             yc2 = (row - center) * (row - center);
 
-            gaussKernel_[row * gaussKernelSize_ + col] = exp(((float) -(xc2 + yc2)) / (2 * sigma2g));
+            gaussKernel_[row * gaussKernelSize_ + col] = Fixed(exp(((float) -(xc2 + yc2)) / (2 * sigma2g)), HARRIS_Q);
+
+            //gaussKernel_[row * gaussKernelSize_ + col] = exp(((float) -(xc2 + yc2)) / (2 * sigma2g));
 
             sumGauss += gaussKernel_[row * gaussKernelSize_ + col];
         }
@@ -132,7 +138,7 @@ void HarrisCornerDetector::inputImage(ImageBitstream img)
     height_ = img.getHeight();
 }
 
-vector<HarrisCornerPoint> HarrisCornerDetector::detectCorners(ImageBitstream img, float **hcr)
+vector<HarrisCornerPoint> HarrisCornerDetector::detectCorners(ImageBitstream img, Fixed **hcr)
 {
 	if(!devKernelX_ || !devKernelY_ || !gaussKernel_)
 		init();
@@ -142,7 +148,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::detectCorners(ImageBitstream img
 	return performHarris(hcr);
 }
 
-vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
+vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 {
 	int imgrow;  // current row and col in the image where the filter is calculated
 	int imgcol;
@@ -167,13 +173,13 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 	ImageBitstream extendedImg = input_.extend(offset);
 
-	float *diffXX = new float[width_ * height_];
-	float *diffYY = new float[width_ * height_];
-	float *diffXY = new float[width_ * height_];
+	Fixed *diffXX = new Fixed[width_ * height_];
+	Fixed *diffYY = new Fixed[width_ * height_];
+	Fixed *diffXY = new Fixed[width_ * height_];
 
-	float sumX;
-	float sumY;
-	float sumXY;
+	Fixed sumX(0, HARRIS_Q);
+	Fixed sumY(0, HARRIS_Q);
+	Fixed sumXY(0, HARRIS_Q);
 
 	startTimer("_harris_conv_der_arm");
 
@@ -192,8 +198,8 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 					row = imgrow + krow - offset;
 					col = imgcol + kcol - offset;
 
-					sumX += extendedImg.pixel(row, col) * devKernelX_[krow * devKernelSize_ + kcol];
-					sumY += extendedImg.pixel(row, col) * devKernelY_[krow * devKernelSize_ + kcol];
+					sumX += scale_uchar(extendedImg.pixel(row, col), HARRIS_Q) * devKernelX_[krow * devKernelSize_ + kcol];
+					sumY += scale_uchar(extendedImg.pixel(row, col), HARRIS_Q) * devKernelY_[krow * devKernelSize_ + kcol];
 				}
 			}
 
@@ -222,9 +228,9 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 	Logger::debug(Logger::HARRIS, "step 2: applying Gauss filters to convolved image");
 
-	float *extDiffXX = ImageBitstream::extend(diffXX, width_, height_, offset);
-	float *extDiffYY = ImageBitstream::extend(diffYY, width_, height_, offset);
-	float *extDiffXY = ImageBitstream::extend(diffXY, width_, height_, offset);
+	Fixed *extDiffXX = ImageBitstream::extend(diffXX, width_, height_, offset);
+	Fixed *extDiffYY = ImageBitstream::extend(diffYY, width_, height_, offset);
+	Fixed *extDiffXY = ImageBitstream::extend(diffXY, width_, height_, offset);
 
 	startTimer("_harris_conv_gauss_arm");
 
@@ -275,10 +281,10 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	// step 3: calculate Harris corner response
 	Logger::debug(Logger::HARRIS, "step 3: calculating Harris response");
 
-	float *hcrIntern = new float[width_ * height_];
-	float Ixx;
-	float Iyy;
-	float Ixy;
+	Fixed *hcrIntern = new Fixed[width_ * height_];
+	Fixed Ixx;
+	Fixed Iyy;
+	Fixed Ixy;
 
 	startTimer("_harris_hcr_arm");
 
@@ -310,7 +316,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 	Logger::debug(Logger::HARRIS, "step 4: performing Non-Maximum-suppression");
 
 	NonMaxSuppressor nonMax;
-	float *hcrNonMax;
+	Fixed *hcrNonMax;
 
 	hcrNonMax = nonMax.performNonMax(hcrIntern, width_, height_);
 
@@ -334,7 +340,7 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(float **hcr)
 
 
 	// return HCR if user wants to, delete it otherwise
-	if(*hcr)
+	if(hcr)
 		*hcr = hcrNonMax;
 	else
 		delete[] hcrNonMax;
@@ -407,4 +413,35 @@ vector<HarrisCornerPoint> HarrisCornerDetector::normalizeAndThreshold(float *dat
 	stopTimer("_harris_normtresh_arm");
 
 	return cornerPoints;
+}
+
+vector<HarrisCornerPoint> HarrisCornerDetector::normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold)
+{
+  int i;
+  Fixed min, max;
+  vector<HarrisCornerPoint> cornerPoints;
+
+  min = max = data[0];
+
+  startTimer("_harris_normtresh_arm");
+
+  for(i = 0; i < n; i++)
+  {
+    if(data[i] > max) max = data[i];
+    if(data[i] < min) min = data[i];
+  }
+
+  for(i = 0; i < n; i++)
+  {
+    data[i] = (data[i] - min) * newMax / (max - min);
+
+    if(data[i] < threshold)
+      data[i] = 0;
+    else
+      cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i].toFloat()));  //TODO: fixed-point?
+  }
+
+  stopTimer("_harris_normtresh_arm");
+
+  return cornerPoints;
 }

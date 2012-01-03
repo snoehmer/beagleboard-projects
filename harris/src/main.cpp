@@ -63,7 +63,6 @@ int main(int argc, char **argv)
 
     HarrisCornerDetector hcd(HARRIS_THRESH);
     vector<HarrisCornerPoint> cornerPoints;
-    float *hcr;
 
     Logger::debug(Logger::MAIN, "initializing Harris Corner Detector on ARM");
 
@@ -74,7 +73,7 @@ int main(int argc, char **argv)
     Logger::debug(Logger::MAIN, "searching for corners on ARM with threshold %f", HARRIS_THRESH);
 
     startTimer("harris_detect_arm");
-    cornerPoints = hcd.detectCorners(inputImg, &hcr);
+    cornerPoints = hcd.detectCorners(inputImg);
     stopTimer("harris_detect_arm");
 
     Logger::debug(Logger::MAIN, "found %d corners", cornerPoints.size());

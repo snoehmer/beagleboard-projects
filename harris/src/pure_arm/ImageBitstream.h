@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <Magick++.h>
+#include "FixedArithmetic.h"
 
 using namespace std;
 using namespace Magick;
@@ -50,6 +51,7 @@ public:
 	ImageBitstream& operator=(const ImageBitstream& original);
 
 	static float* extend(float *input, int width, int height, int borderSize);
+	static Fixed* extend(Fixed *input, int width, int height, int borderSize);
 	static int* extend(int *input, int width, int height, int borderSize);
 	static unsigned char* extend(unsigned char *input, int width, int height, int borderSize);
 

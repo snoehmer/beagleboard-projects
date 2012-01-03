@@ -8,7 +8,9 @@
 #ifndef FIXEDARITHMETIC_H_
 #define FIXEDARITHMETIC_H_
 
+#include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define FIXED_STD_Q 15
 
@@ -27,13 +29,13 @@ public:
     value_ = 0;
   }
 
-  inline Fixed(float f, int q = FIXED_STD_Q)
+  inline Fixed(float f, const unsigned int q = FIXED_STD_Q)
   {
     q_ = q;
     value_ = (int) (f * (float)(1 << q));
   }
 
-  inline Fixed(int i, int q = FIXED_STD_Q)
+  inline Fixed(int i, const unsigned int q = FIXED_STD_Q)
   {
     q_ = q;
     value_ = i * (1 << q);
@@ -41,7 +43,7 @@ public:
 
   virtual ~Fixed() {}
 
-  inline Fixed convert(int q)
+  inline Fixed convert(const unsigned int q)
   {
     if(q != q_)
     {
@@ -99,7 +101,11 @@ public:
   inline Fixed operator /(Fixed right)
   {
     Fixed ret = right.convert(q_);
-    ret.value_ = (int) ((((long long)value_) << q_) / ((long long)ret.value_));
+
+    if(right.value_ != 0)
+      ret.value_ = (int) ((((long long)value_) << q_) / ((long long)ret.value_));
+    else printf("WARNING: FixedArithmetic.h: division by zero!\n");
+
     return ret;
   }
 
@@ -265,6 +271,12 @@ public:
     return ret;
   }
 
+  inline Fixed abs()
+  {
+    Fixed ret = *this;
+    ret.value_ = ::abs(ret.value_);
+    return ret;
+  }
 
   inline int toInt()
   {
@@ -465,20 +477,30 @@ public:
 
 
   // special scale function to convert a uchar directly to a Fixed
-  friend inline Fixed scale_uchar(unsigned int i, unsigned int q = FIXED_STD_Q);
-  friend inline Fixed scale_uchar2(unsigned int i, unsigned int q = FIXED_STD_Q);
+  friend inline Fixed scale_uchar(unsigned int i, const unsigned int q = FIXED_STD_Q);
+  friend inline Fixed scale_uchar2(unsigned int i, const unsigned int q = FIXED_STD_Q);
 
 
 private:
 
   int value_;
-  int q_;
+  unsigned int q_;
 };
 
 
+inline Fixed abs(Fixed x)
+{
+  return x.abs();
+}
+
+inline Fixed sqrt(Fixed x)
+{
+  return x.sqrt();
+}
+
 // special scale function to convert a uchar directly to a Fixed
 // a 0..255 uchar is converted to a 0..1 Fixed
-inline Fixed scale_uchar(unsigned int i, unsigned int q)
+inline Fixed scale_uchar(unsigned int i, const unsigned int q)
 {
   Fixed ret;
   ret.q_ = q;
@@ -493,7 +515,7 @@ inline Fixed scale_uchar(unsigned int i, unsigned int q)
 
 // special scale function to convert a squared uchar directly to a Fixed
 // a (0..255)^2 uchar is converted to a 0..1 Fixed
-inline Fixed scale_uchar2(unsigned int i, unsigned int q)
+inline Fixed scale_uchar2(unsigned int i, const unsigned int q)
 {
   Fixed ret;
   ret.q_ = q;
