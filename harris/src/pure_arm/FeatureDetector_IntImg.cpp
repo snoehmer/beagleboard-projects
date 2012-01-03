@@ -88,8 +88,8 @@ bool FeatureDetectorIntImg::match(ImageBitstream image)
 	unsigned int extHeight = extendedImg.getHeight();
 
 	// calculate image parameters once per image
-	int *imageIntegral = new int[(extWidth + 1) * (extHeight + 1)];
-	int *imageIntegral2 = new int[(extWidth + 1) * (extHeight + 1)];
+	Fixed *imageIntegral = new Fixed[(extWidth + 1) * (extHeight + 1)];
+	Fixed *imageIntegral2 = new Fixed[(extWidth + 1) * (extHeight + 1)];
 	Fixed *imageSqSum = new Fixed[image.getWidth() * image.getHeight()];
 	Fixed *imageAvg = new Fixed[image.getWidth() * image.getHeight()];
 
@@ -119,7 +119,7 @@ bool FeatureDetectorIntImg::match(ImageBitstream image)
 }
 
 
-bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, int *imageIntegral, int *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg)
+bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg)
 {
 	unsigned int row, col;
 	unsigned int prow, pcol;
@@ -153,7 +153,7 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 					for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
 					{
 						//sumIP += patchNorm[prow * patchSize + pcol] * ((float)image[irow * width + icol] - imageAvg[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)]);
-						sumIP += patchNorm[prow * patchSize + pcol] * image[irow * width + icol];
+						sumIP += patchNorm[prow * patchSize + pcol] * scale_uchar(image[irow * width + icol]);
 					}
 				}
 
@@ -175,7 +175,7 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 }
 
 
-void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, int *imageIntegral, int *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg)
+void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned int width, unsigned int height, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg)
 {
 	unsigned int row, col;
 
@@ -202,8 +202,8 @@ void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned in
 	{
 		for(col = 0; col < width; col++)
 		{
-			imageIntegral[(row + 1) * (width + 1) + (col + 1)] = image[row * width + col] + imageIntegral[row * (width + 1) + (col + 1)] + imageIntegral[(row + 1) * (width + 1) + col] - imageIntegral[row * (width + 1) + col];
-			imageIntegral2[(row + 1) * (width + 1) + (col + 1)] = image[row * width + col] * image[row * width + col] + imageIntegral2[row * (width + 1) + (col + 1)] + imageIntegral2[(row + 1) * (width + 1) + col] - imageIntegral2[row * (width + 1) + col];
+			imageIntegral[(row + 1) * (width + 1) + (col + 1)] = scale_uchar(image[row * width + col]) + imageIntegral[row * (width + 1) + (col + 1)] + imageIntegral[(row + 1) * (width + 1) + col] - imageIntegral[row * (width + 1) + col];
+			imageIntegral2[(row + 1) * (width + 1) + (col + 1)] = scale_uchar(image[row * width + col]) * scale_uchar(image[row * width + col]) + imageIntegral2[row * (width + 1) + (col + 1)] + imageIntegral2[(row + 1) * (width + 1) + col] - imageIntegral2[row * (width + 1) + col];
 		}
 	}
 
@@ -211,8 +211,7 @@ void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned in
 	unsigned int patchSize = FeatureDescriptor::patchSize_;
 	unsigned int offset = patchSize / 2;
 	unsigned int imageWidth = width - patchSize;
-	int A, B;
-	Fixed fA, fB;
+	Fixed A, B;
 	int dp = patchSize / 2;  // positive delta
 	int dn = (patchSize - 1) / 2 + 1;  // negative delta
 
@@ -223,11 +222,8 @@ void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned in
 			A = imageIntegral2[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral2[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 			B = imageIntegral[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral[(row - dn + 1) * (width + 1) + (col - dn + 1)];
 
-			//fA = scale_uchar2(A);
-			//fB = scale_uchar(B);
-
-			imageSqSum[(row - offset) * imageWidth + (col - offset)] = (scale_uchar2(A - (B * B)) / ((int)(patchSize * patchSize))).sqrt();
-			imageAvg[(row - offset) * imageWidth + (col - offset)] = scale_uchar(B) / ((int)(patchSize * patchSize));
+			imageSqSum[(row - offset) * imageWidth + (col - offset)] = (A - (B * B) / ((int)(patchSize * patchSize))).sqrt();
+			imageAvg[(row - offset) * imageWidth + (col - offset)] = B / ((int)(patchSize * patchSize));
 		}
 	}
 
