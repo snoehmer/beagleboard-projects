@@ -228,7 +228,7 @@ unsigned int dsp_sift_execute(void *env)
         msg.cmd = DSP_CALC_DETECT_KEYS_FINISHED;
 
         NODE_putMsg(env, NULL, &msg, 0); //DOG finished ...
-
+/*
         //now detect keypoints:
 
         nkeys = 0;
@@ -242,7 +242,7 @@ unsigned int dsp_sift_execute(void *env)
           msg.arg_1 = DSP_CALC_DETECT_KEYS_FAILED;
 
         msg.arg_2 = nkeys;
-        NODE_putMsg(env, NULL, &msg, 0); //detection finished ...
+        NODE_putMsg(env, NULL, &msg, 0); //detection finished ...*/
         break;
       }
 

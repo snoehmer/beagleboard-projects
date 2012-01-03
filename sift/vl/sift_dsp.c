@@ -311,7 +311,9 @@ int detect_dsp(short* octave_smin, short* dog_fixed, int nscales, int w, int h, 
   vl_dsp_get_message();
   TIME_MEASURING_STOP_FUNC("DOG_DSP");
   vl_dsp_dmm_buffer_end(dog_fixed);
-  TIME_MEASURING_START_FUNC("VL_Detect_finding_DSP");
+
+
+  /*TIME_MEASURING_START_FUNC("VL_Detect_finding_DSP");
 
   //wait until detection is finished:
   dsp_msg_t m = vl_dsp_get_message();
@@ -327,7 +329,7 @@ int detect_dsp(short* octave_smin, short* dog_fixed, int nscales, int w, int h, 
   else
     VL_PRINTF("detect: finished, %d keypoints found!", m.arg_2);
 
-  *nkeys = m.arg_2;
+  *nkeys = m.arg_2;*/
 
   return 0;
 }

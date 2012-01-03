@@ -1642,7 +1642,7 @@ vl_sift_detect (VlSiftFilt * f)
     }
   }
   TIME_MEASURING_STOP_FUNC("VL_DOG_fixed");
-/*
+
   /*static int counter = 0;
   counter++;
   char filenameafter[31];
@@ -1652,7 +1652,7 @@ vl_sift_detect (VlSiftFilt * f)
   /* -----------------------------------------------------------------
    *                                          Find local maxima of DoG
    * -------------------------------------------------------------- */
-  /*TIME_MEASURING_START_FUNC("VL_Detect_finding");
+  TIME_MEASURING_START_FUNC("VL_Detect_finding");
    f-> nkeys = 0 ;
   // start from dog [1,1,s_min+1]
   pt_fixed  = dog_fixed + xo + yo + so ;
@@ -1722,7 +1722,7 @@ vl_sift_detect (VlSiftFilt * f)
     }
     pt_fixed += 2 * yo ;
   }
-  TIME_MEASURING_STOP_FUNC("VL_Detect_finding");*/
+  TIME_MEASURING_STOP_FUNC("VL_Detect_finding");
   /* -----------------------------------------------------------------
    *                                               Refine local maxima
    * -------------------------------------------------------------- */
