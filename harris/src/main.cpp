@@ -10,6 +10,7 @@
 #include "pure_arm/HarrisCornerDetector.h"
 #include "pure_arm/FeatureDetector.h"
 #include "pure_arm/FeatureDetector_IntImg.h"
+#include "pure_arm/FeatureDetector_Harris_Std.h"
 #include "util/FeatureGenerator.h"
 #include "util/FeatureDescriptor.h"
 #include "util/HarrisCornerPoint.h"
@@ -25,6 +26,10 @@
 #define HARRIS_THRESH 0.7f  //threshold for Harris Corner Detector
 #define NCC_STD_FEAT_THRESH 80  //threshold for matched features in percent for standard NCC
 #define NCC_STD_NCC_THRESH 0.8f //threshold for NCC score for standard NCC
+#define NCC_HARRIS_FEAT_THRESH 70  //threshold for matched features in percent for Harris-NCC
+#define NCC_HARRIS_NCC_THRESH 0.7f //threshold for NCC score for Harris-NCC
+#define NCC_HARRIS_HARRIS_THRESH 0.5f  //threshold for Harris Corner Detector when used in Harris-NCC
+
 
 using namespace std;
 using namespace Magick;
@@ -107,9 +112,9 @@ int main(int argc, char **argv)
 #elif defined FEATDET_USE_NCCINTIMG
     featureDet = new FeatureDetectorIntImg(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
 #elif defined FEATDET_USE_NCCHARRISSTD
-    featureDet = new FeatureDetectorHarrisStd(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    featureDet = new FeatureDetectorHarrisStd(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #elif defined FEATDET_USE_NCCHARRISINTIMG
-    featureDet = new FeatureDetectorHarrisIntImg(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    featureDet = new FeatureDetectorHarrisIntImg(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #else
 #error You must choose a Feature Detector!
 #endif
@@ -119,9 +124,9 @@ int main(int argc, char **argv)
 #elif defined FEATDET_USE_NCCINTIMG
     featureDet = new FeatureDetectorIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
 #elif defined FEATDET_USE_NCCHARRISSTD
-    featureDet = new FeatureDetectorHarrisStdDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    featureDet = new FeatureDetectorHarrisStdDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #elif defined FEATDET_USE_NCCHARRISINTIMG
-    featureDet = new FeatureDetectorHarrisIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    featureDet = new FeatureDetectorHarrisIntImgDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #else
 #error You must choose a Feature Detector!
 #endif
