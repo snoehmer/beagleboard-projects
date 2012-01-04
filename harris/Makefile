@@ -154,8 +154,8 @@ host-intimg: HarrisCornerDetectorHost
 host-harris: CC_FLAGS += -DFEATDET_USE_NCCHARRISSTD
 host-harris: HarrisCornerDetectorHost
 
-arm-harris-intimg: CC_FLAGS += -DFEATDET_USE_NCCHARRISINTIMG
-arm-harris-intimg: HarrisCornerDetectorHost
+host-harris-intimg: CC_FLAGS += -DFEATDET_USE_NCCHARRISINTIMG
+host-harris-intimg: HarrisCornerDetectorHost
 
 
 # platform targets

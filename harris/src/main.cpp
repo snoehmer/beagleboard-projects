@@ -11,6 +11,7 @@
 #include "pure_arm/FeatureDetector.h"
 #include "pure_arm/FeatureDetector_IntImg.h"
 #include "pure_arm/FeatureDetector_Harris_Std.h"
+#include "pure_arm/FeatureDetector_Harris_IntImg.h"
 #include "util/FeatureGenerator.h"
 #include "util/FeatureDescriptor.h"
 #include "util/HarrisCornerPoint.h"

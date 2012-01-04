@@ -8,6 +8,7 @@
 #ifndef FEATUREDETECTOR_INTIMG_H_
 #define FEATUREDETECTOR_INTIMG_H_
 
+#include "FeatureDetector.h"
 #include "../util/FeatureDescriptor.h"
 #include <Magick++.h>
 #include "ImageBitstream.h"
