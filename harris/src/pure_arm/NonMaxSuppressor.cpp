@@ -269,5 +269,9 @@ Fixed* NonMaxSuppressor::performNonMax(Fixed *input, int width, int height)
 
   stopTimer("_nonmax_nonmax_arm");
 
+  delete[] diffX;
+  delete[] diffY;
+  delete[] magnitude;
+
   return output;
 }

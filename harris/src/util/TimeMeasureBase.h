@@ -60,6 +60,8 @@ protected:
    */
   virtual void init() = 0;
 
+  virtual void cleanup();
+
   /**
    * returns the current time in seconds and mseconds
    */

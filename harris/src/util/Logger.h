@@ -62,10 +62,12 @@ public:
   static void error(const int type, const char* fmt, ...);
 
   static void init();
+  static void cleanup();
 
 
   virtual ~Logger()
   {
+
   }
 };
 

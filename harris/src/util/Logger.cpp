@@ -23,6 +23,16 @@ void Logger::init()
   //loggers.push_back(new FileLogger(DEBUG, "output/log/log"));
 }
 
+void Logger::cleanup()
+{
+  for(unsigned int i = 0; i < loggers.size(); i++)
+  {
+    delete loggers[i];
+  }
+
+  loggers.clear();
+}
+
 /* colors:
  * black - 30
  * red - 31

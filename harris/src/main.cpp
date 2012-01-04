@@ -32,17 +32,18 @@ using namespace Magick;
 
 int main(int argc, char **argv)
 {
-	if(argc < 3)
-	{
-		cout << "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]" << endl;
-		cout << "HCD searches for features in <reference image> und checks if they are contained in the input images" << endl << endl;
-		Logger::error(Logger::MAIN, "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]");
-	  return -1;
-	}
+    Logger::init();
+
+    if(argc < 3)
+    {
+      cout << "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]" << endl;
+      cout << "HCD searches for features in <reference image> und checks if they are contained in the input images" << endl << endl;
+      Logger::error(Logger::MAIN, "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]");
+      return -1;
+    }
 
     InitializeMagick(0);
 
-    Logger::init();
     ImageBitstream inputImg;
 
     try
@@ -55,7 +56,6 @@ int main(int argc, char **argv)
     	Logger::error(Logger::MAIN, "error reading reference image ('%s'), reason: %s", argv[1], e.what());
     	return -1;
     }
-
 
     /* ============================================================================
      * part 1: Harris Corner Detection
@@ -177,6 +177,8 @@ int main(int argc, char **argv)
     // convert raw pixel data back to image
     input.write("./output/corners.png");
 #endif
+
+    Logger::cleanup();
 
     return 0;
 }

@@ -31,9 +31,16 @@ TimeMeasureBase::TimeMeasureBase()
 
 TimeMeasureBase::~TimeMeasureBase()
 {
-  // TODO Auto-generated destructor stub
+  timers.clear();
+
+  if(instance)
+    delete instance;
 }
 
+void TimeMeasureBase::cleanup()
+{
+  delete getInstance();
+}
 
 void TimeMeasureBase::startTimer(const char *identifier)
 {
