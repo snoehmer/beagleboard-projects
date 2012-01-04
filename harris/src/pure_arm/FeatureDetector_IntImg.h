@@ -24,18 +24,18 @@ public:
 	FeatureDetectorIntImg(unsigned int featuresThreshold = 75, float nccThreshold = 0.8f);
 	virtual ~FeatureDetectorIntImg();
 
-	void setFeatures(vector<FeatureDescriptor> features);
+	virtual void setFeatures(vector<FeatureDescriptor> features);
 
-	bool match(ImageBitstream image);
-	bool match(Image image);
+	virtual bool match(ImageBitstream image);
+	virtual bool match(Image image);
 
 
-private:
+protected:
 
-	bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
+	virtual bool getNCCResult(unsigned char *image, unsigned int width, unsigned int height, PatchData patchData, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
 
-	PatchData calculatePatchData(unsigned char *patch);
-	void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
+	virtual PatchData calculatePatchData(unsigned char *patch);
+	virtual void calculateImageData(unsigned char *image, unsigned int width, unsigned int height, Fixed *imageIntegral, Fixed *imageIntegral2, Fixed *imageSqSum, Fixed *imageAvg);
 };
 
 #endif /* FEATUREDETECTOR_INTIMG_H_ */

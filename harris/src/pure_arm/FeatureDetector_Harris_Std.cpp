@@ -75,7 +75,7 @@ bool FeatureDetectorHarrisStd::match(ImageBitstream image)
 	{
 	  for(j = 0; j < cornerPoints_.size(); j++)  // search for features in detected corners
 	  {
-      if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, cornerPoints_[j].getCol() + offset, cornerPoints_[j].getRow() + offset, featureData_[i]))
+      if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, cornerPoints_[j].getRow() + offset, cornerPoints_[j].getCol() + offset, featureData_[i]))
         matchCount++;
 
       if(matchCount >= featuresToMatch)
@@ -83,7 +83,7 @@ bool FeatureDetectorHarrisStd::match(ImageBitstream image)
 	  }
 
 	  if(matchCount >= featuresToMatch)
-        break;
+       break;
 	}
 
 	Logger::debug(Logger::NCC, "matched %d of %d features", matchCount, nFeatures);
