@@ -58,6 +58,8 @@ void FeatureDetector::setFeatures(vector<FeatureDescriptor> features)
 	features_ = features;
 	featureData_.resize(features_.size());  // pre-allocate for performance
 
+	Logger::debug(Logger::NCC, "calculating patch data for %d patches (features)", features.size());
+
   startTimer("_ncc_patchdata_arm");
 
   for(i = 0; i < features_.size(); i++)

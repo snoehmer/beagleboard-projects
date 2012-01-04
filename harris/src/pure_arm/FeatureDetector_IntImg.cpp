@@ -54,6 +54,8 @@ void FeatureDetectorIntImg::setFeatures(vector<FeatureDescriptor> features)
 	features_ = features;
 	featureData_.resize(features_.size());  // pre-allocate for performance
 
+	Logger::debug(Logger::NCC, "calculating patch data of %d patches (features)", features.size());
+
 	startTimer("_ncc_patchdata_arm");
 
 	for(i = 0; i < features_.size(); i++)
@@ -179,7 +181,7 @@ void FeatureDetectorIntImg::calculateImageData(unsigned char *image, unsigned in
 {
 	unsigned int row, col;
 
-	//cout << "calculating image data...";
+	Logger::debug(Logger::NCC, "calculating image data (size %dx%d)", width, height);
 
 	startTimer("_ncc_imagedata_single_arm");
 

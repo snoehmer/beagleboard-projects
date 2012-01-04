@@ -24,12 +24,12 @@
 
 
 //parameters for NCC matching
-#define HARRIS_THRESH 0.7f  //threshold for Harris Corner Detector
+#define HARRIS_THRESH 0.6f  //threshold for Harris Corner Detector
 #define NCC_STD_FEAT_THRESH 80  //threshold for matched features in percent for standard NCC
 #define NCC_STD_NCC_THRESH 0.8f //threshold for NCC score for standard NCC
-#define NCC_HARRIS_FEAT_THRESH 70  //threshold for matched features in percent for Harris-NCC
-#define NCC_HARRIS_NCC_THRESH 0.7f //threshold for NCC score for Harris-NCC
-#define NCC_HARRIS_HARRIS_THRESH 0.5f  //threshold for Harris Corner Detector when used in Harris-NCC
+#define NCC_HARRIS_FEAT_THRESH 80  //threshold for matched features in percent for Harris-NCC
+#define NCC_HARRIS_NCC_THRESH 0.8f //threshold for NCC score for Harris-NCC
+#define NCC_HARRIS_HARRIS_THRESH 0.6f  //threshold for Harris Corner Detector when used in Harris-NCC
 
 
 using namespace std;
