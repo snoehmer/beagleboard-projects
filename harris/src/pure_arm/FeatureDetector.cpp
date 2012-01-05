@@ -131,6 +131,8 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 	Fixed sumII;
 	Fixed ncc;
 
+	startTimer("_ncc_match_single_arm");
+
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
 	{
 		for(col = patchSize / 2; col < width - patchSize / 2; col++)
@@ -183,6 +185,8 @@ bool FeatureDetector::getNCCResult(unsigned char *image, unsigned int width, uns
 		if(ncc >= nccThreshold_)
 			break;
 	}
+
+	stopTimer("_ncc_match_single_arm");
 
 	if(ncc >= nccThreshold_)
 		return true;

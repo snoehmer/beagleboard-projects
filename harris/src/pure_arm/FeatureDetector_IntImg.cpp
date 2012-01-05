@@ -97,6 +97,8 @@ bool FeatureDetectorIntImg::match(ImageBitstream image)
 
 	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum, imageAvg);
 
+	Logger::debug(Logger::NCC, "matching image");
+
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
@@ -138,6 +140,8 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 	Fixed sumIP;
 	Fixed ncc;
 
+	startTimer("_ncc_match_single_arm");
+
 	for(row = patchSize / 2; row < height - patchSize / 2; row++)
 	{
 		for(col = patchSize / 2; col < width - patchSize / 2; col++)
@@ -169,6 +173,8 @@ bool FeatureDetectorIntImg::getNCCResult(unsigned char *image, unsigned int widt
 		if(ncc >= nccThreshold_)
 			break;
 	}
+
+	stopTimer("_ncc_match_single_arm");
 
 	if(ncc >= nccThreshold_)
 		return true;

@@ -73,6 +73,8 @@ bool FeatureDetectorHarrisStd::match(ImageBitstream image)
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
+	  startTimer("_ncc_match_single_arm");
+
 	  for(j = 0; j < cornerPoints_.size(); j++)  // search for features in detected corners
 	  {
       if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, cornerPoints_[j].getRow() + offset, cornerPoints_[j].getCol() + offset, featureData_[i]))
@@ -81,6 +83,8 @@ bool FeatureDetectorHarrisStd::match(ImageBitstream image)
       if(matchCount >= featuresToMatch)
         break;
 	  }
+
+	  stopTimer("_ncc_match_single_arm");
 
 	  if(matchCount >= featuresToMatch)
        break;

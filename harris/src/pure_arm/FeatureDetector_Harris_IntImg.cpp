@@ -76,9 +76,13 @@ bool FeatureDetectorHarrisIntImg::match(ImageBitstream image)
 
 	calculateImageData(extendedImg.getBitstream(), extendedImg.getWidth(), extendedImg.getHeight(), imageIntegral, imageIntegral2, imageSqSum, imageAvg);
 
+	Logger::debug(Logger::NCC, "matching image");
+
 	// calculate NCC for each feature
 	for(i = 0; i < nFeatures; i++)
 	{
+	  startTimer("_ncc_match_single_arm");
+
 	  for(j = 0; j < cornerPoints_.size(); j++)  // search for features in detected corners
     {
       if(getNCCResult(extendedImg.getBitstream(), extWidth, extHeight, cornerPoints_[i].getRow() + offset, cornerPoints_[i].getCol() + offset, featureData_[i], imageIntegral, imageIntegral2, imageSqSum, imageAvg))
@@ -87,6 +91,8 @@ bool FeatureDetectorHarrisIntImg::match(ImageBitstream image)
       if(matchCount >= featuresToMatch)
         break;
     }
+
+	  stopTimer("_ncc_match_single_arm");
 
 	  if(matchCount >= featuresToMatch)
        break;
