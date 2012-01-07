@@ -47,6 +47,7 @@ int filterImageGaussian(
   ConvolutionKernel gauss);
 
 void calcDOG(short * restrict dst, const short* restrict a, const short * restrict b, int len);
+//void calcDOG(short * dst, const short* a, const short * b, int len);
 int detectKeypoints(const short* dog_fixed, int w, int h, int nscales, short tp_fixed, VlSiftKeypoint* keys, int* nkeys, int max_nkeys);
 
 unsigned int dsp_sift_create(void)
@@ -213,10 +214,13 @@ unsigned int dsp_sift_execute(void *env)
         int const    so = params->w * params->h ;     // s-stride
 
 
-
-        for(i = 0; i < params->nscales - 1; i++)
+        int a;
+        for( a = 0; a < 10; a++)
         {
-          calcDOG(params->dog_fixed + i*so, params->octave_smin + (i+1)*so, params->octave_smin + i*so, so);
+          for(i = 0; i < params->nscales - 1; i++)
+          {
+            calcDOG(params->dog_fixed + i*so, params->octave_smin + (i+1)*so, params->octave_smin + i*so, so);
+          }
         }
 
 
@@ -449,8 +453,8 @@ int filterImageGaussian(
   return 0;
 }
 
-void calcDOG(short * restrict dst, const short* restrict a, const short * restrict b, int len)
-//void calcDOG(short * dst, const short* a, const short* b, int len)
+//void calcDOG(short * dst, const short* a, const short * b, int len)
+void calcDOG(short * dst, const short* a, const short* b, int len)
 {
   int i;
 

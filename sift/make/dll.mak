@@ -18,6 +18,7 @@ DLL_NAME = vl
 
 DLL_CFLAGS  = $(CFLAGS)
 DLL_CFLAGS += -fvisibility=hidden -fPIC -DVL_BUILD_DLL -pthread
+DLL_CLFAGS += -DVL_DISABLE_SSE2
 DLL_CFLAGS += $(call if-like,%_sse2,$*,-msse2)
 
 BINDIR = bin/$(ARCH)

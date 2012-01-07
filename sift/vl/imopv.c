@@ -32,7 +32,6 @@ GNU GPLv2, or (at your option) any later version.
   **/
 
 #ifndef VL_IMOPV_INSTANTIATING
-
 #include "imopv.h"
 #include "imopv_sse2.h"
 #include "mathop.h"

@@ -1376,6 +1376,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
   octave = vl_sift_get_octave (f, s_min) ;
   octave_fixed = vl_sift_get_octave_fixed (f, s_min) ;
 
+  TIME_MEASURING_START_FUNC("up_down-sampling");
   if (o_min < 0) {
     /* double once */
     copy_and_upsample_rows_fixed ((vl_sift_pix_fixed*)temp,   im,   width,      height) ;
@@ -1397,6 +1398,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
     /* direct copy */
     memcpy(octave_fixed, im, sizeof(vl_sift_pix_fixed) * width * height) ;
   }
+  TIME_MEASURING_STOP_FUNC("up_down-sampling");
 
   /*
    * Here we adjust the smoothing of the first level of the octave.
@@ -1408,7 +1410,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
   sb = sigman * pow (2.0,    - o_min) ;
 
 
-
+  TIME_MEASURING_START_FUNC("filtering");
   VL_PRINTF("processing first octave...");
 #ifdef ARCH_ARM
   DestinationImage images[5];
@@ -1455,6 +1457,7 @@ vl_sift_process_first_octave (VlSiftFilt *f, vl_sift_pix_fixed const *im)
   filterMultipleTimes_on_dsp(f->octave_fixed,
       w, h, images, destImageCount);
 
+  TIME_MEASURING_STOP_FUNC("filtering");
 
   time_measureing_start_func("conversion");
   _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
@@ -1511,8 +1514,10 @@ vl_sift_process_next_octave (VlSiftFilt *f)
   pt     = vl_sift_get_octave        (f, s_best) ;
   octave = vl_sift_get_octave        (f, s_min) ;
 
+  TIME_MEASURING_START_FUNC("up_down-sampling");
   /* next octave */
   copy_and_downsample (octave, pt, w, h, 1) ;
+  TIME_MEASURING_STOP_FUNC("up_down-sampling");
 
   f-> o_cur            += 1 ;
   f-> nkeys             = 0 ;
@@ -1526,8 +1531,9 @@ vl_sift_process_next_octave (VlSiftFilt *f)
   DestinationImage images[5];
   int destImageCount = 0;
 
+  time_measureing_start_func("conversion");
   _vl_convert_float_to_fixed(octave, f->octave_fixed, w*h);
-
+  time_measureing_stop_func("conversion");
 #endif
 
   if (sa > sb) {
@@ -1561,8 +1567,10 @@ vl_sift_process_next_octave (VlSiftFilt *f)
 
 #ifdef ARCH_ARM
 
+  TIME_MEASURING_START_FUNC("filtering");
   filterMultipleTimes_on_dsp(f->octave_fixed,
       w, h, images, destImageCount);
+  TIME_MEASURING_STOP_FUNC("filtering");
 
   time_measureing_start_func("conversion");
   _vl_convert_fixed_to_float(f->octave_fixed, octave, w*h*(s_max-s_min + 1));
@@ -1728,7 +1736,7 @@ vl_sift_detect (VlSiftFilt * f)
    * -------------------------------------------------------------- */
 
 
-
+  TIME_MEASURING_START_FUNC("refining maxima");
   /* this pointer is used to write the keypoints back */
   k = f->keys ;
 
@@ -1897,6 +1905,8 @@ vl_sift_detect (VlSiftFilt * f)
 
     } /* done checking */
   } /* next keypoint to refine */
+
+  TIME_MEASURING_STOP_FUNC("refining maxima");
 
   /* update keypoint count */
   f-> nkeys = k - f->keys ;
