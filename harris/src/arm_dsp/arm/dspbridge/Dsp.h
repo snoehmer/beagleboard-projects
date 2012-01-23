@@ -10,11 +10,11 @@
 
 #include "dmm_buffer.h"
 #include "dsp_bridge.h"
-#include "Exception.h"
+#include "../../../util/Exception.h"
 #include <map>
 
 #include "node.h"
-#include "Logger.h"
+#include "../../../util/Logger.h"
 
 //this functions are just for the vlfeat library. (C - Functions ...)
 void* dsp_malloc  (size_t n) ;
@@ -32,7 +32,7 @@ int dsp_send_message(uint32_t cmd, uint32_t arg1, uint32_t arg2);
 
 class DspNode;
 
-class DspException : public Exception
+class DspException : public ::Exception
 {
 public:
   DspException(const char* msg) : Exception(msg)

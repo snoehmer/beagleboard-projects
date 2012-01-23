@@ -7,6 +7,7 @@
 
 #include "FeatureDetector_Harris_IntImg.h"
 #include "FeatureDetector.h"
+#include "../arm_dsp/arm/HarrisCornerDetector_DSP.h"
 #include "FeatureDetector_IntImg.h"
 #include "../util/TimeMeasureBase.h"
 #include "../util/Logger.h"
@@ -26,7 +27,11 @@ FeatureDetectorHarrisIntImg::FeatureDetectorHarrisIntImg(unsigned int featuresTh
   harrisGKernelSize_ = harrisGKernelSize;
 
   // find corners in image
+#ifndef HARRIS_USE_DSP
   hcd_ = new HarrisCornerDetector(harrisThreshold_, harrisK_, harrisDSigma_, harrisDKernelSize_, harrisGSigma_, harrisGKernelSize_);
+#else
+  hcd_ = new HarrisCornerDetectorDSP(harrisThreshold_, harrisK_, harrisDSigma_, harrisDKernelSize_, harrisGSigma_, harrisGKernelSize_);
+#endif
 
   Logger::debug(Logger::NCC, "initializing Harris Corner Detector for Harris-NCC with integral images");
 

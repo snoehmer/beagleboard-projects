@@ -613,3 +613,64 @@ unsigned char* ImageBitstream::extend(unsigned char *input, int width, int heigh
 
 	return extendedImg;
 }
+
+short* ImageBitstream::extend(short *input, int width, int height, int borderSize)
+{
+  int row;
+  int col;
+  short *extendedImg;
+
+  int offset = borderSize;
+
+  int extWidth = width + 2 * offset;
+  int extHeight = height + 2 * offset;
+
+  extendedImg = new short[extWidth * extHeight];
+
+  // step 0: copy image
+  for(row = 0; row < height; row++)
+      for(col = 0; col < width; col++)
+          extendedImg[(row + offset) * extWidth + (col + offset)] = input[row * width + col];
+
+  // step 1a: copy upper border
+  for(row = 0; row < offset; row++)
+      for(col = 0; col < width; col++)
+          extendedImg[row * extWidth + (col + offset)] = input[0 * width + col];
+
+  // step 1b: copy lower border
+  for(row = offset + height; row < height + 2*offset; row++)
+      for(col = 0; col < width; col++)
+          extendedImg[row * extWidth + (col + offset)] = input[(height - 1) * width + col];
+
+  // step 1c: copy left border
+  for(col = 0; col < offset; col++)
+      for(row = 0; row < height; row++)
+          extendedImg[(row + offset) * extWidth + col] = input[row * width + 0];
+
+  // step 1d: copy right border
+  for(col = offset + width; col < width + 2*offset; col++)
+      for(row = 0; row < height; row++)
+          extendedImg[(row + offset) * extWidth + col] = input[row * width + (width - 1)];
+
+  // step 2a: copy upper left corner
+  for(row = 0; row < offset; row++)
+      for(col = 0; col < offset; col++)
+          extendedImg[row * extWidth + col] = input[0 * width + 0];
+
+  // step 2b: copy upper right corner
+  for(row = 0; row < offset; row++)
+      for(col = offset + width; col < width + 2*offset; col++)
+          extendedImg[row * extWidth + col] = input[0 * width + (width - 1)];
+
+  // step 2c: copy lower left corner
+  for(row = offset + height; row < height + 2*offset; row++)
+      for(col = 0; col < offset; col++)
+          extendedImg[row * extWidth + col] = input[(height - 1) * width + 0];
+
+  // step 2d: copy lower right corner
+  for(row = offset + height; row < height + 2*offset; row++)
+      for(col = offset + width; col < width + 2*offset; col++)
+          extendedImg[row * extWidth + col] = input[(height - 1) * width + (width - 1)];
+
+  return extendedImg;
+}

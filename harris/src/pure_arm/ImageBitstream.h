@@ -54,6 +54,7 @@ public:
 	static Fixed* extend(Fixed *input, int width, int height, int borderSize);
 	static int* extend(int *input, int width, int height, int borderSize);
 	static unsigned char* extend(unsigned char *input, int width, int height, int borderSize);
+	static short* extend(short *input, int width, int height, int borderSize);
 
 private:
 

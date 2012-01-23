@@ -1,6 +1,6 @@
-	.sect ".3DAC26D0_6D4B_11DD_AD8B_0800200C9A66"
+	.sect ".3DAC26D0_6D4B_11DD_AD8B_0800200C9A67"
 	.string "1024," ; cbstruct (NOT USED);
-	.string "3DAC26D0_6D4B_11DD_AD8B_0800200C9A66," ; uuid;
+	.string "3DAC26D0_6D4B_11DD_AD8B_0800200C9A67," ; uuid;
 	.string "harris_dsp," ; name;
 	.string "1," ; type;
 
@@ -56,4 +56,4 @@
 	.string "none," ; stackSegName segment;
 
 	.sect ".dcd_register";
-	.string "3DAC26D0_6D4B_11DD_AD8B_0800200C9A66:0,";
+	.string "3DAC26D0_6D4B_11DD_AD8B_0800200C9A67:0,";

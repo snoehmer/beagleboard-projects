@@ -14,7 +14,7 @@
 #include <stdbool.h>
 #include <signal.h>
 
-#include "Logger.h"
+#include "../../../util/Logger.h"
 #include "dmm_buffer.h"
 #include "dsp_bridge.h"
 
@@ -389,7 +389,7 @@ int dsp_send_message(uint32_t cmd, uint32_t arg1, uint32_t arg2)
   {
     Dsp::Instance().GetNode().SendMessage(cmd, arg1, arg2);
   }
-  catch(DspException e)
+  catch(DspException &e)
   {
     return -1;
   }
@@ -407,7 +407,7 @@ dsp_msg_t dsp_get_message()
 
     return *(mp);
   }
-  catch(DspException)
+  catch(DspException &e)
   {
     dsp_msg_t err;
     err.cmd = -1;

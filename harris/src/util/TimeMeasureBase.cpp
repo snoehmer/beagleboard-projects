@@ -135,7 +135,7 @@ int TimeMeasureBase::getCallCount(const char *identifier)
 
 void TimeMeasureBase::printStatistic()
 {
-  printf("\n============================= TIMING STATS ===================================\n");
+  printf("\n=============================== TIMING STATS ===================================\n");
   printf(" identifier               | totaltime (ms)   | callcount    | mean duration     \n");
   printf("--------------------------------------------------------------------------------\n");
 

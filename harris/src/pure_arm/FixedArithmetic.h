@@ -288,6 +288,11 @@ public:
     return ((float) value_) / ((float) (1 << q_));
   }
 
+  inline short toQ15()
+  {
+    return (short) convert(15).value_;
+  }
+
 
   // relational operators
   inline bool operator >(Fixed right)
@@ -506,7 +511,7 @@ inline Fixed scale_uchar(unsigned int i, const unsigned int q)
   ret.q_ = q;
 
   if(q > 8)
-    ret.value_ = i << (q - 8);
+    ret.value_ = i << (q - 8);  //TODO: shift by 7 (because of sign bit)?
   else
     ret.value_ = i >> (8 - q);
 

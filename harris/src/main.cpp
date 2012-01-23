@@ -8,6 +8,7 @@
 #include <Magick++.h>
 #include "pure_arm/ImageBitstream.h"
 #include "pure_arm/HarrisCornerDetector.h"
+#include "arm_dsp/arm/HarrisCornerDetector_DSP.h"
 #include "pure_arm/FeatureDetector.h"
 #include "pure_arm/FeatureDetector_IntImg.h"
 #include "pure_arm/FeatureDetector_Harris_Std.h"
@@ -20,6 +21,11 @@
 #include <vector>
 #include <iostream>
 
+// include DSP stuff only if needed
+#if defined(HARRIS_USE_DSP) || defined(FEATDET_USE_DSP)
+#include "arm_dsp/arm/dspbridge/Dsp.h"
+#include "arm_dsp/arm/dspbridge/dsp_bridge.h"
+#endif
 //#define DEBUG_OUTPUT_CORNERS
 
 
@@ -50,6 +56,24 @@ int main(int argc, char **argv)
 
     InitializeMagick(0);
 
+    // initialize DSP: init DSP, load program and run node
+#if defined(HARRIS_USE_DSP) || defined(FEATDET_USE_DSP)
+    Logger::debug(Logger::MAIN, "initializing DSP: creating instance");
+
+    Dsp *dsp = &(Dsp::Instance());
+
+    Logger::debug(Logger::MAIN, "initializing DSP: running Init");
+    dsp->Init();
+
+    const struct dsp_uuid harris_uuid = { 0x3dac26d0, 0x6d4b, 0x11dd, 0xad, 0x8b, { 0x08, 0x00, 0x20, 0x0c, 0x9a, 0x67 } };
+
+    Logger::debug(Logger::MAIN, "initializing DSP: loading node harris_dsp");
+    DspNode& node = dsp->CreateNode(harris_uuid,"./dsp/harris_dsp.dll64P");
+
+    Logger::debug(Logger::MAIN, "initializing DSP: running node harris_dsp");
+    node.Run();
+#endif
+
     ImageBitstream inputImg;
 
     try
@@ -57,7 +81,7 @@ int main(int argc, char **argv)
     	Logger::debug(Logger::MAIN, "reading reference image ('%s')", argv[1]);
     	inputImg = ImageBitstream(argv[1]);
     }
-    catch(Exception &e)
+    catch(Magick::Exception &e)
     {
     	Logger::error(Logger::MAIN, "error reading reference image ('%s'), reason: %s", argv[1], e.what());
     	return -1;
@@ -67,23 +91,30 @@ int main(int argc, char **argv)
      * part 1: Harris Corner Detection
      */
 
-    HarrisCornerDetector hcd(HARRIS_THRESH);
+    HarrisCornerDetector *hcd;
     vector<HarrisCornerPoint> cornerPoints;
+
+#ifndef HARRIS_USE_DSP
+    hcd = new HarrisCornerDetector(HARRIS_THRESH);
+#else
+    hcd = new HarrisCornerDetectorDSP(HARRIS_THRESH);
+#endif
 
     Logger::debug(Logger::MAIN, "initializing Harris Corner Detector on ARM");
 
     startTimer("harris_init_arm");
-    hcd.init();  // generates kernels
+    hcd->init();  // generates kernels
     stopTimer("harris_init_arm");
 
     Logger::debug(Logger::MAIN, "searching for corners on ARM with threshold %f", HARRIS_THRESH);
 
     startTimer("harris_detect_arm");
-    cornerPoints = hcd.detectCorners(inputImg);
+    cornerPoints = hcd->detectCorners(inputImg);
     stopTimer("harris_detect_arm");
 
     Logger::debug(Logger::MAIN, "found %d corners", cornerPoints.size());
 
+    delete hcd;
 
 
     /* ============================================================================
@@ -107,7 +138,7 @@ int main(int argc, char **argv)
     Logger::debug(Logger::MAIN, "initializing standard feature detector with feature threshold %d\%, NCC threshold %f", NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
     FeatureDetector *featureDet;
 
-#ifndef USE_DSP
+#ifndef FEATDET_USE_DSP
 #if defined FEATDET_USE_NCCSTD
     featureDet = new FeatureDetector(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
 #elif defined FEATDET_USE_NCCINTIMG
@@ -144,7 +175,7 @@ int main(int argc, char **argv)
     	{
     		currentImg = ImageBitstream(argv[i]);
     	}
-    	catch(Exception &e)
+    	catch(Magick::Exception &e)
     	{
     		Logger::error(Logger::MAIN, "error detecting features in file #%d ('%s'), reason: %s", i-1, argv[i], e.what());
     		return -1;

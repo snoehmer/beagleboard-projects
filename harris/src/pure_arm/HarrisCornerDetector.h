@@ -35,7 +35,7 @@ public:
     /**
      * does all the initialization stuff (generating kernels etc)
      */
-    void init();
+    virtual void init();
 
     /**
      * sets the (new) input image for the corner detector
@@ -43,7 +43,7 @@ public:
      * @param width the width of the input image
      * @param height the height of the input image
      */
-    void inputImage(ImageBitstream img);
+    virtual void inputImage(ImageBitstream img);
 
     /**
      * performs a full Harris corner detection
@@ -53,10 +53,10 @@ public:
      * @param cornerList a list of the detected corners
      * @param corners a image with the corner strength
      */
-    vector<HarrisCornerPoint> detectCorners(ImageBitstream img, Fixed **hcr = 0);
+    virtual vector<HarrisCornerPoint> detectCorners(ImageBitstream img, Fixed **hcr = 0);
 
 
-private:
+protected:
 
     float devSigma_;
     int devKernelSize_;
@@ -86,12 +86,12 @@ private:
      * @param hcr a raw bit stream of the harris corner response
      * @param cornerStrength the thresholded corner strength
      */
-    vector<HarrisCornerPoint> performHarris(Fixed **hcr);
+    virtual vector<HarrisCornerPoint> performHarris(Fixed **hcr);
 
-    void normalize(float *data, int n, float newMax = 1.0f);
-    vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
-    vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
-    vector<HarrisCornerPoint> normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold);
+    virtual void normalize(float *data, int n, float newMax = 1.0f);
+    virtual vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
+    virtual vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
+    virtual vector<HarrisCornerPoint> normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold);
 };
 
 #endif /* HARRISCORNERDETECTOR_H_ */

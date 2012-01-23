@@ -18,12 +18,17 @@
 
 OPTIMIZATION_LEVEL = 2
 
+BEAGLEBOARD_ADDRESS = beagleboard
+#BEAGLEBOARD_ADDRESS = 10.1.0.66
+
 
 # pretty print
 ifndef V
 QUIET_CC    = @echo '   CC         '$@;
 QUIET_LINK  = @echo '   LINK       '$@;
 QUIET_CLEAN = @echo '   CLEAN      '$@;
+QUIET_TICC  = @echo '   DSPCC      '$@;
+QUIET_TILINK= @echo '   DSPLINK    '$@;
 QUIET_DLL   = @echo '   DLLCREATE  '$@;
 endif
 
@@ -64,20 +69,20 @@ DSP_OUT_DIR := ./bin/dsp
 
 
 # build rules for DSP stuff
-#./bin/dsp/harris_bridge.o64P: ./src/arm_dsp/dsp/harris_bridge.s
-#	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
-#
-#./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
-#	$(QUIET_CC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
-#
-#./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
-#	$(QUIET_LINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
-#
-#./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
-#	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
-#
+./bin/dsp/harris_bridge.o64P: ./src/arm_dsp/dsp/harris_bridge.s
+	$(QUIET_TICC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+
+./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
+	$(QUIET_TICC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
+
+./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
+	$(QUIET_TILINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
+
+./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
+	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
+
 # DSP target
-#dsp-generic: $(DSP_OUT_DIR)/harris_dsp.dll64P
+dsp-generic: $(DSP_OUT_DIR)/harris_dsp.dll64P
 
 
 # -------------------------------------------------------------------------------
@@ -101,6 +106,9 @@ CPP_SRCS_ARM = \
 ./src/pure_arm/GaussFilter.cpp \
 ./src/pure_arm/NonMaxSuppressor.cpp \
 ./src/pure_arm/HarrisCornerDetector.cpp \
+./src/arm_dsp/arm/dspbridge/dsp_bridge.cpp \
+./src/arm_dsp/arm/dspbridge/Dsp.cpp \
+./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp \
 ./src/main.cpp 
 
 OBJS_ARM = \
@@ -119,6 +127,9 @@ OBJS_ARM = \
 ./bin/GaussFilter.o \
 ./bin/NonMaxSuppressor.o \
 ./bin/HarrisCornerDetector.o \
+./bin/dsp_bridge.o \
+./bin/Dsp.o \
+./bin/HarrisCornerDetector_DSP.o \
 ./bin/main.o 
 
 
@@ -130,6 +141,13 @@ DEPLOYDIR = ./bin/deploy
 
 # quick targets
 all: HarrisCornerDetectorHost
+
+# quick targets for ARM platform with DSP support
+arm-dsp-harris: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISSTD -DHARRIS_USE_DSP #-DFEATDET_USE_DSP
+arm-dsp-harris: hcd-arm-dsp
+
+arm-dsp-harris-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISINTIMG -DHARRIS_USE_DSP #-DFEATDET_USE_DSP
+arm-dsp-harris-intimg: hcd-arm-dsp
 
 # quick targets for ARM platform without DSP
 arm-slow: CC_FLAGS_ARM += -DFEATDET_USE_NCCSTD
@@ -163,7 +181,7 @@ HarrisCornerDetectorHost: buildHarrisCornerDetectorHost
 
 hcd-arm-nondsp: buildHarrisCornerDetectorARM deploybeagleboard
 
-#hcd-arm-dsp: buildHarrisCornerDetectorARM deploybeagleboard dsp-generic
+hcd-arm-dsp: buildHarrisCornerDetectorARM dsp-generic deploybeagleboard
 
 
 # compile for host machine
@@ -184,6 +202,7 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 ./bin/main.o: ./src/main.cpp $(CPP_SRCS_ARM)
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
+# utils
 ./bin/ConsoleLogger.o: ./src/util/ConsoleLogger.cpp ./src/util/ConsoleLogger.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
@@ -196,12 +215,14 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 ./bin/TimeMeasureBase.o: ./src/util/TimeMeasureBase.cpp ./src/util/TimeMeasureBase.h ./src/util/SystemTimeMeasure.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
+# generic
 ./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 ./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
+# ARM version
 ./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
@@ -229,13 +250,24 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 ./bin/FeatureDetector_Harris_IntImg.o: ./src/pure_arm/FeatureDetector_Harris_IntImg.cpp ./src/pure_arm/FeatureDetector_Harris_IntImg.h ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
+# DSP utils
+./bin/dsp_bridge.o: ./src/arm_dsp/arm/dspbridge/dsp_bridge.cpp ./src/arm_dsp/arm/dspbridge/dsp_bridge.h
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
+
+./bin/Dsp.o: ./src/arm_dsp/arm/dspbridge/Dsp.cpp ./src/arm_dsp/arm/dspbridge/Dsp.h ./src/arm_dsp/arm/dspbridge/dsp_bridge.h ./src/arm_dsp/arm/dspbridge/dsp_bridge.cpp ./src/arm_dsp/arm/dspbridge/dmm_buffer.h ./src/arm_dsp/arm/dspbridge/node.h
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
+
+# DSP version
+./bin/HarrisCornerDetector_DSP.o: ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp ./src/arm_dsp/arm/HarrisCornerDetector_DSP.h ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/arm_dsp/common/harris_common.h
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
+
 
 .PHONY: deploybeagleboard
 
 deploybeagleboard:
 	@echo deploying files to beagleboard...
 	cp $(BIN) $(DEPLOYDIR)
-	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@10.1.0.66:/home/ubuntu/harris
+	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@$(BEAGLEBOARD_ADDRESS):/home/ubuntu/harris
 
 
 .PHONY: clean
