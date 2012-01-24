@@ -6,12 +6,15 @@
 #include <c6x.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <dsplib.h>
+#include "../../../opt/dsplib/inc/dsplib.h"
 #include <stddef.h>
 #include <string.h>
 #include "../common/harris_common.h"
 #include "../arm/dspbridge/node.h"
 
+
+void DSP_mat_trans_slow(const short* restrict x, const short rows, const short columns, short* restrict r);
+void DSP_fir_gen_slow(const short* restrict x, const short* restrict h, short* restrict r, const int nh, const int nr);
 
 int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
     unsigned int extWidth, unsigned int offset, const short* restrict kernel_gauss,
@@ -19,8 +22,10 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
     short* restrict output_diffYY, short* restrict output_diffXY);
 
 
+
 unsigned int dsp_harris_create(void)
 {
+
 	return 0x8000;
 }
 
@@ -82,6 +87,7 @@ unsigned int dsp_harris_execute(void *env)
         msg.arg_2 = result;
 
         NODE_putMsg(env, NULL, &msg, 0);
+
         break;
       }
 
@@ -99,7 +105,7 @@ unsigned int dsp_harris_execute(void *env)
 
 // slow functions for images that do not fulfill requirements (taken from TIs DSPLIB)
 
-void DSP_mat_trans_slow(const short *x, const short rows, const short columns, short *r)
+void DSP_mat_trans_slow(const short* restrict x, const short rows, const short columns, short* restrict r)
 {
   short i,j;
     for(i=0; i<columns; i++)
@@ -109,9 +115,9 @@ void DSP_mat_trans_slow(const short *x, const short rows, const short columns, s
 
 void DSP_fir_gen_slow
 (
-  const short * x, // Input ('nr + nh - 1' samples)
-  const short * h, // Filter coefficients (nh taps)
-  short * r, // Output array ('nr' samples)
+  const short* restrict x, // Input ('nr + nh - 1' samples)
+  const short* restrict h, // Filter coefficients (nh taps)
+  short* restrict r, // Output array ('nr' samples)
   const int nh, // Length of filter (nh >= 5)
   const int nr // Length of output (nr >= 1)
 )
@@ -143,6 +149,7 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   short *convX = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
   short *convY = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
 
+
   // temporary memory for the intermediate result between 1d convolutions
   short *temp = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
 
@@ -151,15 +158,16 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
 
 
   // calculate horizontal convolution with x-derived kernel (derived gauss)
-  if(extWidth * extHeight % 4 == 0)
-    DSP_fir_gen(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
-  else
+  //if(extWidth * extHeight % 4 == 0)
+  //  DSP_fir_gen(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
+  //else
     DSP_fir_gen_slow(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
 
+
   // transpose temporary image to compute vertical convolution with x-derived kernel
-  if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
-  else
+  //if(extWidth % 4 == 0 && extHeight % 4 == 0)
+  //  DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
+  /*else
     DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
 
   // set all values of temp array again to known values
@@ -206,6 +214,8 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
 
   free(temp);
 
+  */
+
   int row;
   int col;
 
@@ -225,5 +235,6 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   free(convY);
 
 
-  return DSP_STATUS_FINISHED;
+  return DSP_STATUS_FAILED;
+  //return DSP_STATUS_FINISHED;
 }

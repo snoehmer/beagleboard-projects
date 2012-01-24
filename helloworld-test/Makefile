@@ -1,7 +1,7 @@
-DSP_TOOLS := /opt/TI/TI_CGT_C6000_7.2.2
+DSP_TOOLS := /opt/TI/C6000CGT7.2.2
 DSP_DOFFBUILD := /opt/doffbuild
 
-CROSS_COMPILE := /usr/local/sourcery-arm-linux/bin/arm-none-linux-gnueabi-
+CROSS_COMPILE := /opt/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-
 CC := $(CROSS_COMPILE)gcc
 
 CFLAGS := -O2 -Wall -Wextra -Wno-unused-parameter -ansi -std=c99
@@ -47,6 +47,8 @@ all: $(bins)
 
 clean:
 	$(QUIET_CLEAN)$(RM) $(bins) *.o *.o64P *.x64P
+
+V := 1
 
 # pretty print
 ifndef V

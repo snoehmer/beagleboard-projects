@@ -65,12 +65,12 @@ int main(int argc, char **argv)
     Logger::debug(Logger::MAIN, "initializing DSP: running Init");
     dsp->Init();
 
-    const struct dsp_uuid harris_uuid = { 0x3dac26d0, 0x6d4b, 0x11dd, 0xad, 0x8b, { 0x08, 0x00, 0x20, 0x0c, 0x9a, 0x67 } };
+    const struct dsp_uuid harris_uuid = { 0x3dac26d0, 0x6d4b, 0x11dd, 0xad, 0x8b, { 0x08, 0x00, 0x20, 0x0c, 0x9a, 0x66 } };
 
-    Logger::debug(Logger::MAIN, "initializing DSP: loading node harris_dsp");
-    DspNode& node = dsp->CreateNode(harris_uuid,"./dsp/harris_dsp.dll64P");
+    Logger::debug(Logger::MAIN, "initializing DSP: loading node harris");
+    DspNode& node = dsp->CreateNode(harris_uuid, "./harris.dll64P");
 
-    Logger::debug(Logger::MAIN, "initializing DSP: running node harris_dsp");
+    Logger::debug(Logger::MAIN, "initializing DSP: running node harris");
     node.Run();
 #endif
 

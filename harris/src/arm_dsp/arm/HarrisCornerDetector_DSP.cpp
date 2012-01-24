@@ -38,7 +38,13 @@ HarrisCornerDetectorDSP::~HarrisCornerDetectorDSP()
 		delete[] devKernelY_;
 
 	if(gaussKernel_)
-		delete[] gaussKernel_;
+		dsp_free(gaussKernel_);
+
+	if(devKernel_gauss_)
+	  dsp_free(devKernel_gauss_);
+
+	if(devKernel_gauss2_)
+    dsp_free(devKernel_gauss2_);
 }
 
 void HarrisCornerDetectorDSP::init()
@@ -55,9 +61,9 @@ void HarrisCornerDetectorDSP::init()
 
     Logger::debug(Logger::HARRIS, "calculating kernels");
 
-    devKernel_gauss_ = new short[devKernelSize_];
-    devKernel_gauss2_ = new short[devKernelSize_];
-    kernel_gauss_ = new short[gaussKernelSize_];
+    devKernel_gauss_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
+    devKernel_gauss2_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
+    kernel_gauss_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
 
     devKernelX_ = new Fixed[devKernelSize_];  // we borrow this for devKernel_gauss_ intermediate results
     devKernelY_ = new Fixed[devKernelSize_];  // we borrow this for devKernel_gauss2_ intermediate results
@@ -137,7 +143,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 
 	// convert bitstream to DSP format (Q15)
-	short *input_dsp = new short[extWidth * extHeight + devKernelSize_ - 1];
+	short *input_dsp = (short*) dsp_malloc((extWidth * extHeight + devKernelSize_ - 1) * sizeof(short));
 
 	for(row = 0; row < extHeight; row++)
 	{
@@ -151,13 +157,13 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	memset(input_dsp + extWidth * extHeight, 0, (devKernelSize_ - 1));
 
 
-	short *diffXX = new short[width_ * height_];
-	short *diffYY = new short[width_ * height_];
-	short *diffXY = new short[width_ * height_];
+	short *diffXX = (short*) dsp_malloc(width_ * height_ * sizeof(short));
+	short *diffYY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
+	short *diffXY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
 
 	startTimer("_harris_conv_der_arm");
 
-	dsp_harris_conv_params *params = new dsp_harris_conv_params;
+	dsp_harris_conv_params *params = (dsp_harris_conv_params*) dsp_malloc(sizeof(dsp_harris_conv_params));
 	params->input_ = (short*) dsp_get_mapped_addr(input_dsp);
 	params->width_ = extWidth;
 	params->height_ = extHeight;
@@ -176,10 +182,10 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
   dsp_dmm_buffer_begin(diffYY);
   dsp_dmm_buffer_begin(diffXY);
 
-	int dsp_result = 0;
+	int *dsp_result = (int*) dsp_malloc(sizeof(int));
 
 	dspNode_->SendMessage(DSP_HARRIS_CALC_CONVOLUTION, (uint32_t) dsp_get_mapped_addr(params),
-	    (uint32_t) dsp_get_mapped_addr(&dsp_result), 0);
+	    (uint32_t) dsp_get_mapped_addr(dsp_result), 0);
 
 	dsp_msg message = dspNode_->GetMessage();
 
@@ -189,7 +195,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 	stopTimer("_harris_conv_der_arm");
 
-	delete params;
+	dsp_free(params);
 
 	if(message.cmd == DSP_HARRIS_CALC_CONVOLUTION && message.arg_2 == DSP_STATUS_FINISHED)
 	  Logger::debug(Logger::HARRIS, "DSP successfully calculated convolution with derives");
@@ -311,9 +317,13 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 	stopTimer("_harris_hcr_arm");
 
-	delete[] diffXX;
-	delete[] diffYY;
-	delete[] diffXY;
+	dsp_free(diffXX);
+	dsp_free(diffYY);
+  dsp_free(diffXY);
+
+	delete[] diffXX2;
+	delete[] diffYY2;
+	delete[] diffXY2;
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);

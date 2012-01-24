@@ -17,12 +17,14 @@
 
 
 OPTIMIZATION_LEVEL = 2
+DSP_API = 2
 
 BEAGLEBOARD_ADDRESS = beagleboard
 #BEAGLEBOARD_ADDRESS = 10.1.0.66
 
-
 # pretty print
+#V = 1
+
 ifndef V
 QUIET_CC    = @echo '   CC         '$@;
 QUIET_LINK  = @echo '   LINK       '$@;
@@ -53,19 +55,20 @@ CC_FLAGS_ARM = -Iopt/include/GraphicsMagick -O$(OPTIMIZATION_LEVEL) -g3 -Wall -c
 # -------------------------------------------------------------------------------
 # DSP compilation stuff
 
-DSP_API := 2
-
 DSP_TOOLS := /opt/TI/C6000CGT7.2.2
 DSP_DOFFBUILD := /opt/doffbuild
 CL6X := $(DSP_TOOLS)/bin/cl6x
 LNK6X := $(DSP_TOOLS)/bin/lnk6x
 DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 
-DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
-DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P
+#DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
+DSP_CC_FLAGS := -Iopt/dsplib/inc/ -DDSP_API=$(DSP_API)
+#DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P
+DSP_LD_FLAGS := -lopt/dsplib/lib/dsplib.a64P
 DSP_INCLUDES := -I$(DSP_TOOLS)/include/
 
 DSP_OUT_DIR := ./bin/dsp
+DSP_EXECUTABLE := harris.dll64P
 
 
 # build rules for DSP stuff
@@ -75,14 +78,14 @@ DSP_OUT_DIR := ./bin/dsp
 ./bin/dsp/harris_dsp.o64P: ./src/arm_dsp/dsp/harris_dsp.c
 	$(QUIET_TICC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
 
-./bin/dsp/harris_dsp.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
+./bin/dsp/harris.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
 	$(QUIET_TILINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
 
-./bin/dsp/harris_dsp.dll64P: ./bin/dsp/harris_dsp.x64P
+./bin/dsp/harris.dll64P: ./bin/dsp/harris.x64P
 	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
 
 # DSP target
-dsp-generic: $(DSP_OUT_DIR)/harris_dsp.dll64P
+dsp-generic: $(DSP_OUT_DIR)/$(DSP_EXECUTABLE)
 
 
 # -------------------------------------------------------------------------------
@@ -266,7 +269,9 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 
 deploybeagleboard:
 	@echo deploying files to beagleboard...
+	mkdir -p $(DEPLOYDIR)
 	cp $(BIN) $(DEPLOYDIR)
+	cp $(DSP_OUT_DIR)/$(DSP_EXECUTABLE) $(DEPLOYDIR)
 	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@$(BEAGLEBOARD_ADDRESS):/home/ubuntu/harris
 
 
