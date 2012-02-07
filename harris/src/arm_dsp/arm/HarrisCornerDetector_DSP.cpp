@@ -31,20 +31,14 @@ HarrisCornerDetectorDSP::HarrisCornerDetectorDSP(float threshold, float k, float
 
 HarrisCornerDetectorDSP::~HarrisCornerDetectorDSP()
 {
-	if(devKernelX_)
-		delete[] devKernelX_;
-
-	if(devKernelY_)
-		delete[] devKernelY_;
-
-	if(gaussKernel_)
-		dsp_free(gaussKernel_);
-
 	if(devKernel_gauss_)
 	  dsp_free(devKernel_gauss_);
 
-	if(devKernel_gauss2_)
-    dsp_free(devKernel_gauss2_);
+	if(devKernel_gauss_der_)
+    dsp_free(devKernel_gauss_der_);
+
+	if(kernel_gauss_)
+	  dsp_free(kernel_gauss_);
 }
 
 void HarrisCornerDetectorDSP::init()
@@ -56,14 +50,20 @@ void HarrisCornerDetectorDSP::init()
     float sigma2g = gaussSigma_ * gaussSigma_;
 
     Fixed sum_gauss(0, HARRIS_Q); // needed for normalization
-    Fixed sum_gauss2(0, HARRIS_Q);
+    Fixed sum_gauss_der(0, HARRIS_Q);
     Fixed sumGauss(0, HARRIS_Q);
 
     Logger::debug(Logger::HARRIS, "calculating kernels");
 
     devKernel_gauss_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
-    devKernel_gauss2_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
-    kernel_gauss_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
+    devKernel_gauss_der_ = (short*) dsp_malloc(devKernelSize_ * sizeof(short));
+    kernel_gauss_ = (short*) dsp_malloc(gaussKernelSize_ * sizeof(short));
+
+    if(!devKernel_gauss_ || !devKernel_gauss_der_ || !kernel_gauss_)
+    {
+      Logger::error(Logger::HARRIS, "failed to allocate memory for convolution kernels!");
+      return;
+    }
 
     devKernelX_ = new Fixed[devKernelSize_];  // we borrow this for devKernel_gauss_ intermediate results
     devKernelY_ = new Fixed[devKernelSize_];  // we borrow this for devKernel_gauss2_ intermediate results
@@ -76,30 +76,32 @@ void HarrisCornerDetectorDSP::init()
 
     for(x = 0; x < devKernelSize_; x++)
     {
-        xc2 = (x - center) * (x - center);
+        xc2 = (devKernelSize_ - 1 - x - center) * (devKernelSize_ - 1 - x - center);  // the convolution kernel must be mirrored!
 
-        devKernelX_[x] = Fixed(-((float) x - center) * exp(((float) -xc2) / (2 * sigma2)), HARRIS_Q);  // this is a derived Gauss function
+        devKernelX_[x] = Fixed(-((float) devKernelSize_ - 1 - x - center) * exp(((float) -xc2) / (2 * sigma2)), HARRIS_Q);  // this is a derived Gauss function
 
-        devKernelY_[x] = Fixed(exp(((float) -(xc2)) / (2 * sigma2g)), HARRIS_Q);  // this is a standard Gauss function
+        devKernelY_[x] = Fixed(exp(((float) -(xc2)) / (2 * sigma2)), HARRIS_Q);  // this is a standard Gauss function
 
-        sum_gauss += abs(devKernelX_[x]);
-        sum_gauss2 += abs(devKernelY_[x]);
+        sum_gauss_der += abs(devKernelX_[x]);
+        sum_gauss += abs(devKernelY_[x]);
     }
 
     // step 2: normalize kernels and convert to Q15 short
     for(x = 0; x < devKernelSize_; x++)
     {
-        devKernel_gauss_[x] = (devKernelX_[x] / sum_gauss).toQ15();
-        devKernel_gauss2_[x] = (devKernelY_[x] / sum_gauss2).toQ15();
-    }
+        devKernelX_[x] = devKernelX_[x] / sum_gauss_der;
+        devKernelY_[x] = devKernelY_[x] / sum_gauss;
 
+        devKernel_gauss_der_[x] = devKernelX_[x].toQ15();
+        devKernel_gauss_[x] = devKernelY_[x].toQ15();
+    }
 
     // step 3: calculate Gauss function for gauss kernels
     center = (gaussKernelSize_ - 1) / 2;
 
     for(x = 0; x < gaussKernelSize_; x++)
     {
-        xc2 = (x - center) * (x - center);
+        xc2 = (gaussKernelSize_ - 1 - x - center) * (gaussKernelSize_ - 1 - x - center);  // the convolution kernels must be mirrored!
 
         gaussKernel_[x] = Fixed(exp(((float) -xc2) / (2 * sigma2g)), HARRIS_Q);
 
@@ -109,7 +111,9 @@ void HarrisCornerDetectorDSP::init()
     // step 2: normalize kernel and convert to Q15 short
     for(x = 0; x < gaussKernelSize_; x++)
     {
-        gaussKernel_[x] = (gaussKernel_[x] / sumGauss).toQ15();
+        gaussKernel_[x] = gaussKernel_[x] / sumGauss;
+
+        kernel_gauss_[x] = gaussKernel_[x].toQ15();
     }
 
     stopTimer("_harris_kernels_arm");
@@ -130,6 +134,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	int extHeight;
 
 	Image tempImg;
+	vector<HarrisCornerPoint> dummyVector;
 
 
 	// step 1: convolve the image with the derives of Gaussians
@@ -144,32 +149,51 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 	// convert bitstream to DSP format (Q15)
 	short *input_dsp = (short*) dsp_malloc((extWidth * extHeight + devKernelSize_ - 1) * sizeof(short));
+	if(!input_dsp)
+	{
+	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP input array!");
+	  return dummyVector;
+	}
+
+	// set "border" elements to 0
+  memset((short*) (input_dsp + extWidth * extHeight), 0, (devKernelSize_ - 1));
 
 	for(row = 0; row < extHeight; row++)
 	{
 	  for(col = 0; col < extWidth; col++)
 	  {
-	    input_dsp[row * extWidth + col] = extendedImg.pixel(row, col) << 7;  // shifted by 7 because highest bit is sign bit!
+	    input_dsp[row * extWidth + col] = ((short) extendedImg.pixel(row, col)) << 7;  // shifted by 7 because highest bit is sign bit!
 	  }
 	}
-
-	// set "border" elements to 0
-	memset(input_dsp + extWidth * extHeight, 0, (devKernelSize_ - 1));
 
 
 	short *diffXX = (short*) dsp_malloc(width_ * height_ * sizeof(short));
 	short *diffYY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
 	short *diffXY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
 
+	if(!diffXX || !diffYY || !diffXY)
+	{
+	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP output array!");
+    return dummyVector;
+	}
+
+
 	startTimer("_harris_conv_der_arm");
 
+
 	dsp_harris_conv_params *params = (dsp_harris_conv_params*) dsp_malloc(sizeof(dsp_harris_conv_params));
+	if(!params)
+	{
+	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP params!");
+    return dummyVector;
+	}
+
 	params->input_ = (short*) dsp_get_mapped_addr(input_dsp);
 	params->width_ = extWidth;
 	params->height_ = extHeight;
 	params->offset_ = offset;
 	params->kernel_gauss_ = (short*) dsp_get_mapped_addr(devKernel_gauss_);
-	params->kernel_gauss2_ = (short*) dsp_get_mapped_addr(devKernel_gauss2_);
+	params->kernel_gauss_der_ = (short*) dsp_get_mapped_addr(devKernel_gauss_der_);
 	params->kSize_ = devKernelSize_;
 	params->output_diffXX_ = (short*) dsp_get_mapped_addr(diffXX);
 	params->output_diffYY_ = (short*) dsp_get_mapped_addr(diffYY);
@@ -177,13 +201,14 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
   dsp_dmm_buffer_begin(input_dsp);
   dsp_dmm_buffer_begin(devKernel_gauss_);
-  dsp_dmm_buffer_begin(devKernel_gauss2_);
+  dsp_dmm_buffer_begin(devKernel_gauss_der_);
   dsp_dmm_buffer_begin(diffXX);
   dsp_dmm_buffer_begin(diffYY);
   dsp_dmm_buffer_begin(diffXY);
 
 	int *dsp_result = (int*) dsp_malloc(sizeof(int));
 
+	// start calculation on DSP
 	dspNode_->SendMessage(DSP_HARRIS_CALC_CONVOLUTION, (uint32_t) dsp_get_mapped_addr(params),
 	    (uint32_t) dsp_get_mapped_addr(dsp_result), 0);
 
@@ -202,8 +227,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	else
 	{
 	  Logger::error(Logger::HARRIS, "error while calculating convolution with derives!");
-	  vector<HarrisCornerPoint> empty;
-	  return empty;
+	  return dummyVector;
 	}
 
 
@@ -221,6 +245,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
       diffXY2[row * width_ + col] = Fixed(diffXY[row * width_ + col], HARRIS_Q - 15);  // restore old format
     }
   }
+
 
 #ifdef DEBUG_OUTPUT_PICS
 	tempImg.read(width_, height_, "I", FloatPixel, diffXX);

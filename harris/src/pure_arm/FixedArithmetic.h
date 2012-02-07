@@ -50,9 +50,9 @@ public:
       Fixed ret;
 
       if(q_ > q)
-        ret.value_ = value_ << (q_ - q);
+        ret.value_ = value_ >> (q_ - q);
       else
-        ret.value_ = value_ >> (q - q_);
+        ret.value_ = value_ << (q - q_);
 
       ret.q_ = q;
 
@@ -104,7 +104,7 @@ public:
 
     if(right.value_ != 0)
       ret.value_ = (int) ((((long long)value_) << q_) / ((long long)ret.value_));
-    else printf("WARNING: FixedArithmetic.h: division by zero!\n");
+    //else printf("WARNING: FixedArithmetic.h: division by zero!\n");
 
     return ret;
   }
@@ -265,8 +265,7 @@ public:
 
     if(this->value_ >= 0)
       ret.value_ = ::sqrt(((long long)value_) << q_);
-    else
-      printf("WARNING: FixedArithmetic.h: sqrt of negative number!\n");
+    //else printf("WARNING: FixedArithmetic.h: sqrt of negative number!\n");
 
     return ret;
   }
@@ -290,7 +289,7 @@ public:
 
   inline short toQ15()
   {
-    return (short) convert(15).value_;
+    return (short) (convert(15).value_);
   }
 
 

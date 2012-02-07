@@ -47,7 +47,7 @@ private:
 
     // kernels for convolution on DSP
     short *devKernel_gauss_;
-    short *devKernel_gauss2_;
+    short *devKernel_gauss_der_;
     short *kernel_gauss_;
 
     /**

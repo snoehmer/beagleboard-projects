@@ -28,7 +28,7 @@ typedef struct dsp_harris_conv_params_
 {
   short *input_;          // input image in fixed point representation
   short *kernel_gauss_;   // standard Gauss convolution kernel
-  short *kernel_gauss2_;  // derived Gauss convolution kernel
+  short *kernel_gauss_der_;  // derived Gauss convolution kernel
   unsigned int kSize_;    // size of the kernel
   short *output_diffXX_;    // output images: derives in different directions
   short *output_diffYY_;

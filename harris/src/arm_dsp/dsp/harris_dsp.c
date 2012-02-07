@@ -18,7 +18,7 @@ void DSP_fir_gen_slow(const short* restrict x, const short* restrict h, short* r
 
 int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
     unsigned int extWidth, unsigned int offset, const short* restrict kernel_gauss,
-    const short* restrict kernel_gauss2, unsigned int kSize, short* restrict output_diffXX,
+    const short* restrict kernel_gauss_der, unsigned int kSize, short* restrict output_diffXX,
     short* restrict output_diffYY, short* restrict output_diffXY);
 
 
@@ -58,7 +58,7 @@ unsigned int dsp_harris_execute(void *env)
         unsigned int extWidth = params->width_;
         unsigned int offset = params->offset_;
         short *kernel_gauss = params->kernel_gauss_;
-        short *kernel_gauss2 = params->kernel_gauss2_;
+        short *kernel_gauss_der = params->kernel_gauss_der_;
         unsigned int kSize = params->kSize_;
         short *output_diffXX = params->output_diffXX_;
         short *output_diffYY = params->output_diffYY_;
@@ -71,14 +71,14 @@ unsigned int dsp_harris_execute(void *env)
         unsigned int size = height * width;
 
         BCACHE_inv((void*) input, extSize * sizeof(short), 1);
-        BCACHE_inv((void*) kernel_gauss, kSize * kSize * sizeof(short), 1);
-        BCACHE_inv((void*) kernel_gauss2, kSize * kSize * sizeof(short), 1);
+        BCACHE_inv((void*) kernel_gauss, kSize * sizeof(short), 1);
+        BCACHE_inv((void*) kernel_gauss_der, kSize * sizeof(short), 1);
         BCACHE_inv((void*) output_diffXX, size * sizeof(short), 1);
         BCACHE_inv((void*) output_diffYY, size * sizeof(short), 1);
         BCACHE_inv((void*) output_diffXY, size * sizeof(short), 1);
 
         int result = dsp_harris_convolve_harris(input, extHeight, extWidth, offset,
-            kernel_gauss, kernel_gauss2, kSize, output_diffXX, output_diffYY, output_diffXY);
+            kernel_gauss, kernel_gauss_der, kSize, output_diffXX, output_diffYY, output_diffXY);
 
         BCACHE_wbInv((void*) output_diffXX, size * sizeof(short), 1);
         BCACHE_wbInv((void*) output_diffYY, size * sizeof(short), 1);
@@ -128,7 +128,7 @@ void DSP_fir_gen_slow
     sum = 0;
     for (i = 0; i < nh; i++)
     {
-      sum += x[i + j] * h[i];
+      sum += ((int) x[i + j]) * ((int) h[i]);
     }
     r[j] = sum >> 15;
   }
@@ -137,84 +137,81 @@ void DSP_fir_gen_slow
 
 int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
     unsigned int extWidth, unsigned int offset, const short* restrict kernel_gauss,
-    const short* restrict kernel_gauss2, unsigned int kSize, short* restrict output_diffXX,
+    const short* restrict kernel_gauss_der, unsigned int kSize, short* restrict output_diffXX,
     short* restrict output_diffYY, short* restrict output_diffXY)
 {
   unsigned int height = extHeight - 2 * offset;
   unsigned int width = extWidth - 2 * offset;
   unsigned int size = height * width;
-  unsigned int radius = size / 2;
+  unsigned int radius = kSize / 2;
 
   // results of the 2d convolution by 2 1d convolutions
-  short *convX = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
-  short *convY = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  short *convX = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
+  short *convY = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
 
 
   // temporary memory for the intermediate result between 1d convolutions
-  short *temp = (short*) memalign(8, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  short* temp = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
 
   // set all values of temp array to known values
-  memset(temp, 0, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
 
 
   // calculate horizontal convolution with x-derived kernel (derived gauss)
-  //if(extWidth * extHeight % 4 == 0)
-  //  DSP_fir_gen(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
-  //else
-    DSP_fir_gen_slow(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
-
+  if(extWidth * extHeight % 4 == 0)
+    DSP_fir_gen(input, kernel_gauss_der, temp + kSize/2, kSize, extWidth * extHeight);
+  else
+    DSP_fir_gen_slow(input, kernel_gauss_der, temp + kSize/2, kSize, extWidth * extHeight);
 
   // transpose temporary image to compute vertical convolution with x-derived kernel
-  //if(extWidth % 4 == 0 && extHeight % 4 == 0)
-  //  DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
-  /*else
-    DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
+  if(extWidth % 4 == 0 && extHeight % 4 == 0)
+    DSP_mat_trans(temp, extHeight, extWidth, convX);
+  else
+    DSP_mat_trans_slow(temp, extHeight, extWidth, convX);
 
   // set all values of temp array again to known values
-  memset(temp, 0, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
 
   // now calculate vertical convolution with x-derived kernel (standard gauss)
   if(extWidth * extHeight % 4 == 0)
-    DSP_fir_gen(convX, kernel_gauss, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen(convX, kernel_gauss, temp + kSize/2, kSize, extWidth * extHeight);
   else
-    DSP_fir_gen_slow(convX, kernel_gauss, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen_slow(convX, kernel_gauss, temp + kSize/2, kSize, extWidth * extHeight);
 
   // transpose image again to retrieve original image
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
+    DSP_mat_trans(temp, extHeight, extWidth, convX);
   else
-    DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
+    DSP_mat_trans_slow(temp, extHeight, extWidth, convX);
 
 
   // now calculate convolution with y-derived kernel in the same way (except swapped kernels)
-  memset(temp, 0, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
 
   if(extWidth * extHeight % 4 == 0)
-    DSP_fir_gen(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen(input, kernel_gauss, temp + kSize/2, kSize, extWidth * extHeight);
   else
-    DSP_fir_gen_slow(input, kernel_gauss2, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen_slow(input, kernel_gauss, temp + kSize/2, kSize, extWidth * extHeight);
 
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
+    DSP_mat_trans(temp, extHeight, extWidth, convY);
   else
-    DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
+    DSP_mat_trans_slow(temp, extHeight, extWidth, convY);
 
-  memset(temp, 0, (8 + extWidth * extHeight + kSize - 1) * sizeof(short));
+  memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
 
   if(extWidth * extHeight % 4 == 0)
-    DSP_fir_gen(convX, kernel_gauss, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen(convY, kernel_gauss_der, temp + kSize/2, kSize, extWidth * extHeight);
   else
-    DSP_fir_gen_slow(convX, kernel_gauss, temp + 8, kSize, extWidth * extHeight);
+    DSP_fir_gen_slow(convY, kernel_gauss_der, temp + kSize/2, kSize, extWidth * extHeight);
 
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp + 8 - radius, extHeight, extWidth, convX);
+    DSP_mat_trans(temp, extHeight, extWidth, convY);
   else
-    DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
-
+    DSP_mat_trans_slow(temp, extHeight, extWidth, convY);
 
   free(temp);
 
-  */
 
   int row;
   int col;
@@ -224,9 +221,12 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   {
     for(col = 0; col < width; col++)
     {
-      output_diffXX[row * width + col] = (short) ((int) convX[(row + offset) * extWidth + (col + offset)] * (int) convX[(row + offset) * extWidth + (col + offset)]) >> 15;
-      output_diffYY[row * width + col] = (short) ((int) convY[(row + offset) * extWidth + (col + offset)] * (int) convY[(row + offset) * extWidth + (col + offset)]) >> 15;
-      output_diffXY[row * width + col] = (short) ((int) convX[(row + offset) * extWidth + (col + offset)] * (int) convY[(row + offset) * extWidth + (col + offset)]) >> 15;
+      output_diffXX[row * width + col] = (short) (((int) convX[(row + offset) * extWidth + (col + offset)] * (int) convX[(row + offset) * extWidth + (col + offset)]) >> 15);
+      output_diffYY[row * width + col] = (short) (((int) convY[(row + offset) * extWidth + (col + offset)] * (int) convY[(row + offset) * extWidth + (col + offset)]) >> 15);
+      output_diffXY[row * width + col] = (short) (((int) convX[(row + offset) * extWidth + (col + offset)] * (int) convY[(row + offset) * extWidth + (col + offset)]) >> 15);
+
+//      output_diffXX[row * width + col] = convX[(row + offset) * extWidth + (col + offset)];
+//      output_diffYY[row * width + col] = convY[(row + offset) * extWidth + (col + offset)];
     }
   }
 
@@ -234,7 +234,66 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   free(convX);
   free(convY);
 
-
-  return DSP_STATUS_FAILED;
-  //return DSP_STATUS_FINISHED;
+  return DSP_STATUS_FINISHED;
 }
+
+/*
+int dsp_harris_convolve_harris2(const short* restrict input, unsigned int extHeight,
+    unsigned int extWidth, unsigned int offset, const short* restrict kernel_gauss,
+    const short* restrict kernel_gauss2, unsigned int kSize, short* restrict output_diffXX,
+    short* restrict output_diffYY, short* restrict output_diffXY)
+{
+  unsigned int height = extHeight - 2 * offset;
+  unsigned int width = extWidth - 2 * offset;
+  unsigned int size = height * width;
+  unsigned int radius = kSize / 2;
+
+  // temporary memory for the intermediate result between 1d convolutions
+  short* temp = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
+
+  // results of the 2d convolution by 2 1d convolutions
+  short *convX = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
+  short *convY = (short*) malloc((extWidth * extHeight + kSize - 1) * sizeof(short));
+
+  // set all values (especially border) of temp array to known values
+  memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
+
+
+  // calculate horizontal convolution with x-derived kernel (derived gauss)
+//  if(extWidth * extHeight % 4 == 0)
+    DSP_fir_gen(input, kernel_gauss2, temp + kSize/2, kSize, extWidth * extHeight);
+//  else
+    //DSP_fir_gen_slow(input, kernel_gauss2, temp, kSize, extWidth * extHeight);
+
+
+  // transpose temporary image to compute vertical convolution with x-derived kernel
+//  if(extWidth % 4 == 0 && extHeight % 4 == 0)
+    DSP_mat_trans(temp, extHeight, extWidth, convX);
+//  else
+    //DSP_mat_trans_slow(temp + 8 - radius, extHeight, extWidth, convX);
+
+    memset(temp, 0, (extWidth * extHeight + kSize - 1) * sizeof(short));
+
+    DSP_fir_gen(convX, kernel_gauss, temp + kSize/2, kSize, extWidth * extHeight);
+
+    DSP_mat_trans(temp, extHeight, extWidth, convX);
+
+  int row;
+  int col;
+
+  // now calculate diffXX (squared x), diffYY (squared y) and diffXY (x * y)
+  for(row = 0; row < height; row++)
+  {
+    for(col = 0; col < width; col++)
+    {
+      output_diffXX[row * width + col] = temp[(row + offset) * extWidth + (col + offset)];
+      output_diffYY[row * width + col] = convX[(row + offset) * extWidth + (col + offset)];
+      output_diffXY[row * width + col] = temp[(row + offset) * extWidth + (col + offset)];
+    }
+  }
+
+
+  free(temp);
+
+  return DSP_STATUS_FINISHED;
+}*/

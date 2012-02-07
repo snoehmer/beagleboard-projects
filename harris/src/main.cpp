@@ -46,11 +46,11 @@ int main(int argc, char **argv)
 {
     Logger::init();
 
-    if(argc < 3)
+    if(argc < 2)
     {
       cout << "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]" << endl;
       cout << "HCD searches for features in <reference image> und checks if they are contained in the input images" << endl << endl;
-      Logger::error(Logger::MAIN, "usage: HarrisCornerDetector <reference image> <input image 1> [<output image 2> ...]");
+      Logger::error(Logger::MAIN, "usage: HarrisCornerDetector <reference image> [<input image 1> <input image 2> ...]");
       return -1;
     }
 

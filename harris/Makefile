@@ -61,10 +61,10 @@ CL6X := $(DSP_TOOLS)/bin/cl6x
 LNK6X := $(DSP_TOOLS)/bin/lnk6x
 DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 
-#DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
-DSP_CC_FLAGS := -Iopt/dsplib/inc/ -DDSP_API=$(DSP_API)
-#DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P
-DSP_LD_FLAGS := -lopt/dsplib/lib/dsplib.a64P
+DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
+#DSP_CC_FLAGS := -Iopt/dsplib/inc/ -DDSP_API=$(DSP_API)
+DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P  # must be the LAST argument for lnk6x!
+#DSP_LD_FLAGS := -lopt/dsplib/lib/dsplib.a64P
 DSP_INCLUDES := -I$(DSP_TOOLS)/include/
 
 DSP_OUT_DIR := ./bin/dsp
@@ -79,7 +79,7 @@ DSP_EXECUTABLE := harris.dll64P
 	$(QUIET_TICC)$(CL6X) $(DSP_CC_FLAGS) $(DSP_INCLUDES) -mv=64p -eo.o64P --obj_directory $(DSP_OUT_DIR) --asm_directory $(DSP_OUT_DIR) -c $<
 
 ./bin/dsp/harris.x64P: ./bin/dsp/harris_dsp.o64P ./bin/dsp/harris_bridge.o64P
-	$(QUIET_TILINK)$(LNK6X) $(DSP_LD_FLAGS) -r -cr --localize='$$bss' -o $@ $+
+	$(QUIET_TILINK)$(LNK6X) -r -cr --localize='$$bss' -o $@ $+ $(DSP_LD_FLAGS)
 
 ./bin/dsp/harris.dll64P: ./bin/dsp/harris.x64P
 	$(QUIET_DLL)$(DLLCREATE) $< -o=$@
@@ -219,38 +219,38 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 # generic
-./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h
+./bin/ImageBitstream.o: ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h
+./bin/HarrisCornerPoint.o: ./src/util/HarrisCornerPoint.cpp ./src/util/HarrisCornerPoint.h ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 # ARM version
-./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+./bin/HarrisCornerDetector.o: ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp ./src/pure_arm/GaussFilter.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+./bin/GaussFilter.o: ./src/pure_arm/GaussFilter.cpp ./src/pure_arm/GaussFilter.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/NonMaxSuppressor.o: ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+./bin/NonMaxSuppressor.o: ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureDescriptor.o: ./src/util/FeatureDescriptor.cpp ./src/util/FeatureDescriptor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp
+./bin/FeatureDescriptor.o: ./src/util/FeatureDescriptor.cpp ./src/util/FeatureDescriptor.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureGenerator.o: ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
+./bin/FeatureGenerator.o: ./src/util/FeatureGenerator.cpp ./src/util/FeatureGenerator.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
+./bin/FeatureDetector.o: ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureDetector_IntImg.o: ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp
+./bin/FeatureDetector_IntImg.o: ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureDetector_Harris_Std.o: ./src/pure_arm/FeatureDetector_Harris_Std.cpp ./src/pure_arm/FeatureDetector_Harris_Std.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp
+./bin/FeatureDetector_Harris_Std.o: ./src/pure_arm/FeatureDetector_Harris_Std.cpp ./src/pure_arm/FeatureDetector_Harris_Std.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
-./bin/FeatureDetector_Harris_IntImg.o: ./src/pure_arm/FeatureDetector_Harris_IntImg.cpp ./src/pure_arm/FeatureDetector_Harris_IntImg.h ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp
+./bin/FeatureDetector_Harris_IntImg.o: ./src/pure_arm/FeatureDetector_Harris_IntImg.cpp ./src/pure_arm/FeatureDetector_Harris_IntImg.h ./src/pure_arm/FeatureDetector_IntImg.cpp ./src/pure_arm/FeatureDetector_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 # DSP utils
@@ -261,7 +261,7 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 # DSP version
-./bin/HarrisCornerDetector_DSP.o: ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp ./src/arm_dsp/arm/HarrisCornerDetector_DSP.h ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/arm_dsp/common/harris_common.h
+./bin/HarrisCornerDetector_DSP.o: ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp ./src/arm_dsp/arm/HarrisCornerDetector_DSP.h ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/arm_dsp/common/harris_common.h ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
 
 
@@ -280,3 +280,9 @@ deploybeagleboard:
 clean:
 	$(QUIET_CLEAN)rm -rf $(BIN) $(OBJS_ARM)
 	$(QUIET_CLEAN)rm -rf ./bin/dsp/*
+
+.PHONY: dsp-clean
+
+dsp-clean:
+	$(QUIET_CLEAN)rm -rf ./bin/dsp/*
+
