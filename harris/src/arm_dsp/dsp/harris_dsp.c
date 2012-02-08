@@ -189,9 +189,9 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
 
   // transpose image again to retrieve original image
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp, extHeight, extWidth, convX);
+    DSP_mat_trans(temp, extWidth, extHeight, convX);
   else
-    DSP_mat_trans_slow(temp, extHeight, extWidth, convX);
+    DSP_mat_trans_slow(temp, extWidth, extHeight, convX);
 
 
   // now calculate convolution with y-derived kernel in the same way (except swapped kernels)
@@ -215,9 +215,9 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
     DSP_fir_gen_slow(convY, devKernel_gauss_der, temp + devKernelSize/2, devKernelSize, extWidth * extHeight);
 
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
-    DSP_mat_trans(temp, extHeight, extWidth, convY);
+    DSP_mat_trans(temp, extWidth, extHeight, convY);
   else
-    DSP_mat_trans_slow(temp, extHeight, extWidth, convY);
+    DSP_mat_trans_slow(temp, extWidth, extHeight, convY);
 
   free(temp);
 
@@ -310,15 +310,15 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   // transpose temporary images to compute vertical filtered version
   if(extWidth % 4 == 0 && extHeight % 4 == 0)
   {
-    DSP_mat_trans(tempXX, extHeight, extWidth, diffXX);
-    DSP_mat_trans(tempYY, extHeight, extWidth, diffYY);
-    DSP_mat_trans(tempXY, extHeight, extWidth, diffXY);
+    DSP_mat_trans(tempXX, extWidth, extHeight, diffXX);
+    DSP_mat_trans(tempYY, extWidth, extHeight, diffYY);
+    DSP_mat_trans(tempXY, extWidth, extHeight, diffXY);
   }
   else
   {
-    DSP_mat_trans_slow(tempXX, extHeight, extWidth, diffXX);
-    DSP_mat_trans_slow(tempYY, extHeight, extWidth, diffYY);
-    DSP_mat_trans_slow(tempXY, extHeight, extWidth, diffXY);
+    DSP_mat_trans_slow(tempXX, extWidth, extHeight, diffXX);
+    DSP_mat_trans_slow(tempYY, extWidth, extHeight, diffYY);
+    DSP_mat_trans_slow(tempXY, extWidth, extHeight, diffXY);
   }
 
   free(tempXX);
