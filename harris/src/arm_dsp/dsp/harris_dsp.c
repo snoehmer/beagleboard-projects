@@ -16,12 +16,18 @@
 void DSP_mat_trans_slow(const short* restrict x, const short rows, const short columns, short* restrict r);
 void DSP_fir_gen_slow(const short* restrict x, const short* restrict h, short* restrict r, const int nh, const int nr);
 
+
+int dsp_perform_harris(dsp_harris_params *params);
+
 int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
     unsigned int extWidth, unsigned int offset, const short* restrict devKernel_gauss,
     const short* restrict devKernel_gauss_der, unsigned int devKernelSize, const short* restrict gaussKernel,
     unsigned int gaussKernelSize, short* restrict output_diffXX,
     short* restrict output_diffYY, short* restrict output_diffXY);
 
+int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned int width, unsigned int offset,
+    const short* restrict kernel_hor, const short* restrict kernel_ver, unsigned int kernelSize,
+    short* restrict output);
 
 
 unsigned int dsp_harris_create(void)
@@ -47,9 +53,9 @@ unsigned int dsp_harris_execute(void *env)
 
 		switch(msg.cmd)
 		{
-      case DSP_HARRIS_CALC_CONVOLUTION:
+      case DSP_PERFORM_HARRIS:
       {
-        dsp_harris_conv_params *params = (dsp_harris_conv_params*) msg.arg_1;
+        dsp_harris_params *params = (dsp_harris_params*) msg.arg_1;
 
         short *input = params->input_;
 
@@ -151,16 +157,30 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   unsigned int width = extWidth - 2 * offset;
 
 
-
   // ============== perform edge detection by convolution with derived kernels ==============
 
   // results of the 2d convolution by 2 1d convolutions
   short *convX = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!convX)
+    return DSP_STATUS_FAILED;
+
   short *convY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!convY)
+  {
+    free(convX);
+    return DSP_STATUS_FAILED;
+  }
 
 
   // temporary memory for the intermediate result between 1d convolutions
   short* temp = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!temp)
+  {
+    free(convX);
+    free(convY);
+    return DSP_STATUS_FAILED;
+  }
+
 
   // set all values of temp array to known values
   memset(temp, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
@@ -224,8 +244,32 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
 
   // now calculate diffXX (squared x), diffYY (squared y) and diffXY (x * y)
   short *diffXX = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!diffXX)
+  {
+    free(convX);
+    free(convY);
+    return DSP_STATUS_FAILED;
+  }
+
   short *diffYY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!diffYY)
+  {
+    free(convX);
+    free(convY);
+    free(diffXX);
+    return DSP_STATUS_FAILED;
+  }
+
   short *diffXY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!diffXY)
+  {
+    free(convX);
+    free(convY);
+    free(diffXX);
+    free(diffYY);
+    return DSP_STATUS_FAILED;
+  }
+
 
   memset(diffXX, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
   memset(diffYY, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
@@ -254,8 +298,34 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
 
   // temporary memory for the intermediate results between 1d convolutions
   short* tempXX = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!tempXX)
+  {
+    free(diffXX);
+    free(diffYY);
+    free(diffXY);
+    return DSP_STATUS_FAILED;
+  }
+
   short* tempYY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!tempYY)
+  {
+    free(diffXX);
+    free(diffYY);
+    free(diffXY);
+    free(tempXX);
+    return DSP_STATUS_FAILED;
+  }
+
   short* tempXY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
+  if(!tempXY)
+  {
+    free(diffXX);
+    free(diffYY);
+    free(diffXY);
+    free(tempXX);
+    free(tempYY);
+    return DSP_STATUS_FAILED;
+  }
 
 
   // calculate horizontally filtered versions with standard Gauss kernel
@@ -340,6 +410,57 @@ int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeig
   free(diffXX);
   free(diffYY);
   free(diffXY);
+
+
+  return DSP_STATUS_FINISHED;
+}
+
+
+int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned int width, unsigned int offset,
+    const short* restrict kernel_hor, const short* restrict kernel_ver, unsigned int kernelSize,
+    short* restrict output)
+{
+  // temporary memory for the intermediate result between 1d convolutions
+  short* temp = (short*) malloc((width * height + 2 * offset - 1) * sizeof(short));
+  if(!temp)
+    return DSP_STATUS_FAILED;
+
+
+  // set all values of temp array to known values
+  memset(temp, 0, (width * height + 2 * offset - 1) * sizeof(short));
+
+
+  // calculate horizontal convolution with hor kernel
+  if(width * height % 4 == 0)
+    DSP_fir_gen(input, kernel_hor, temp + kernelSize/2, kernelSize, width * height);
+  else
+    DSP_fir_gen_slow(input, kernel_hor, temp + kernelSize/2, kernelSize, width * height);
+
+  // transpose temporary image to compute vertical convolution
+  if(width % 4 == 0 && height % 4 == 0)
+    DSP_mat_trans(temp, height, width, output);
+  else
+    DSP_mat_trans_slow(temp, height, width, output);
+
+
+  // set all values of temp array again to known values
+  memset(temp, 0, (width * height + 2 * offset - 1) * sizeof(short));
+
+
+  // now calculate vertical convolution ver kernel
+  if(width * height % 4 == 0)
+    DSP_fir_gen(output, kernel_ver, temp + kernelSize/2, kernelSize, width * height);
+  else
+    DSP_fir_gen_slow(output, kernel_ver, temp + kernelSize/2, kernelSize, width * height);
+
+  // transpose image again to retrieve original image
+  if(width % 4 == 0 && height % 4 == 0)
+    DSP_mat_trans(temp, width, height, output);
+  else
+    DSP_mat_trans_slow(temp, width, height, output);
+
+
+  free(temp);
 
 
   return DSP_STATUS_FINISHED;
