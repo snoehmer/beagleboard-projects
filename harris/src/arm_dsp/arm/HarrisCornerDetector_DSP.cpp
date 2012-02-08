@@ -185,7 +185,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	startTimer("_harris_conv_der_arm");
 
 
-	dsp_harris_conv_params *params = (dsp_harris_conv_params*) dsp_malloc(sizeof(dsp_harris_conv_params));
+	dsp_harris_params *params = (dsp_harris_params*) dsp_malloc(sizeof(dsp_harris_params));
 	if(!params)
 	{
 	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP params!");
@@ -216,7 +216,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	int *dsp_result = (int*) dsp_malloc(sizeof(int));
 
 	// start calculation on DSP
-	dspNode_->SendMessage(DSP_HARRIS_CALC_CONVOLUTION, (uint32_t) dsp_get_mapped_addr(params),
+	dspNode_->SendMessage(DSP_PERFORM_HARRIS, (uint32_t) dsp_get_mapped_addr(params),
 	    (uint32_t) dsp_get_mapped_addr(dsp_result), 0);
 
 	dsp_msg message = dspNode_->GetMessage();
@@ -229,7 +229,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 	dsp_free(params);
 
-	if(message.cmd == DSP_HARRIS_CALC_CONVOLUTION && message.arg_2 == DSP_STATUS_FINISHED)
+	if(message.cmd == DSP_PERFORM_HARRIS && message.arg_2 == DSP_STATUS_FINISHED)
 	  Logger::debug(Logger::HARRIS, "DSP successfully calculated convolution with derives and smoothing");
 	else
 	{

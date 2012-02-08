@@ -41,9 +41,13 @@ typedef struct dsp_harris_params_
   short *convX_;                // input convolved in x/y-direction
   short *convY_;
 
-  short *diffXX_;               // derives in different directions, Gaussian filtered
-  short *diffYY_;
-  short *diffXY_;
+//  short *diffXX_;               // derives in different directions, Gaussian filtered
+//  short *diffYY_;
+//  short *diffXY_;
+
+  short *output_diffXX_;        // derives in different directions, Gaussian filtered, cropped
+  short *output_diffYY_;
+  short *output_diffXY_;
 
   short *hcr_;                  // Harris corner response, non-maximum suppressed
 
