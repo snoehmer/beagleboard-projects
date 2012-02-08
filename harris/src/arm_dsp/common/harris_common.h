@@ -26,16 +26,18 @@
 // structures for DSP-ARM communication
 typedef struct dsp_harris_conv_params_
 {
-  short *input_;          // input image in fixed point representation
-  short *kernel_gauss_;   // standard Gauss convolution kernel
-  short *kernel_gauss_der_;  // derived Gauss convolution kernel
-  unsigned int kSize_;    // size of the kernel
-  short *output_diffXX_;    // output images: derives in different directions
+  short *input_;                // input image in fixed point representation (with borders)
+  unsigned int height_;         // size of (extended) input image
+  unsigned int width_;
+  unsigned int offset_;         // image offset (border for convolution)
+  short *devKernel_gauss_;      // standard Gauss convolution kernel for edge detection (derivative)
+  short *devKernel_gauss_der_;  // derived Gauss convolution kernel for edge detection (derivative)
+  unsigned int devKernelSize_;  // size of the derivative kernel
+  short *gaussKernel_;          // Gauss kernel for image smoothing
+  unsigned int gaussKernelSize_;// size of the smoothing kernel
+  short *output_diffXX_;        // output images: derives in different directions, Gaussian filtered
   short *output_diffYY_;
   short *output_diffXY_;
-  unsigned int offset_;   // image offset (border for convolution)
-  unsigned int height_;   // size of (extended) input image
-  unsigned int width_;
 } dsp_harris_conv_params;
 
 

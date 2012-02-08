@@ -138,7 +138,11 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 
 	// step 1: convolve the image with the derives of Gaussians
-	offset = (devKernelSize_ - 1) / 2;
+	if(devKernelSize_ > gaussKernelSize_)  // set right offset (resizing to fit largest kernel)
+	  offset = (devKernelSize_ - 1) / 2;
+	else
+	  offset = (gaussKernelSize_ - 1) / 2;
+
 	extWidth = width_ + 2 * offset;
 	extHeight = height_ + 2 * offset;
 
@@ -148,15 +152,15 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 
 
 	// convert bitstream to DSP format (Q15)
-	short *input_dsp = (short*) dsp_malloc((extWidth * extHeight + devKernelSize_ - 1) * sizeof(short));
+	short *input_dsp = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
 	if(!input_dsp)
 	{
 	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP input array!");
 	  return dummyVector;
 	}
 
-	// set "border" elements to 0
-  memset((short*) (input_dsp + extWidth * extHeight), 0, (devKernelSize_ - 1));
+	// set DSP convolution "border" elements to 0
+  memset((short*) (input_dsp + extWidth * extHeight), 0, (2 * offset - 1));
 
 	for(row = 0; row < extHeight; row++)
 	{
@@ -192,9 +196,11 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	params->width_ = extWidth;
 	params->height_ = extHeight;
 	params->offset_ = offset;
-	params->kernel_gauss_ = (short*) dsp_get_mapped_addr(devKernel_gauss_);
-	params->kernel_gauss_der_ = (short*) dsp_get_mapped_addr(devKernel_gauss_der_);
-	params->kSize_ = devKernelSize_;
+	params->devKernel_gauss_ = (short*) dsp_get_mapped_addr(devKernel_gauss_);
+	params->devKernel_gauss_der_ = (short*) dsp_get_mapped_addr(devKernel_gauss_der_);
+	params->devKernelSize_ = devKernelSize_;
+	params->gaussKernel_ = (short*) dsp_get_mapped_addr(kernel_gauss_);
+	params->gaussKernelSize_ = gaussKernelSize_;
 	params->output_diffXX_ = (short*) dsp_get_mapped_addr(diffXX);
 	params->output_diffYY_ = (short*) dsp_get_mapped_addr(diffYY);
   params->output_diffXY_ = (short*) dsp_get_mapped_addr(diffXY);
@@ -202,6 +208,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
   dsp_dmm_buffer_begin(input_dsp);
   dsp_dmm_buffer_begin(devKernel_gauss_);
   dsp_dmm_buffer_begin(devKernel_gauss_der_);
+  dsp_dmm_buffer_begin(kernel_gauss_);
   dsp_dmm_buffer_begin(diffXX);
   dsp_dmm_buffer_begin(diffYY);
   dsp_dmm_buffer_begin(diffXY);
@@ -223,10 +230,10 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	dsp_free(params);
 
 	if(message.cmd == DSP_HARRIS_CALC_CONVOLUTION && message.arg_2 == DSP_STATUS_FINISHED)
-	  Logger::debug(Logger::HARRIS, "DSP successfully calculated convolution with derives");
+	  Logger::debug(Logger::HARRIS, "DSP successfully calculated convolution with derives and smoothing");
 	else
 	{
-	  Logger::error(Logger::HARRIS, "error while calculating convolution with derives!");
+	  Logger::error(Logger::HARRIS, "error while calculating convolution with derives and smoothing!");
 	  return dummyVector;
 	}
 
@@ -236,86 +243,45 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
   Fixed *diffYY2 = new Fixed[width_ * height_];
   Fixed *diffXY2 = new Fixed[width_ * height_];
 
+  //printf("diffXX, diffYY, diffXY: ");
   for(row = 0; row < height_; row++)
   {
     for(col = 0; col < width_; col++)
     {
-      diffXX2[row * width_ + col] = Fixed(diffXX[row * width_ + col], HARRIS_Q - 15);  // restore old format
-      diffYY2[row * width_ + col] = Fixed(diffYY[row * width_ + col], HARRIS_Q - 15);  // restore old format
-      diffXY2[row * width_ + col] = Fixed(diffXY[row * width_ + col], HARRIS_Q - 15);  // restore old format
+      diffXX2[row * width_ + col] = Q15toFixed(diffXX[row * width_ + col], HARRIS_Q);  // restore old format
+      diffYY2[row * width_ + col] = Q15toFixed(diffYY[row * width_ + col], HARRIS_Q);  // restore old format
+      diffXY2[row * width_ + col] = Q15toFixed(diffXY[row * width_ + col], HARRIS_Q);  // restore old format
+
+      //printf("%d->%d[%d](%f) %d->%d[%d](%f) %d->%d[%d](%f), ", diffXX[row * width_ + col], diffXX2[row * width_ + col].value_, diffXX2[row * width_ + col].getQ(), diffXX2[row * width_ + col].toFloat(), diffYY[row * width_ + col], diffYY2[row * width_ + col].value_, diffYY2[row * width_ + col].getQ(), diffYY2[row * width_ + col].toFloat(), diffXY[row * width_ + col], diffXY2[row * width_ + col].value_, diffXY2[row * width_ + col].getQ(), diffXY2[row * width_ + col].toFloat());
+    }
+    //printf("; ");
+  }
+  //printf("done\n");
+
+
+  float *outXX = new float[width_ * height_];
+  float *outYY = new float[width_ * height_];
+  float *outXY = new float[width_ * height_];
+
+  for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      outXX[row * width_ + col] = diffXX2[row * width_ + col].toFloat() * 10;  // restore old format
+      outYY[row * width_ + col] = diffYY2[row * width_ + col].toFloat() * 10;  // restore old format
+      outXY[row * width_ + col] = diffXY2[row * width_ + col].toFloat() * 10;  // restore old format
     }
   }
 
 
-#ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
+//#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, outXX);
 	tempImg.write("./output/diffXX.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
+	tempImg.read(width_, height_, "I", FloatPixel, outYY);
 	tempImg.write("./output/diffYY.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
+	tempImg.read(width_, height_, "I", FloatPixel, outXY);
 	tempImg.write("./output/diffXY.png");
-#endif
-
-
-	// step 2: apply Gaussian filters to convolved image
-	offset = (gaussKernelSize_ - 1) / 2;
-	extWidth = width_ + 2 * offset;
-	extHeight = height_ + 2 * offset;
-
-	Fixed sumX(0, HARRIS_Q);
-  Fixed sumY(0, HARRIS_Q);
-  Fixed sumXY(0, HARRIS_Q);
-
-	Logger::debug(Logger::HARRIS, "step 2: applying Gauss filters to convolved image");
-
-	Fixed *extDiffXX = ImageBitstream::extend(diffXX2, width_, height_, offset);
-	Fixed *extDiffYY = ImageBitstream::extend(diffYY2, width_, height_, offset);
-	Fixed *extDiffXY = ImageBitstream::extend(diffXY2, width_, height_, offset);
-
-	startTimer("_harris_conv_gauss_arm");
-
-	for(imgrow = offset; imgrow < extHeight - offset; imgrow++)
-	{
-		for(imgcol = offset; imgcol < extWidth - offset; imgcol++)
-		{
-			sumX = 0;
-			sumY = 0;
-			sumXY = 0;
-
-			// calculate weighted sum over kernel (convolution)
-			for(krow = 0; krow < gaussKernelSize_; krow++)
-			{
-				for(kcol = 0; kcol < gaussKernelSize_; kcol++)
-				{
-					row = imgrow + krow - offset;
-					col = imgcol + kcol - offset;
-
-					sumX += extDiffXX[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
-					sumY += extDiffYY[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
-					sumXY += extDiffXY[row * extWidth + col] * gaussKernel_[krow * gaussKernelSize_ + kcol];
-				}
-			}
-
-			diffXX2[(imgrow - offset) * width_ + (imgcol - offset)] = sumX;
-			diffYY2[(imgrow - offset) * width_ + (imgcol - offset)] = sumY;
-			diffXY2[(imgrow - offset) * width_ + (imgcol - offset)] = sumXY;
-		}
-	}
-
-	stopTimer("_harris_conv_gauss_arm");
-
-	delete[] extDiffXX;
-	delete[] extDiffYY;
-	delete[] extDiffXY;
-
-#ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
-	tempImg.write("./output/diffXX-gauss.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
-	tempImg.write("./output/diffYY-gauss.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
-	tempImg.write("./output/diffXY-gauss.png");
-#endif
+//#endif
 
 
 	// step 3: calculate Harris corner response
@@ -326,19 +292,27 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	Fixed Iyy;
 	Fixed Ixy;
 
+	float *outhcr = new float[width_ * height_];
+
 	startTimer("_harris_hcr_arm");
 
+	//printf("hcr: ");
 	for(row = 0; row < height_; row++)
 	{
 		for(col = 0; col < width_; col++)
 		{
-			Ixx = diffXX[row * width_ + col];
-			Iyy = diffYY[row * width_ + col];
-			Ixy = diffXY[row * width_ + col];
+			Ixx = diffXX2[row * width_ + col];
+			Iyy = diffYY2[row * width_ + col];
+			Ixy = diffXY2[row * width_ + col];
 
 			hcrIntern[row * width_ + col] = Ixx * Iyy - Ixy * Ixy - harrisK_ * (Ixx + Iyy) * (Ixx + Iyy);
+			outhcr[row * width_ + col] = hcrIntern[row * width_ + col].toFloat() * 100;
+
+			//printf("%d[%d](%f) ", hcrIntern[row * width_ + col].value_, hcrIntern[row * width_ + col].getQ(), hcrIntern[row * width_ + col].toFloat());
 		}
+		//printf("; ");
 	}
+	//printf("done\n");
 
 	stopTimer("_harris_hcr_arm");
 
@@ -350,10 +324,10 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **hcr)
 	delete[] diffYY2;
 	delete[] diffXY2;
 
-#ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);
+//#ifdef DEBUG_OUTPUT_PICS
+	tempImg.read(width_, height_, "I", FloatPixel, outhcr);
 	tempImg.write("./output/hcrIntern.png");
-#endif
+//#endif
 
 
 	// step 4: perform non-maximum-suppression

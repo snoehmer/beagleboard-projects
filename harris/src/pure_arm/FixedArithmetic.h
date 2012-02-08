@@ -43,6 +43,11 @@ public:
 
   virtual ~Fixed() {}
 
+  inline unsigned int getQ()
+  {
+    return q_;
+  }
+
   inline Fixed convert(const unsigned int q)
   {
     if(q != q_)
@@ -104,7 +109,7 @@ public:
 
     if(right.value_ != 0)
       ret.value_ = (int) ((((long long)value_) << q_) / ((long long)ret.value_));
-    //else printf("WARNING: FixedArithmetic.h: division by zero!\n");
+    else printf("WARNING: FixedArithmetic.h: division by zero!\n");
 
     return ret;
   }
@@ -265,7 +270,7 @@ public:
 
     if(this->value_ >= 0)
       ret.value_ = ::sqrt(((long long)value_) << q_);
-    //else printf("WARNING: FixedArithmetic.h: sqrt of negative number!\n");
+    else printf("WARNING: FixedArithmetic.h: sqrt of negative number!\n");
 
     return ret;
   }
@@ -480,12 +485,15 @@ public:
   }
 
 
+  // method to convert a Q15 number to Fixed format
+  friend inline Fixed Q15toFixed(const short q15, const unsigned int q = FIXED_STD_Q);
+
   // special scale function to convert a uchar directly to a Fixed
   friend inline Fixed scale_uchar(unsigned int i, const unsigned int q = FIXED_STD_Q);
   friend inline Fixed scale_uchar2(unsigned int i, const unsigned int q = FIXED_STD_Q);
 
 
-private:
+public:
 
   int value_;
   unsigned int q_;
@@ -500,6 +508,19 @@ inline Fixed abs(Fixed x)
 inline Fixed sqrt(Fixed x)
 {
   return x.sqrt();
+}
+
+
+// converts a Q15 number to the specified Fixed format
+inline Fixed Q15toFixed(const short q15, const unsigned int q)
+{
+  Fixed temp;
+
+  temp.q_ = 15;
+  temp.value_ = q15;
+
+  return temp.convert(q);
+
 }
 
 // special scale function to convert a uchar directly to a Fixed
