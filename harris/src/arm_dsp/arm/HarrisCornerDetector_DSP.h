@@ -50,6 +50,7 @@ private:
     short *devKernel_gauss_der_;
     short *kernel_gauss_;
     short *nonMaxKernel_;
+    short *nonMaxKernel1_;
     static const unsigned int nonMaxKernelSize_ = 3;
 
     /**

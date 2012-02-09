@@ -61,9 +61,9 @@ CL6X := $(DSP_TOOLS)/bin/cl6x
 LNK6X := $(DSP_TOOLS)/bin/lnk6x
 DLLCREATE := $(DSP_DOFFBUILD)/bin/DLLcreate
 
-DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
+DSP_CC_FLAGS := --std_lib_func_defined --silicon_version=6400+ -Iopt/dsplib/inc/ -Iopt/iqmath/include/ -o2 -mh32 -s --consultant -D_GNU_SOURCE -DDSP_API=$(DSP_API)
 #DSP_CC_FLAGS := -Iopt/dsplib/inc/ -DDSP_API=$(DSP_API)
-DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P  # must be the LAST argument for lnk6x!
+DSP_LD_FLAGS := --silicon_version=6400+ -lopt/dsplib/lib/dsplib.a64P -lopt/iqmath/lib/IQmath_c64x+.lib -lopt/iqmath/lib/IQmath_RAM_c64x+.lib # must be the LAST argument for lnk6x!
 #DSP_LD_FLAGS := -lopt/dsplib/lib/dsplib.a64P
 DSP_INCLUDES := -I$(DSP_TOOLS)/include/
 

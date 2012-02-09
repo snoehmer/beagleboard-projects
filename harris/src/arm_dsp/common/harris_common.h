@@ -39,6 +39,7 @@ typedef struct dsp_harris_params_
   short harris_k_;                // k factor of Harris corner detector
 
   short *nonMaxKernel_;           // kernel used for non-maximum suppression
+  short *nonMaxKernel1_;
   unsigned int nonMaxKernelSize_; // size of the nonMax kernel
 
   //short *temp;                    // temporary storage between 2 1d convolutions
@@ -55,6 +56,10 @@ typedef struct dsp_harris_params_
   short *output_diffXY_;
 
   short *hcr_;                    // Harris corner response, non-maximum suppressed
+
+  short *nonmaxX_;                // nonmax derivative in x direction
+  short *nonmaxY_;                // nonmax derivative in y direction
+  short *nonmaxM2_;               // nonmax squared magnitude
 
   short *hcr_out_;                // thresholded and cropped ready-to-go HCR
 } dsp_harris_params;

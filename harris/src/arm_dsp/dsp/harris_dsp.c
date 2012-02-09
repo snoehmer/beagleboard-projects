@@ -3,10 +3,13 @@
  * and Normalized Cross Correlator to speed up calculations
  */
 
+#define GLOBAL_Q 15
+
 #include <c6x.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "../../../opt/dsplib/inc/dsplib.h"
+#include "../../../opt/iqmath/include/IQmath.h"
 #include <stddef.h>
 #include <string.h>
 #include "../common/harris_common.h"
@@ -124,6 +127,7 @@ int dsp_perform_harris(dsp_harris_params *params)
 
   // derived kernel for non-maximum suppression
   short *nonMaxKernel = params->nonMaxKernel_;
+  short *nonMaxKernel1 = params->nonMaxKernel1_;
   unsigned int nonMaxKernelSize = params->nonMaxKernelSize_;
 
   // temporary memory for convolutions in x/y-direction
@@ -142,6 +146,11 @@ int dsp_perform_harris(dsp_harris_params *params)
 
   // temporary memory for Harris corner response
   short *hcr = params->hcr_;
+
+  // temporary memory for non-maximum suppression
+  short *nonmaxX = params->nonmaxX_;
+  short *nonmaxY = params->nonmaxY_;
+  short *nonmaxM2 = params->nonmaxM2_;
 
   // result of Harris corner detection (normalized HCR)
   short *hcr_out = params->hcr_out_;
@@ -163,6 +172,7 @@ int dsp_perform_harris(dsp_harris_params *params)
   BCACHE_inv((void*) devKernel_gauss_der, devKernelSize * sizeof(short), 1);
   BCACHE_inv((void*) gaussKernel, gaussKernelSize * sizeof(short), 1);
   BCACHE_inv((void*) nonMaxKernel, nonMaxKernelSize * sizeof(short), 1);
+  BCACHE_inv((void*) nonMaxKernel1, nonMaxKernelSize * sizeof(short), 1);
   BCACHE_inv((void*) convX, extConvSize * sizeof(short), 1);
   BCACHE_inv((void*) convY, extConvSize * sizeof(short), 1);
   BCACHE_inv((void*) diffXX, extConvSize * sizeof(short), 1);
@@ -171,6 +181,9 @@ int dsp_perform_harris(dsp_harris_params *params)
   BCACHE_inv((void*) output_diffXX, size * sizeof(short), 1);
   BCACHE_inv((void*) output_diffYY, size * sizeof(short), 1);
   BCACHE_inv((void*) output_diffXY, size * sizeof(short), 1);
+  BCACHE_inv((void*) nonmaxX, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) nonmaxY, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) nonmaxM2, extConvSize * sizeof(short), 1);
   BCACHE_inv((void*) hcr, extConvSize * sizeof(short), 1);
   BCACHE_inv((void*) hcr_out, size * sizeof(short), 1);
 
@@ -223,6 +236,8 @@ int dsp_perform_harris(dsp_harris_params *params)
 
   // ============================== calculate Harris corner response ================================
 
+  memset(hcr, 0, extConvSize * sizeof(short));
+
   int Ixx, Iyy, Ixy, Ixxyy, Ixy2, Ixxpyy, Ixxpyy2, kIxxpyy2;
 
   #pragma MUST_ITERATE(1)
@@ -248,6 +263,89 @@ int dsp_perform_harris(dsp_harris_params *params)
 
 
   // ============================== perform non-maximum suppression ================================
+
+  memset(nonmaxX, 0, extConvSize * sizeof(short));
+  memset(nonmaxY, 0, extConvSize * sizeof(short));
+
+  // convolve with standard derived kernels
+  if(dsp_convolve2d(hcr, extHeight, extWidth, offset, nonMaxKernel, nonMaxKernel1, nonMaxKernelSize, nonmaxX) != DSP_STATUS_FINISHED)
+    return DSP_STATUS_FAILED;
+
+  if(dsp_convolve2d(hcr, extHeight, extWidth, offset, nonMaxKernel1, nonMaxKernel, nonMaxKernelSize, nonmaxY) != DSP_STATUS_FINISHED)
+    return DSP_STATUS_FAILED;
+
+
+  // calculate squared magnitude
+  #pragma MUST_ITERATE(1)
+  for(row = offset; row < offset + height; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = offset; col < offset + width; col++)
+    {
+      nonmaxM2[row * extWidth + col] = _IQsqrt(_IQmpy((int) nonmaxX[row * extWidth + col], (int) nonmaxX[row * extWidth + col]) + _IQmpy((int) nonmaxY[row * extWidth + col], (int) nonmaxY[row * extWidth + col]));
+    }
+  }
+
+
+  // perform non-maximum suppression algorithm
+  int irow, icol;
+  short dX, dY, a1, a2, b1, b2;
+  int A, B, P;
+
+  memset(hcr, 0, extConvSize * sizeof(short));
+
+  #pragma MUST_ITERATE(1)
+  for(row = offset + 1; row < offset + height - 1; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = offset + 1; col < offset + width - 1; col++)
+    {
+      dX = nonmaxX[row * extWidth + col];
+      dY = nonmaxY[row * extWidth + col];
+
+      // set increments for different quadrants
+      if(dX > 0) irow = 1;
+      else irow = -1;
+
+      if(dY > 0) icol = 1;
+      else icol = -1;
+
+      if(abs(dX) > abs(dY))
+      {
+        a1 = nonmaxM2[(row) * extWidth + (col + icol)];
+        a2 = nonmaxM2[(row - irow) * extWidth + (col + icol)];
+        b1 = nonmaxM2[(row) * extWidth + (col - icol)];
+        b2 = nonmaxM2[(row + irow) * extWidth + (col - icol)];
+
+        A = ((int) (abs(dX) - abs(dY))) * ((int) a1) + ((int) abs(dY)) * ((int) a2);
+        B = ((int) (abs(dX) - abs(dY))) * ((int) b1) + ((int) abs(dY)) * ((int) b2);
+
+        P = ((int) nonmaxM2[row * extWidth + col]) * ((int) abs(dX));
+
+        if(P >= A && P > B)
+        {
+          hcr[row * extWidth + col] = abs(dX); //magnitude[row * width + col];
+        }
+      }
+      else
+      {
+        a1 = nonmaxM2[(row - irow) * extWidth + (col)];
+        a2 = nonmaxM2[(row - irow) * extWidth + (col + icol)];
+        b1 = nonmaxM2[(row + irow) * extWidth + (col)];
+        b2 = nonmaxM2[(row + irow) * extWidth + (col - icol)];
+
+        A = ((int) (abs(dY) - abs(dX))) * ((int) a1) + ((int) abs(dX)) * ((int) a2);
+        B = ((int) (abs(dY) - abs(dX))) * ((int) b1) + ((int) abs(dX)) * ((int) b2);
+
+        P = ((int) nonmaxM2[row * extWidth + col]) * ((int) abs(dY));
+
+        if(P >= A && P > B)
+        {
+          hcr[row * extWidth + col] = abs(dY); //magnitude[row * width + col];
+        }
+      }
+    }
+  }
 
 
   // ============================== generate cropped output values ================================
@@ -276,6 +374,9 @@ int dsp_perform_harris(dsp_harris_params *params)
   BCACHE_wbInv((void*) output_diffYY, size * sizeof(short), 1);
   BCACHE_wbInv((void*) output_diffXY, size * sizeof(short), 1);
   BCACHE_wbInv((void*) hcr, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) nonmaxX, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) nonmaxY, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) nonmaxM2, extConvSize * sizeof(short), 1);
   BCACHE_wbInv((void*) hcr_out, size * sizeof(short), 1);
 
 
