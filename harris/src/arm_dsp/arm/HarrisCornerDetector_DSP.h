@@ -68,7 +68,9 @@ private:
     vector<HarrisCornerPoint> performHarris(Fixed **hcr);
 
     void normalize(float *data, int n, float newMax = 1.0f);
-    vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
+    vector<HarrisCornerPoint> threshold(float *data, int n, float threshold);
+    vector<HarrisCornerPoint> threshold(Fixed *data, int n, Fixed threshold);
+    vector<HarrisCornerPoint> threshold(short *data, int n, short threshold);
     vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
     vector<HarrisCornerPoint> normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold);
 };

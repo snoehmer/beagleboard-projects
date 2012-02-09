@@ -18,7 +18,22 @@
 
 // message identifiers:
 #define DSP_PERFORM_HARRIS 10
+#define DSP_HARRIS_NEWCORNER 11
+#define DSP_PERFORMANCE 12
+
 #define DSP_PERFORM_NCC 30
+
+
+// special arguments
+#define DSP_PERF_START 99
+#define DSP_PERF_FIN 100
+
+#define DSP_PERF_CONV_CORNERS 101
+#define DSP_PERF_CONV_GAUSS 102
+#define DSP_PERF_HCR 103
+#define DSP_PERF_NONMAX_CONV 104
+#define DSP_PERF_NONMAX_NONMAX 105
+#define DSP_PERF_NORMTHRESH 106
 
 
 // structures for DSP-ARM communication
@@ -56,6 +71,8 @@ typedef struct dsp_harris_params_
   short *output_diffXY_;
 
   short *hcr_;                    // Harris corner response, non-maximum suppressed
+  short hcrMax_;                  // maximum value for HCR normalization (0..hcrMax)
+  short threshold_;               // threshold used for HCR thresholding
 
   short *nonmaxX_;                // nonmax derivative in x direction
   short *nonmaxY_;                // nonmax derivative in y direction
@@ -63,6 +80,14 @@ typedef struct dsp_harris_params_
 
   short *hcr_out_;                // thresholded and cropped ready-to-go HCR
 } dsp_harris_params;
+
+
+typedef struct dsp_harris_corner_
+{
+  unsigned int row_;
+  unsigned int col_;
+  short strength_;
+} dsp_harris_corner;
 
 
 

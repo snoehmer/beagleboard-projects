@@ -16,11 +16,45 @@
 #include "../arm/dspbridge/node.h"
 
 
+inline void dsp_startTimer(void *env, unsigned char id)
+{
+  dsp_msg_t msg;
+
+  msg.cmd = DSP_PERFORMANCE;
+  msg.arg_1 = DSP_PERF_START;
+  msg.arg_2 = id;
+
+  NODE_putMsg(env, NULL, &msg, 0);
+}
+
+inline void dsp_stopTimer(void *env, unsigned char id)
+{
+  dsp_msg_t msg;
+
+  msg.cmd = DSP_PERFORMANCE;
+  msg.arg_1 = DSP_PERF_FIN;
+  msg.arg_2 = id;
+
+  NODE_putMsg(env, NULL, &msg, 0);
+}
+
+inline void dsp_harris_newcorner(void *env, unsigned char row, unsigned char col, unsigned char width, short strength)
+{
+  dsp_msg_t msg;
+
+  msg.cmd = DSP_HARRIS_NEWCORNER;
+  msg.arg_1 = row * width + col;
+  msg.arg_2 = strength;
+
+  NODE_putMsg(env, NULL, &msg, 0);
+}
+
+
 void DSP_mat_trans_slow(const short* restrict x, const short rows, const short columns, short* restrict r);
 void DSP_fir_gen_slow(const short* restrict x, const short* restrict h, short* restrict r, const int nh, const int nr);
 
 
-int dsp_perform_harris(dsp_harris_params *params);
+int dsp_perform_harris(void *env, dsp_harris_params *params);
 
 int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned int width, unsigned int offset,
     const short* restrict kernel_hor, const short* restrict kernel_ver, unsigned int kernelSize,
@@ -29,7 +63,6 @@ int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned in
 
 unsigned int dsp_harris_create(void)
 {
-
 	return 0x8000;
 }
 
@@ -55,7 +88,7 @@ unsigned int dsp_harris_execute(void *env)
         dsp_harris_params *params = (dsp_harris_params*) msg.arg_1;
         BCACHE_inv((void*) params, sizeof(dsp_harris_params), 1);
 
-        msg.arg_2 = dsp_perform_harris(params);
+        msg.arg_2 = dsp_perform_harris(env, params);
 
         NODE_putMsg(env, NULL, &msg, 0);
 
@@ -106,7 +139,7 @@ void DSP_fir_gen_slow
 }
 
 
-int dsp_perform_harris(dsp_harris_params *params)
+int dsp_perform_harris(void *env, dsp_harris_params *params)
 {
   short *input = params->input_;
   unsigned int extHeight = params->height_;
@@ -146,6 +179,8 @@ int dsp_perform_harris(dsp_harris_params *params)
 
   // temporary memory for Harris corner response
   short *hcr = params->hcr_;
+  short hcrMax = params->hcrMax_;
+  short threshold = params->threshold_;
 
   // temporary memory for non-maximum suppression
   short *nonmaxX = params->nonmaxX_;
@@ -190,6 +225,8 @@ int dsp_perform_harris(dsp_harris_params *params)
 
   // ================================ perform corner detection ======================================
 
+  dsp_startTimer(env, DSP_PERF_CONV_CORNERS);
+
   // calculate x-derivate of image
   if(dsp_convolve2d(input, extHeight, extWidth, offset, devKernel_gauss_der, devKernel_gauss, devKernelSize, convX) != DSP_STATUS_FINISHED)
     return DSP_STATUS_FAILED;
@@ -217,8 +254,12 @@ int dsp_perform_harris(dsp_harris_params *params)
     }
   }
 
+  dsp_stopTimer(env, DSP_PERF_CONV_CORNERS);
+
 
   // ================================ perform Gaussian filtering ===================================
+
+  dsp_startTimer(env, DSP_PERF_CONV_GAUSS);
 
   //calculate Gaussian filtered version of diffXX
   if(dsp_convolve2d(diffXX, extHeight, extWidth, offset, gaussKernel, gaussKernel, gaussKernelSize, diffXX) != DSP_STATUS_FINISHED)
@@ -232,9 +273,12 @@ int dsp_perform_harris(dsp_harris_params *params)
   if(dsp_convolve2d(diffXY, extHeight, extWidth, offset, gaussKernel, gaussKernel, gaussKernelSize, diffXY) != DSP_STATUS_FINISHED)
     return DSP_STATUS_FAILED;
 
+  dsp_stopTimer(env, DSP_PERF_CONV_GAUSS);
 
 
   // ============================== calculate Harris corner response ================================
+
+  dsp_startTimer(env, DSP_PERF_HCR);
 
   memset(hcr, 0, extConvSize * sizeof(short));
 
@@ -261,8 +305,12 @@ int dsp_perform_harris(dsp_harris_params *params)
     }
   }
 
+  dsp_stopTimer(env, DSP_PERF_HCR);
+
 
   // ============================== perform non-maximum suppression ================================
+
+  dsp_startTimer(env, DSP_PERF_NONMAX_CONV);
 
   memset(nonmaxX, 0, extConvSize * sizeof(short));
   memset(nonmaxY, 0, extConvSize * sizeof(short));
@@ -285,6 +333,10 @@ int dsp_perform_harris(dsp_harris_params *params)
       nonmaxM2[row * extWidth + col] = _IQsqrt(_IQmpy((int) nonmaxX[row * extWidth + col], (int) nonmaxX[row * extWidth + col]) + _IQmpy((int) nonmaxY[row * extWidth + col], (int) nonmaxY[row * extWidth + col]));
     }
   }
+
+  dsp_stopTimer(env, DSP_PERF_NONMAX_CONV);
+
+  dsp_startTimer(env, DSP_PERF_NONMAX_NONMAX);
 
 
   // perform non-maximum suppression algorithm
@@ -347,8 +399,35 @@ int dsp_perform_harris(dsp_harris_params *params)
     }
   }
 
+  dsp_stopTimer(env, DSP_PERF_NONMAX_NONMAX);
 
-  // ============================== generate cropped output values ================================
+
+  // ========================== normalize Harris corner response to 0..1 =============================
+
+  dsp_startTimer(env, DSP_PERF_NORMTHRESH);
+
+  int i;
+  short min, max;
+
+  if(extWidth * extHeight % 8 == 0 && extWidth * extHeight >= 32)
+  {
+    min = DSP_minval(hcr, extWidth * extHeight);
+    max = DSP_maxval(hcr, extWidth * extHeight);
+  }
+  else
+  {
+    min = max = hcr[0];
+
+    #pragma MUST_ITERATE(1)
+    for(i = 0; i < extWidth * extHeight; i++)
+    {
+      if(hcr[i] > max) max = hcr[i];
+      if(hcr[i] < min) min = hcr[i];
+    }
+  }
+
+
+  // =================== perform thresholding and generate cropped output values ====================
 
   #pragma MUST_ITERATE(1)
   for(row = 0; row < height; row++)
@@ -360,9 +439,17 @@ int dsp_perform_harris(dsp_harris_params *params)
       output_diffYY[row * width + col] = diffYY[(row + offset) * extWidth + (col + offset)];
       output_diffXY[row * width + col] = diffXY[(row + offset) * extWidth + (col + offset)];
 
-      hcr_out[row * width + col] = hcr[(row + offset) * extWidth + (col + offset)];
+      hcr_out[row * width + col] = _IQdiv(_IQmpy((int) (hcr[(row + offset) * extWidth + (col + offset)] - min), (int) hcrMax), (int) (max - min));
+
+      if(hcr_out[row * width + col] >= threshold)
+      {
+        dsp_harris_newcorner(env, row, col, width, hcr_out[row * width + col]);
+      }
     }
   }
+
+  dsp_stopTimer(env, DSP_PERF_NORMTHRESH);
+
 
   // invalidate cache (writeback) for output arrays
   BCACHE_wbInv((void*) convX, extConvSize * sizeof(short), 1);

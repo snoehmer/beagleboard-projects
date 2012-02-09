@@ -124,11 +124,11 @@ void HarrisCornerDetectorDSP::init()
 
     //step 3: generate non-maximum suppression kernel (simple 1st deviation kernel)
     nonMaxKernel_ = (short*) dsp_malloc(nonMaxKernelSize_ * sizeof(short));
-    //nonMaxKernel_[0] = Fixed(-0.5f).toQ15(); nonMaxKernel_[1] = Fixed(0).toQ15(); nonMaxKernel_[2] = Fixed(0.5f).toQ15();  // TODO: reverse?
-    nonMaxKernel_[0] = Fixed(-1).toQ15(); nonMaxKernel_[1] = Fixed(0).toQ15(); nonMaxKernel_[2] = Fixed(1).toQ15();  // TODO: reverse?
+    //nonMaxKernel_[0] = Fixed(-0.5f).toQ15(); nonMaxKernel_[1] = Fixed(0).toQ15(); nonMaxKernel_[2] = Fixed(0.5f).toQ15();
+    nonMaxKernel_[0] = Fixed(-1).toQ15(); nonMaxKernel_[1] = Fixed(0).toQ15(); nonMaxKernel_[2] = Fixed(0.99999f).toQ15();
     nonMaxKernel1_ = (short*) dsp_malloc(nonMaxKernelSize_ * sizeof(short));
     //nonMaxKernel1_[0] = Fixed(0.33333f).toQ15(); nonMaxKernel1_[1] = Fixed(0.33333f).toQ15(); nonMaxKernel1_[2] = Fixed(0.33333f).toQ15();
-    nonMaxKernel1_[0] = Fixed(1).toQ15(); nonMaxKernel1_[1] = Fixed(1).toQ15(); nonMaxKernel1_[2] = Fixed(1).toQ15();
+    nonMaxKernel1_[0] = Fixed(0.99999f).toQ15(); nonMaxKernel1_[1] = Fixed(0.99999f).toQ15(); nonMaxKernel1_[2] = Fixed(0.99999f).toQ15();
 
 
     stopTimer("_harris_kernels_arm");
@@ -145,7 +145,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	int extHeight;
 
 	Image tempImg;
-	vector<HarrisCornerPoint> dummyVector;
+	vector<HarrisCornerPoint> cornerPoints;
 
 
 	// step 1: convolve the image with the derives of Gaussians
@@ -157,7 +157,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	extWidth = width_ + 2 * offset;
 	extHeight = height_ + 2 * offset;
 
-	Logger::debug(Logger::HARRIS, "step 1: convolving with derivates of Gaussians");
+	Logger::debug(Logger::HARRIS, "preparing data to send to DSP");
 
 	ImageBitstream extendedImg = input_.extend(offset);
 
@@ -167,7 +167,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	if(!input_dsp)
 	{
 	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP input array!");
-	  return dummyVector;
+	  return cornerPoints;
 	}
 
 	// set DSP convolution "border" elements to 0
@@ -187,14 +187,14 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	if(!convX)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP convX array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 	short *convY = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
 	if(!convY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP convY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 
@@ -202,21 +202,21 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	if(!diffXX)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP diffXX array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 	short *diffYY = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
 	if(!diffYY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP diffYY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 	short *diffXY = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
 	if(!diffXY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP diffXY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 
@@ -224,21 +224,21 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	if(!out_diffXX)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP out_diffXX array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
   short *out_diffYY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
   if(!out_diffYY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP out_diffYY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
   short *out_diffXY = (short*) dsp_malloc(width_ * height_ * sizeof(short));
   if(!out_diffXY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP out_diffXY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 
@@ -246,21 +246,21 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   if(!nonmaxX)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP nonmaxX array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
   short *nonmaxY = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
   if(!nonmaxY)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP nonmaxY array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
   short *nonmaxM2 = (short*) dsp_malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
   if(!nonmaxM2)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP nonmaxM2 array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
 
@@ -268,18 +268,15 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   if(!hcr)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP hcr array!");
-    return dummyVector;
+    return cornerPoints;
   }
 
-  short *hcr_out = (short*) dsp_malloc((width_ * height_ + 2 * offset - 1) * sizeof(short));
+  short *hcr_out = (short*) dsp_malloc((width_ * height_) * sizeof(short));
   if(!hcr_out)
   {
     Logger::error(Logger::HARRIS, "failed to allocate memory for DSP hcr_out array!");
-    return dummyVector;
+    return cornerPoints;
   }
-
-
-	startTimer("_harris_conv_der_arm");
 
 
 	// set parameters for whole Harris corner detection
@@ -287,8 +284,9 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	if(!params)
 	{
 	  Logger::error(Logger::HARRIS, "failed to allocate memory for DSP params!");
-    return dummyVector;
+    return cornerPoints;
 	}
+
 
 	params->input_ = (short*) dsp_get_mapped_addr(input_dsp);
 	params->width_ = extWidth;
@@ -309,6 +307,8 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	params->diffYY_ = (short*) dsp_get_mapped_addr(diffYY);
   params->diffXY_ = (short*) dsp_get_mapped_addr(diffXY);
   params->hcr_ = (short*) dsp_get_mapped_addr(hcr);
+  params->hcrMax_ = Fixed(0.99999f).toQ15();
+  params->threshold_ = Fixed(threshold_).toQ15();
   params->nonmaxX_ = (short*) dsp_get_mapped_addr(nonmaxX);
   params->nonmaxY_ = (short*) dsp_get_mapped_addr(nonmaxY);
   params->nonmaxM2_ = (short*) dsp_get_mapped_addr(nonmaxM2);
@@ -338,10 +338,106 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   dsp_dmm_buffer_begin(hcr_out);
 
 
+  Logger::debug(Logger::HARRIS, "starting Harris corner response computation on DSP");
+
+  startTimer("harris_dsp");
+
+
   // start calculation on DSP
 	dspNode_->SendMessage(DSP_PERFORM_HARRIS, (uint32_t) dsp_get_mapped_addr(params), 0, 0);
 
-	dsp_msg message = dspNode_->GetMessage();
+	dsp_msg_t message;
+
+	while(1)  // process incoming messages from DSP
+	{
+	  message = dsp_get_message();
+
+	  if(message.cmd == DSP_HARRIS_NEWCORNER)  // a new corner was detected on DSP
+	  {
+	    cornerPoints.push_back(HarrisCornerPoint(message.arg_1 / width_, message.arg_1 % width_, Q15toFixed(message.arg_2).toFloat()));
+	  }
+	  else if(message.cmd == DSP_PERFORMANCE)  // performance measurement coming in
+	  {
+	    if(message.arg_1 == DSP_PERF_START)  // start a performance timer
+	    {
+	      switch(message.arg_2)
+	      {
+	        case DSP_PERF_CONV_CORNERS:
+	          startTimer("_harris_conv_der_dsp");
+	          break;
+
+	        case DSP_PERF_CONV_GAUSS:
+            startTimer("_harris_conv_gauss_dsp");
+            break;
+
+          case DSP_PERF_HCR:
+            startTimer("_harris_hcr_dsp");
+            break;
+
+          case DSP_PERF_NONMAX_CONV:
+            startTimer("_nonmax_conv_dsp");
+            break;
+
+          case DSP_PERF_NONMAX_NONMAX:
+            startTimer("_nonmax_nonmax_dsp");
+            break;
+
+          case DSP_PERF_NORMTHRESH:
+            startTimer("_harris_normthresh_dsp");
+            break;
+
+          default:
+            Logger::info(Logger::HARRIS, "unknown performance measurement message from DSP received!");
+            break;
+	      }
+	    }
+
+	    else if(message.arg_1 == DSP_PERF_FIN)  // stop a performance timer
+      {
+        switch(message.arg_2)
+        {
+          case DSP_PERF_CONV_CORNERS:
+            stopTimer("_harris_conv_der_dsp");
+            break;
+
+          case DSP_PERF_CONV_GAUSS:
+            stopTimer("_harris_conv_gauss_dsp");
+            break;
+
+          case DSP_PERF_HCR:
+            stopTimer("_harris_hcr_dsp");
+            break;
+
+          case DSP_PERF_NONMAX_CONV:
+            stopTimer("_nonmax_conv_dsp");
+            break;
+
+          case DSP_PERF_NONMAX_NONMAX:
+            stopTimer("_nonmax_nonmax_dsp");
+            break;
+
+          case DSP_PERF_NORMTHRESH:
+            stopTimer("_harris_normthresh_dsp");
+            break;
+
+          default:
+            Logger::info(Logger::HARRIS, "unknown performance measurement message from DSP received!");
+            break;
+        }
+      }
+	  }
+	  else if(message.cmd == DSP_PERFORM_HARRIS)  // calculation finished or failed
+	  {
+	    break;
+	  }
+	  else
+	  {
+	    Logger::info(Logger::HARRIS, "unknown message from DSP received!");
+	  }
+	}
+
+
+	stopTimer("harris_dsp");
 
 
 	dsp_dmm_buffer_end(convX);
@@ -358,7 +454,6 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   dsp_dmm_buffer_end(out_diffXY);
   dsp_dmm_buffer_end(hcr_out);
 
-	stopTimer("_harris_conv_der_arm");
 
 	dsp_free(params);
 
@@ -367,16 +462,15 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	else
 	{
 	  Logger::error(Logger::HARRIS, "error while calculating Harris corner response on DSP!");
-	  return dummyVector;
+	  return cornerPoints;
 	}
 
 
-//#ifdef DEBUG_OUTPUT_PICS
+#ifdef DEBUG_OUTPUT_PICS
   float *outXX = new float[width_ * height_];
   float *outYY = new float[width_ * height_];
   float *outXY = new float[width_ * height_];
 
-  //printf("diffXX, diffYY, diffXY: ");
   for(row = 0; row < height_; row++)
   {
     for(col = 0; col < width_; col++)
@@ -384,12 +478,8 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
       outXX[row * width_ + col] = Q15toFixed(out_diffXX[row * width_ + col]).toFloat();  // restore old format
       outYY[row * width_ + col] = Q15toFixed(out_diffYY[row * width_ + col]).toFloat();  // restore old format
       outXY[row * width_ + col] = Q15toFixed(out_diffXY[row * width_ + col]).toFloat();  // restore old format
-
-      //printf("%d=%f %d=%f %d=%f, ", out_diffXX[row * width_ + col], outXX[row * width_ + col], out_diffYY[row * width_ + col], outYY[row * width_ + col], out_diffXY[row * width_ + col], outXY[row * width_ + col]);
     }
-    //printf("; ");
   }
-  //printf("done\n");
 
 
 	tempImg.read(width_, height_, "I", FloatPixel, outXX);
@@ -402,44 +492,26 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	delete[] outXX;
 	delete[] outYY;
 	delete[] outXY;
-//#endif
+#endif
 
 
-	Fixed *hcrIntern = new Fixed[width_ * height_];
-
-
-//#ifdef DEBUG_OUTPUT_PICS
+#ifdef DEBUG_OUTPUT_PICS
 	float *outhcr = new float[width_ * height_];
-//#endif
 
-	//printf("hcr: ");
-	//printf("hcr, nonmaxX, nonmaxY, nonmaxM2: ");
 	for(row = 0; row < height_; row++)
 	{
 		for(col = 0; col < width_; col++)
 		{
-		  hcrIntern[row * width_ + col] = Q15toFixed(hcr_out[row * width_ + col]);
-
-//#ifdef DEBUG_OUTPUT_PICS
-			outhcr[row * width_ + col] = hcrIntern[row * width_ + col].toFloat();
-//#endif
-
-			//printf("%d=%f ", hcr_out[row * width_ + col], outhcr[row * width_ + col]);
-			//printf("%d %d %d %d, ", hcr_out[row * width_ + col], nonmaxX[(row + offset) * extWidth + col + offset], nonmaxY[(row + offset) * extWidth + col + offset], nonmaxM2[(row + offset) * extWidth + col + offset]);
+			outhcr[row * width_ + col] = Q15toFixed(hcr_out[row * width_ + col]).toFloat();
 		}
-		//printf("; ");
 	}
-	//printf("done\n");
 
-//#ifdef DEBUG_OUTPUT_PICS
   tempImg.read(width_, height_, "I", FloatPixel, outhcr);
   tempImg.write("./output/hcrIntern.png");
 
   delete[] outhcr;
-//#endif
+#endif
 
-
-	stopTimer("_harris_hcr_arm");
 
 	dsp_free(convX);  //TODO: use for rotation invariance
 	dsp_free(convY);
@@ -453,25 +525,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   dsp_free(nonmaxX);
   dsp_free(nonmaxY);
   dsp_free(nonmaxM2);
-  dsp_free(hcr_out);
-
-
-	// step 5: normalize the image to a range 0...1 and threshold
-	Logger::debug(Logger::HARRIS, "step 5: normalizing and thresholding image");
-
-	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrIntern, width_ * height_, 1.0f, threshold_);
-
-#ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);
-	tempImg.write("./output/hcrNonMax-tresh.png");
-#endif
-
-
-	// return HCR if user wants to, delete it otherwise
-	if(ret_hcr)
-		*ret_hcr = hcrIntern;
-	else
-		delete[] hcrIntern;
+	dsp_free(hcr_out);
 
 	return cornerPoints;
 }
@@ -496,7 +550,7 @@ void HarrisCornerDetectorDSP::normalize(float *data, int n, float newMax)
 	}
 }
 
-vector<HarrisCornerPoint> HarrisCornerDetectorDSP::treshold(float *data, int n, float threshold)
+vector<HarrisCornerPoint> HarrisCornerDetectorDSP::threshold(float *data, int n, float threshold)
 {
 	int i;
 	vector<HarrisCornerPoint> cornerPoints;
@@ -510,6 +564,38 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::treshold(float *data, int n, 
 	}
 
 	return cornerPoints;
+}
+
+vector<HarrisCornerPoint> HarrisCornerDetectorDSP::threshold(Fixed *data, int n, Fixed threshold)
+{
+  int i;
+  vector<HarrisCornerPoint> cornerPoints;
+
+  for(i = 0; i < n; i++)
+  {
+    if(data[i] < threshold)
+      data[i] = 0;
+    else
+      cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i].toFloat()));
+  }
+
+  return cornerPoints;
+}
+
+vector<HarrisCornerPoint> HarrisCornerDetectorDSP::threshold(short *data, int n, short threshold)
+{
+  int i;
+  vector<HarrisCornerPoint> cornerPoints;
+
+  for(i = 0; i < n; i++)
+  {
+    if(data[i] < threshold)
+      data[i] = 0;
+    else
+      cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, Q15toFixed(data[i]).toFloat()));
+  }
+
+  return cornerPoints;
 }
 
 vector<HarrisCornerPoint> HarrisCornerDetectorDSP::normalizeAndThreshold(float *data, int n, float newMax, float threshold)
@@ -566,7 +652,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::normalizeAndThreshold(Fixed *
     if(data[i] < threshold)
       data[i] = 0;
     else
-      cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i].toFloat()));  //TODO: fixed-point?
+      cornerPoints.push_back(HarrisCornerPoint(i / width_, i % width_, data[i].toFloat()));
   }
 
   stopTimer("_harris_normtresh_arm");

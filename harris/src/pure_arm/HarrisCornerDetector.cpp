@@ -368,7 +368,7 @@ void HarrisCornerDetector::normalize(float *data, int n, float newMax)
 	}
 }
 
-vector<HarrisCornerPoint> HarrisCornerDetector::treshold(float *data, int n, float threshold)
+vector<HarrisCornerPoint> HarrisCornerDetector::threshold(float *data, int n, float threshold)
 {
 	int i;
 	vector<HarrisCornerPoint> cornerPoints;

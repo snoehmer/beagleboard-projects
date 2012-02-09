@@ -89,7 +89,7 @@ protected:
     virtual vector<HarrisCornerPoint> performHarris(Fixed **hcr);
 
     virtual void normalize(float *data, int n, float newMax = 1.0f);
-    virtual vector<HarrisCornerPoint> treshold(float *data, int n, float threshold);
+    virtual vector<HarrisCornerPoint> threshold(float *data, int n, float threshold);
     virtual vector<HarrisCornerPoint> normalizeAndThreshold(float *data, int n, float newMax, float threshold);
     virtual vector<HarrisCornerPoint> normalizeAndThreshold(Fixed *data, int n, Fixed newMax, Fixed threshold);
 };
