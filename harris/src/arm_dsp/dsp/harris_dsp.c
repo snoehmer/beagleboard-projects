@@ -17,13 +17,7 @@ void DSP_mat_trans_slow(const short* restrict x, const short rows, const short c
 void DSP_fir_gen_slow(const short* restrict x, const short* restrict h, short* restrict r, const int nh, const int nr);
 
 
-//int dsp_perform_harris(dsp_harris_params *params);
-
-int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
-    unsigned int extWidth, unsigned int offset, const short* restrict devKernel_gauss,
-    const short* restrict devKernel_gauss_der, unsigned int devKernelSize, const short* restrict gaussKernel,
-    unsigned int gaussKernelSize, short* restrict output_diffXX,
-    short* restrict output_diffYY, short* restrict output_diffXY);
+int dsp_perform_harris(dsp_harris_params *params);
 
 int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned int width, unsigned int offset,
     const short* restrict kernel_hor, const short* restrict kernel_ver, unsigned int kernelSize,
@@ -56,47 +50,9 @@ unsigned int dsp_harris_execute(void *env)
       case DSP_PERFORM_HARRIS:
       {
         dsp_harris_params *params = (dsp_harris_params*) msg.arg_1;
-
-        short *input = params->input_;
-
         BCACHE_inv((void*) params, sizeof(dsp_harris_params), 1);
 
-        unsigned int extHeight = params->height_;
-        unsigned int extWidth = params->width_;
-        unsigned int offset = params->offset_;
-        short *devKernel_gauss = params->devKernel_gauss_;
-        short *devKernel_gauss_der = params->devKernel_gauss_der_;
-        unsigned int devKernelSize = params->devKernelSize_;
-        short *gaussKernel = params->gaussKernel_;
-        unsigned int gaussKernelSize = params->gaussKernelSize_;
-        short *output_diffXX = params->output_diffXX_;
-        short *output_diffYY = params->output_diffYY_;
-        short *output_diffXY = params->output_diffXY_;
-
-        unsigned int extSize = extHeight * extWidth;
-
-        unsigned int height = extHeight - 2 * offset;
-        unsigned int width = extWidth - 2 * offset;
-        unsigned int size = height * width;
-
-        BCACHE_inv((void*) input, extSize * sizeof(short), 1);
-        BCACHE_inv((void*) devKernel_gauss, devKernelSize * sizeof(short), 1);
-        BCACHE_inv((void*) devKernel_gauss_der, devKernelSize * sizeof(short), 1);
-        BCACHE_inv((void*) gaussKernel, gaussKernelSize * sizeof(short), 1);
-        BCACHE_inv((void*) output_diffXX, size * sizeof(short), 1);
-        BCACHE_inv((void*) output_diffYY, size * sizeof(short), 1);
-        BCACHE_inv((void*) output_diffXY, size * sizeof(short), 1);
-
-        int result = dsp_harris_convolve_harris(input, extHeight, extWidth, offset,
-            devKernel_gauss, devKernel_gauss_der, devKernelSize,
-            gaussKernel, gaussKernelSize,
-            output_diffXX, output_diffYY, output_diffXY);
-
-        BCACHE_wbInv((void*) output_diffXX, size * sizeof(short), 1);
-        BCACHE_wbInv((void*) output_diffYY, size * sizeof(short), 1);
-        BCACHE_wbInv((void*) output_diffXY, size * sizeof(short), 1);
-
-        msg.arg_2 = result;
+        msg.arg_2 = dsp_perform_harris(params);
 
         NODE_putMsg(env, NULL, &msg, 0);
 
@@ -147,148 +103,185 @@ void DSP_fir_gen_slow
 }
 
 
-int dsp_harris_convolve_harris(const short* restrict input, unsigned int extHeight,
-    unsigned int extWidth, unsigned int offset, const short* restrict devKernel_gauss,
-    const short* restrict devKernel_gauss_der, unsigned int devKernelSize, const short* restrict gaussKernel,
-    unsigned int gaussKernelSize, short* restrict output_diffXX,
-    short* restrict output_diffYY, short* restrict output_diffXY)
+int dsp_perform_harris(dsp_harris_params *params)
 {
+  short *input = params->input_;
+  unsigned int extHeight = params->height_;
+  unsigned int extWidth = params->width_;
+  unsigned int offset = params->offset_;
+
+  // derived Gauss kernels for corner detection
+  short *devKernel_gauss = params->devKernel_gauss_;
+  short *devKernel_gauss_der = params->devKernel_gauss_der_;
+  unsigned int devKernelSize = params->devKernelSize_;
+
+  // Gauss kernel for image smoothing
+  short *gaussKernel = params->gaussKernel_;
+  unsigned int gaussKernelSize = params->gaussKernelSize_;
+
+  // k factor of Harris corner detector
+  short harris_k = params->harris_k_;
+
+  // derived kernel for non-maximum suppression
+  short *nonMaxKernel = params->nonMaxKernel_;
+  unsigned int nonMaxKernelSize = params->nonMaxKernelSize_;
+
+  // temporary memory for convolutions in x/y-direction
+  short *convX = params->convX_;
+  short *convY = params->convY_;
+
+  // temporary memory for products of convolutions
+  short *diffXX = params->diffXX_;
+  short *diffYY = params->diffYY_;
+  short *diffXY = params->diffXY_;
+
+  // preview of the convolved images TODO: remove
+  short *output_diffXX = params->output_diffXX_;
+  short *output_diffYY = params->output_diffYY_;
+  short *output_diffXY = params->output_diffXY_;
+
+  // temporary memory for Harris corner response
+  short *hcr = params->hcr_;
+
+  // result of Harris corner detection (normalized HCR)
+  short *hcr_out = params->hcr_out_;
+
+
+  unsigned int extSize = extHeight * extWidth;
+  unsigned int extConvSize = extSize + 2 * offset - 1;
   unsigned int height = extHeight - 2 * offset;
   unsigned int width = extWidth - 2 * offset;
+  unsigned int size = height * width;
+
+  unsigned int row;
+  unsigned int col;
 
 
-  // ============== perform edge detection by convolution with derived kernels ==============
+  // invalidate cache for input arrays
+  BCACHE_inv((void*) input, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) devKernel_gauss, devKernelSize * sizeof(short), 1);
+  BCACHE_inv((void*) devKernel_gauss_der, devKernelSize * sizeof(short), 1);
+  BCACHE_inv((void*) gaussKernel, gaussKernelSize * sizeof(short), 1);
+  BCACHE_inv((void*) nonMaxKernel, nonMaxKernelSize * sizeof(short), 1);
+  BCACHE_inv((void*) convX, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) convY, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) diffXX, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) diffYY, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) diffXY, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) output_diffXX, size * sizeof(short), 1);
+  BCACHE_inv((void*) output_diffYY, size * sizeof(short), 1);
+  BCACHE_inv((void*) output_diffXY, size * sizeof(short), 1);
+  BCACHE_inv((void*) hcr, extConvSize * sizeof(short), 1);
+  BCACHE_inv((void*) hcr_out, size * sizeof(short), 1);
 
-  // results of the 2d convolution by 2 1d convolutions
-  short *convX = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  if(!convX)
-    return DSP_STATUS_FAILED;
 
-  short *convY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  if(!convY)
-  {
-    free(convX);
-    return DSP_STATUS_FAILED;
-  }
-
+  // ================================ perform corner detection ======================================
 
   // calculate x-derivate of image
   if(dsp_convolve2d(input, extHeight, extWidth, offset, devKernel_gauss_der, devKernel_gauss, devKernelSize, convX) != DSP_STATUS_FINISHED)
-  {
-    free(convX);
     return DSP_STATUS_FAILED;
-  }
-
 
   //calculate y-derivate of image
   if(dsp_convolve2d(input, extHeight, extWidth, offset, devKernel_gauss, devKernel_gauss_der, devKernelSize, convY) != DSP_STATUS_FINISHED)
-  {
-    free(convX);
-    free(convY);
     return DSP_STATUS_FAILED;
-  }
 
 
   // now calculate diffXX (squared x), diffYY (squared y) and diffXY (x * y)
-  short *diffXX = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  if(!diffXX)
-  {
-    free(convX);
-    free(convY);
-    return DSP_STATUS_FAILED;
-  }
+  memset(diffXX, 0, extConvSize * sizeof(short));
+  memset(diffYY, 0, extConvSize * sizeof(short));
+  memset(diffXY, 0, extConvSize * sizeof(short));
 
-  short *diffYY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  if(!diffYY)
-  {
-    free(convX);
-    free(convY);
-    free(diffXX);
-    return DSP_STATUS_FAILED;
-  }
-
-  short *diffXY = (short*) malloc((extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  if(!diffXY)
-  {
-    free(convX);
-    free(convY);
-    free(diffXX);
-    free(diffYY);
-    return DSP_STATUS_FAILED;
-  }
-
-
-  memset(diffXX, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  memset(diffYY, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-  memset(diffXY, 0, (extWidth * extHeight + 2 * offset - 1) * sizeof(short));
-
-  int row;
-  int col;
-
+  #pragma MUST_ITERATE(1)
   for(row = offset; row < offset + height; row++)
   {
+    #pragma MUST_ITERATE(1)
     for(col = offset; col < offset + width; col++)
     {
-      diffXX[row * extWidth + col] = (short) ((((int) convX[row * extWidth + col]) * ((int) convX[row * extWidth + col])) >> 15);
-      diffYY[row * extWidth + col] = (short) ((((int) convY[row * extWidth + col]) * ((int) convY[row * extWidth + col])) >> 15);
-      diffXY[row * extWidth + col] = (short) ((((int) convX[row * extWidth + col]) * ((int) convY[row * extWidth + col])) >> 15);
+      // shift by 13 (instead of 15) to increase resolution with short variable (later normalized anyway)
+      diffXX[row * extWidth + col] = (short) ((((int) convX[row * extWidth + col]) * ((int) convX[row * extWidth + col])) >> 13);
+      diffYY[row * extWidth + col] = (short) ((((int) convY[row * extWidth + col]) * ((int) convY[row * extWidth + col])) >> 13);
+      diffXY[row * extWidth + col] = (short) ((((int) convX[row * extWidth + col]) * ((int) convY[row * extWidth + col])) >> 13);
     }
   }
 
-  free(convX);
-  free(convY);
 
-
-
-  // ============================ perform Gaussian filtering ===================================
-
+  // ================================ perform Gaussian filtering ===================================
 
   //calculate Gaussian filtered version of diffXX
   if(dsp_convolve2d(diffXX, extHeight, extWidth, offset, gaussKernel, gaussKernel, gaussKernelSize, diffXX) != DSP_STATUS_FINISHED)
-  {
-    free(diffXX);
-    free(diffYY);
-    free(diffXY);
     return DSP_STATUS_FAILED;
-  }
 
   //calculate Gaussian filtered version of diffYY
   if(dsp_convolve2d(diffYY, extHeight, extWidth, offset, gaussKernel, gaussKernel, gaussKernelSize, diffYY) != DSP_STATUS_FINISHED)
-  {
-    free(diffXX);
-    free(diffYY);
-    free(diffXY);
     return DSP_STATUS_FAILED;
-  }
 
   //calculate Gaussian filtered version of diffXY
   if(dsp_convolve2d(diffXY, extHeight, extWidth, offset, gaussKernel, gaussKernel, gaussKernelSize, diffXY) != DSP_STATUS_FINISHED)
-  {
-    free(diffXX);
-    free(diffYY);
-    free(diffXY);
     return DSP_STATUS_FAILED;
+
+
+
+  // ============================== calculate Harris corner response ================================
+
+  int Ixx, Iyy, Ixy, Ixxyy, Ixy2, Ixxpyy, Ixxpyy2, kIxxpyy2;
+
+  #pragma MUST_ITERATE(1)
+  for(row = offset; row < offset + height; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = offset; col < offset + width; col++)
+    {
+      Ixx = diffXX[row * extWidth + col];
+      Iyy = diffYY[row * extWidth + col];
+      Ixy = diffXY[row * extWidth + col];
+
+      Ixxyy = (((int) Ixx) * ((int) Iyy));
+      Ixy2 = (((int) Ixy) * ((int) Ixy));
+      Ixxpyy = ((int) Ixx) + ((int) Iyy);
+      Ixxpyy2 = (((int) Ixxpyy) * ((int) Ixxpyy));
+      kIxxpyy2 = (((long) harris_k) * ((long) Ixxpyy2)) >> 15;
+
+      // shift by 13 to increase resolution with short variable (later normalized anyway)
+      hcr[row * extWidth + col] = (short) ((Ixxyy - Ixy2 - kIxxpyy2) >> 13);
+    }
   }
 
 
-  // now copy the derived and smoothed values in the output arrays
+  // ============================== perform non-maximum suppression ================================
+
+
+  // ============================== generate cropped output values ================================
+
+  #pragma MUST_ITERATE(1)
   for(row = 0; row < height; row++)
   {
+    #pragma MUST_ITERATE(1)
     for(col = 0; col < width; col++)
     {
       output_diffXX[row * width + col] = diffXX[(row + offset) * extWidth + (col + offset)];
       output_diffYY[row * width + col] = diffYY[(row + offset) * extWidth + (col + offset)];
       output_diffXY[row * width + col] = diffXY[(row + offset) * extWidth + (col + offset)];
+
+      hcr_out[row * width + col] = hcr[(row + offset) * extWidth + (col + offset)];
     }
   }
 
-  free(diffXX);
-  free(diffYY);
-  free(diffXY);
+  // invalidate cache (writeback) for output arrays
+  BCACHE_wbInv((void*) convX, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) convY, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) diffXX, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) diffYY, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) diffXY, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) output_diffXX, size * sizeof(short), 1);
+  BCACHE_wbInv((void*) output_diffYY, size * sizeof(short), 1);
+  BCACHE_wbInv((void*) output_diffXY, size * sizeof(short), 1);
+  BCACHE_wbInv((void*) hcr, extConvSize * sizeof(short), 1);
+  BCACHE_wbInv((void*) hcr_out, size * sizeof(short), 1);
 
 
   return DSP_STATUS_FINISHED;
 }
+
 
 
 int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned int width, unsigned int offset,

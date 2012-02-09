@@ -46,7 +46,7 @@ public:
   static const int MAIN        = 0x00001 | outputEna;
   static const int HARRIS      = 0x00002 | outputEna;
   static const int TIMEMEASURE = 0x00004;// | outputEna;
-  static const int DSP         = 0x00008 | outputEna;
+  static const int DSP         = 0x00008;// | outputEna;
   static const int DMMMANGER   = 0x00010;// | outputEna;
   static const int NCC         = 0x00020 | outputEna;
   static const int IMG_BITSTR  = 0x00040 | outputEna;

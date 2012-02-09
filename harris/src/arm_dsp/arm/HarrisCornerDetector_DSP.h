@@ -49,6 +49,8 @@ private:
     short *devKernel_gauss_;
     short *devKernel_gauss_der_;
     short *kernel_gauss_;
+    short *nonMaxKernel_;
+    static const unsigned int nonMaxKernelSize_ = 3;
 
     /**
      * performs the convolution with both derived kernels for every pixel

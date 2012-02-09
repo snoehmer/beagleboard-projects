@@ -156,7 +156,8 @@ int main(int argc, char **argv)
 #elif defined FEATDET_USE_NCCINTIMG
     featureDet = new FeatureDetectorIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
 #elif defined FEATDET_USE_NCCHARRISSTD
-    featureDet = new FeatureDetectorHarrisStdDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
+    //featureDet = new FeatureDetectorHarrisStdDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
+    featureDet = new FeatureDetectorHarrisStd(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #elif defined FEATDET_USE_NCCHARRISINTIMG
     featureDet = new FeatureDetectorHarrisIntImgDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #else
