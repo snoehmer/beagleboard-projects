@@ -8,6 +8,7 @@
 #include "FeatureDetector.h"
 #include "../util/TimeMeasureBase.h"
 #include "../util/Logger.h"
+#include "../arm_dsp/arm/dspbridge/Dsp.h"
 #include <Magick++.h>
 
 
@@ -22,12 +23,17 @@ FeatureDetector::FeatureDetector(unsigned int featuresThreshold, float nccThresh
 
 FeatureDetector::~FeatureDetector()
 {
+  Logger::debug(Logger::NCC, "destroying ARM data");
+
   unsigned int i = 0;
 
   for(i = 0; i < features_.size(); i++)
   {
-    delete[] featureData_[i].patchNorm_;
-    delete[] featureData_[i].patchNormSq_;
+    if(featureData_[i].patchNorm_)
+      delete[] featureData_[i].patchNorm_;
+
+    if(featureData_[i].patchNormSq_)
+      delete[] featureData_[i].patchNormSq_;
   }
 
   featureData_.clear();
@@ -46,8 +52,17 @@ void FeatureDetector::setFeatures(vector<FeatureDescriptor> features)
   {
     for(i = 0; i < features_.size(); i++)
     {
-      delete[] featureData_[i].patchNorm_;
-      delete[] featureData_[i].patchNormSq_;
+      if(featureData_[i].patchNorm_)
+        delete[] featureData_[i].patchNorm_;
+
+      if(featureData_[i].patchNormSq_)
+        delete[] featureData_[i].patchNormSq_;
+
+      if(featureData_[i].patchNormDSP_)
+        dsp_free(featureData_[i].patchNormDSP_);
+
+      if(featureData_[i].patchNormSqDSP_)
+        dsp_free(featureData_[i].patchNormSqDSP_);
     }
 
     featureData_.clear();

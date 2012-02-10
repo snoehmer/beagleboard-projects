@@ -43,6 +43,8 @@ FeatureDetectorHarrisStd::FeatureDetectorHarrisStd(unsigned int featuresThreshol
 
 FeatureDetectorHarrisStd::~FeatureDetectorHarrisStd()
 {
+  Logger::debug(Logger::NCC, "destroying Harris data");
+
   cornerPoints_.clear();
 
   delete hcd_;

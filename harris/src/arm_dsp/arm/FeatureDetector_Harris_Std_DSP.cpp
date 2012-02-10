@@ -30,12 +30,14 @@ FeatureDetectorHarrisStdDSP::FeatureDetectorHarrisStdDSP(unsigned int featuresTh
 
 FeatureDetectorHarrisStdDSP::~FeatureDetectorHarrisStdDSP()
 {
+  Logger::debug(Logger::NCC, "destroying DSP data");
+
   unsigned int i = 0;
 
   for(i = 0; i < features_.size(); i++)
   {
     dsp_free(featureData_[i].patchNormDSP_);
-    dsp_free(featureData_[i].patchNormSq_);
+    dsp_free(featureData_[i].patchNormSqDSP_);
   }
 }
 
@@ -85,7 +87,7 @@ bool FeatureDetectorHarrisStdDSP::match(ImageBitstream image)
   // calculate NCC for each feature
   for(i = 0; i < nFeatures; i++)
   {
-    startTimer("_ncc_match_single_arm");
+    startTimer("_ncc_match_single_dsp");
 
     for(j = 0; j < cornerPoints_.size(); j++)  // search for features in detected corners
     {
@@ -96,7 +98,7 @@ bool FeatureDetectorHarrisStdDSP::match(ImageBitstream image)
         break;
     }
 
-    stopTimer("_ncc_match_single_arm");
+    stopTimer("_ncc_match_single_dsp");
 
     if(matchCount >= featuresToMatch)
        break;
@@ -232,7 +234,7 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
   }
 
 
-  startTimer("_ncc_patchdata_single_arm");
+  startTimer("_ncc_patchdata_single_dsp");
 
 
   // set parameters for standard NCC patchdata calculation
@@ -275,7 +277,7 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
 
   if(msg.cmd == DSP_NCC_STD_PATCHDATA && msg.arg_1 == DSP_STATUS_FINISHED)
   {
-    Logger::debug(Logger::NCC, "DSP successfully calculated patch data: avg %d", *patchAvg);
+    //Logger::debug(Logger::NCC, "DSP successfully calculated patch data: avg %d", *patchAvg);
   }
   else
   {
@@ -284,7 +286,7 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
   }
 
 
-  stopTimer("_ncc_patchdata_single_arm");
+  stopTimer("_ncc_patchdata_single_dsp");
 
   dsp_free(patch_dsp);
 
@@ -293,6 +295,8 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
   pd.patchNormDSP_ = patchNorm;
   pd.patchNormSqDSP_ = patchNormSq;
   pd.patchSqSumDSP_ = *patchSqSum;
+  pd.patchNorm_ = 0;
+  pd.patchNormSq_ = 0;
 
 
   dsp_free(patchAvg);
