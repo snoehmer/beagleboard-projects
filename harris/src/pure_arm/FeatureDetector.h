@@ -20,10 +20,17 @@ using namespace std;
 
 struct PatchData
 {
+  // comfortable ARM version
 	Fixed patchAvg_;
 	Fixed *patchNorm_;
 	Fixed *patchNormSq_;
 	Fixed patchSqSum_;
+
+	// DSP version
+	int patchAvgDSP_;
+	int *patchNormDSP_;
+	int *patchNormSqDSP_;
+	int patchSqSumDSP_;
 };
 
 

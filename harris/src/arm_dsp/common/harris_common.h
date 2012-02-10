@@ -22,6 +22,11 @@
 #define DSP_PERFORMANCE 12
 
 #define DSP_PERFORM_NCC 30
+#define DSP_NCC_STD_PATCHDATA 31
+#define DSP_NCC_STD_GETNCC 32
+#define DSP_NCC_INTIMG_PATCHDATA 35
+#define DSP_NCC_INTIMG_IMGDATA 36
+#define DSP_NCC_INTIMG_GETNCC 37
 
 
 // special arguments
@@ -90,5 +95,34 @@ typedef struct dsp_harris_corner_
 } dsp_harris_corner;
 
 
+typedef struct dsp_ncc_std_getncc_params_
+{
+  int *input_;
+  int width_;
+  int height_;
+
+  int row_;
+  int col_;
+
+  int patchAvg_;
+  int *patchNorm_;
+  int *patchNormSq_;
+  int patchSqSum_;
+
+  int patchSize_;
+} dsp_ncc_std_getncc_params;
+
+
+typedef struct dsp_ncc_std_patchdata_params_
+{
+  int *patch_;
+
+  int *patchAvg_;
+  int *patchNorm_;
+  int *patchNormSq_;
+  int *patchSqSum_;
+
+  int patchSize_;
+} dsp_ncc_std_patchdata_params;
 
 #endif /* HARRIS_COMMON_H_ */

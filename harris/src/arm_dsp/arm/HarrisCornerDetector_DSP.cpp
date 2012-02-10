@@ -356,7 +356,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 	  {
 	    cornerPoints.push_back(HarrisCornerPoint(message.arg_1 / width_, message.arg_1 % width_, Q15toFixed(message.arg_2).toFloat()));
 
-	    Logger::debug(Logger::HARRIS, "new Corner: %d, %d, %f", message.arg_1 / width_, message.arg_1 % width_, Q15toFixed(message.arg_2).toFloat());
+	    //Logger::debug(Logger::HARRIS, "new Corner: %d, %d, %f", message.arg_1 / width_, message.arg_1 % width_, Q15toFixed(message.arg_2).toFloat());
 	  }
 	  else if(message.cmd == DSP_PERFORMANCE)  // performance measurement coming in
 	  {

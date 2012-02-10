@@ -9,6 +9,7 @@
 #include "pure_arm/ImageBitstream.h"
 #include "pure_arm/HarrisCornerDetector.h"
 #include "arm_dsp/arm/HarrisCornerDetector_DSP.h"
+#include "arm_dsp/arm/FeatureDetector_Harris_Std_DSP.h"
 #include "pure_arm/FeatureDetector.h"
 #include "pure_arm/FeatureDetector_IntImg.h"
 #include "pure_arm/FeatureDetector_Harris_Std.h"
@@ -152,12 +153,13 @@ int main(int argc, char **argv)
 #endif
 #else
 #if defined FEATDET_USE_NCCSTD
-    featureDet = new FeatureDetectorDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    //featureDet = new FeatureDetectorDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    #error "non-Harris feature detectors are not implemented for DSP support!"
 #elif defined FEATDET_USE_NCCINTIMG
-    featureDet = new FeatureDetectorIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    //featureDet = new FeatureDetectorIntImgDSP(NCC_STD_FEAT_THRESH, NCC_STD_NCC_THRESH);
+    #error "non-Harris feature detectors are not implemented for DSP support!"
 #elif defined FEATDET_USE_NCCHARRISSTD
-    //featureDet = new FeatureDetectorHarrisStdDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
-    featureDet = new FeatureDetectorHarrisStd(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
+    featureDet = new FeatureDetectorHarrisStdDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #elif defined FEATDET_USE_NCCHARRISINTIMG
     featureDet = new FeatureDetectorHarrisIntImgDSP(NCC_HARRIS_FEAT_THRESH, NCC_HARRIS_NCC_THRESH, NCC_HARRIS_HARRIS_THRESH);
 #else

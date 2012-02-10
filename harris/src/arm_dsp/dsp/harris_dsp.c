@@ -61,6 +61,10 @@ int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned in
     short* restrict output);
 
 
+int dsp_perform_ncc_std_getncc(void *env, dsp_ncc_std_getncc_params *params, int *ncc);
+int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *params);
+
+
 unsigned int dsp_harris_create(void)
 {
 	return 0x8000;
@@ -89,6 +93,30 @@ unsigned int dsp_harris_execute(void *env)
         BCACHE_inv((void*) params, sizeof(dsp_harris_params), 1);
 
         msg.arg_2 = dsp_perform_harris(env, params);
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
+
+      case DSP_NCC_STD_GETNCC:
+      {
+        dsp_ncc_std_getncc_params *params = (dsp_ncc_std_getncc_params*) msg.arg_1;
+        BCACHE_inv((void*) params, sizeof(dsp_ncc_std_getncc_params), 1);
+
+        msg.arg_1 = dsp_perform_ncc_std_getncc(env, params, (int*) &msg.arg_2);
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
+
+      case DSP_NCC_STD_PATCHDATA:
+      {
+        dsp_ncc_std_patchdata_params *params = (dsp_ncc_std_patchdata_params*) msg.arg_1;
+        BCACHE_inv((void*) params, sizeof(dsp_ncc_std_patchdata_params), 1);
+
+        msg.arg_1 = dsp_perform_ncc_std_patchdata(env, params);
 
         NODE_putMsg(env, NULL, &msg, 0);
 
@@ -521,6 +549,139 @@ int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned in
 
 
   free(temp);
+
+
+  return DSP_STATUS_FINISHED;
+}
+
+
+int dsp_perform_ncc_std_getncc(void *env, dsp_ncc_std_getncc_params *params, int *ncc)
+{
+  int* restrict input = params->input_;
+  int width = params->width_;
+  int height = params->height_;
+
+  int row = params->row_;
+  int col = params->col_;
+
+  int patchAvg = params->patchAvg_;
+  int* restrict patchNorm = params->patchNorm_;
+  int* restrict patchNormSq = params->patchNormSq_;
+  int patchSqSum = params->patchSqSum_;
+
+  int patchSize = params->patchSize_;
+
+  int irow, icol, prow, pcol;
+
+
+  BCACHE_inv((void*) input, width * height * sizeof(int), 1);
+  BCACHE_inv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchNormSq, patchSize * patchSize * sizeof(int), 1);
+
+
+  // calculate average of image at current patch
+  int iavg = 0;
+
+  #pragma MUST_ITERATE(1)
+  for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
+    {
+      iavg += input[irow * width + icol]; // must be scale_uchar'ed!
+    }
+  }
+
+  iavg = _IQdiv(iavg, _IQmpy(_IQ(patchSize), _IQ(patchSize)));
+
+
+  // calculate NCC
+  int inorm;
+
+  int sumIP = 0;
+  int sumPP = 0;
+  int sumII = 0;
+
+  #pragma MUST_ITERATE(1)
+  for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
+    {
+      inorm = input[irow * width + icol] - iavg;
+
+      sumIP += _IQmpy(patchNorm[prow * patchSize + pcol], inorm);
+      sumPP += patchNormSq[prow * patchSize + pcol];
+      sumII += _IQmpy(inorm, inorm);
+    }
+  }
+
+  if(sumPP == 0 || sumII == 0)  // we wont find any corners in a homogenous area
+  {
+    *ncc = 0;
+  }
+  else
+  {
+    *ncc = _IQdiv(sumIP, _IQsqrt(_IQmpy(sumPP, sumII)));
+  }
+
+  return DSP_STATUS_FINISHED;
+}
+
+int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *params)
+{
+  int* restrict patch = params->patch_;
+
+  int* restrict patchAvg = params->patchAvg_;
+  int* restrict patchNorm = params->patchNorm_;
+  int* restrict patchNormSq = params->patchNormSq_;
+  int* restrict patchSqSum = params->patchSqSum_;
+
+  int patchSize = params->patchSize_;
+
+
+  BCACHE_inv((void*) patch, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchAvg, sizeof(int), 1);
+  BCACHE_inv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchNormSq, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchSqSum, sizeof(int), 1);
+
+
+  // calculate average of feature patch
+  int row, col;
+  int psum = 0;
+
+  #pragma MUST_ITERATE(1)
+  for(row = 0; row < patchSize; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = 0; col < patchSize; col++)
+    {
+      psum += patch[row * patchSize + col];
+    }
+  }
+
+  *patchAvg = _IQdiv(psum, _IQmpy(_IQ(patchSize), _IQ(patchSize)));
+
+
+  // now calculate normalized patch and squared normalized patch
+  #pragma MUST_ITERATE(1)
+  for(row = 0; row < patchSize; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = 0; col < patchSize; col++)
+    {
+      patchNorm[row * patchSize + col] = patch[row * patchSize + col] - *patchAvg;
+
+      patchNormSq[row * patchSize + col] = _IQmpy(patchNorm[row * patchSize + col], patchNorm[row * patchSize + col]);
+    }
+  }
+
+
+  BCACHE_wbInv((void*) patchAvg, sizeof(int), 1);
+  BCACHE_wbInv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_wbInv((void*) patchNormSq, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_wbInv((void*) patchSqSum, sizeof(int), 1);
 
 
   return DSP_STATUS_FINISHED;

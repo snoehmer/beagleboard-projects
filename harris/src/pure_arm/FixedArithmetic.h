@@ -297,6 +297,11 @@ public:
     return (short) (convert(15).value_);
   }
 
+  inline int toIntQ15()
+  {
+    return (convert(15).value_);
+  }
+
 
   // relational operators
   inline bool operator >(Fixed right)
@@ -487,6 +492,7 @@ public:
 
   // method to convert a Q15 number to Fixed format
   friend inline Fixed Q15toFixed(const short q15, const unsigned int q = FIXED_STD_Q);
+  friend inline Fixed IntQ15toFixed(const int q15, const unsigned int q = FIXED_STD_Q);
 
   // special scale function to convert a uchar directly to a Fixed
   friend inline Fixed scale_uchar(unsigned int i, const unsigned int q = FIXED_STD_Q);
@@ -513,6 +519,17 @@ inline Fixed sqrt(Fixed x)
 
 // converts a Q15 number to the specified Fixed format
 inline Fixed Q15toFixed(const short q15, const unsigned int q)
+{
+  Fixed temp;
+
+  temp.q_ = 15;
+  temp.value_ = q15;
+
+  return temp.convert(q);
+
+}
+
+inline Fixed IntQ15toFixed(const int q15, const unsigned int q)
 {
   Fixed temp;
 
