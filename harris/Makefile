@@ -184,7 +184,7 @@ HarrisCornerDetectorHost: buildHarrisCornerDetectorHost
 
 hcd-arm-nondsp: buildHarrisCornerDetectorARM deploybeagleboard
 
-hcd-arm-dsp: buildHarrisCornerDetectorARM dsp-generic deploybeagleboard
+hcd-arm-dsp: buildHarrisCornerDetectorARM dsp-generic deploybeagleboard-dsp
 
 
 # compile for host machine
@@ -268,6 +268,14 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 .PHONY: deploybeagleboard
 
 deploybeagleboard:
+	@echo deploying files to beagleboard...
+	mkdir -p $(DEPLOYDIR)
+	cp $(BIN) $(DEPLOYDIR)
+	rsync -avze --progress --inplace --rsh='ssh' $(DEPLOYDIR)/* ubuntu@$(BEAGLEBOARD_ADDRESS):/home/ubuntu/harris
+
+.PHONY: deploybeagleboard-dsp
+
+deploybeagleboard-dsp:
 	@echo deploying files to beagleboard...
 	mkdir -p $(DEPLOYDIR)
 	cp $(BIN) $(DEPLOYDIR)

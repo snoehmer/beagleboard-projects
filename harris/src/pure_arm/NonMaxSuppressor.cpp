@@ -153,7 +153,8 @@ float* NonMaxSuppressor::performNonMax(float *input, int width, int height)
 
 Fixed* NonMaxSuppressor::performNonMax(Fixed *input, int width, int height)
 {
-  Fixed sumX, sumY;
+  Fixed sumX(0, 25);
+  Fixed sumY(0, 25);
   Fixed *diffX = new Fixed[width * height];
   Fixed *diffY = new Fixed[width * height];
   Fixed *magnitude = new Fixed[width * height];

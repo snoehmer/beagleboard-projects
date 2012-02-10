@@ -54,7 +54,7 @@ public:
     {
       Fixed ret;
 
-      if(q_ > q)
+      if(q_ > q)  // RIGHT
         ret.value_ = value_ >> (q_ - q);
       else
         ret.value_ = value_ << (q - q_);
@@ -531,7 +531,7 @@ inline Fixed scale_uchar(unsigned int i, const unsigned int q)
   ret.q_ = q;
 
   if(q > 8)
-    ret.value_ = i << (q - 8);  //TODO: shift by 7 (because of sign bit)?
+    ret.value_ = i << (q - 8);
   else
     ret.value_ = i >> (8 - q);
 
