@@ -38,7 +38,7 @@ inline void dsp_stopTimer(void *env, unsigned char id)
   NODE_putMsg(env, NULL, &msg, 0);
 }
 
-inline void dsp_harris_newcorner(void *env, unsigned char row, unsigned char col, unsigned char width, short strength)
+inline void dsp_harris_newcorner(void *env, unsigned int row, unsigned int col, unsigned int width, short strength)
 {
   dsp_msg_t msg;
 
@@ -444,6 +444,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
       if(hcr_out[row * width + col] >= threshold)
       {
         dsp_harris_newcorner(env, row, col, width, hcr_out[row * width + col]);
+      }
+      else
+      {
+        hcr_out[row * width + col] = 0;
       }
     }
   }
