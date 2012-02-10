@@ -252,6 +252,8 @@ PatchData FeatureDetector::calculatePatchData(unsigned char *patch)
   pd.patchAvg_ = patchAvg;
   pd.patchNorm_ = patchNorm;
   pd.patchNormSq_ = patchNormSq;
+  pd.patchNormDSP_ = 0;
+  pd.patchNormSqDSP_ = 0;
 
   return pd;
 }

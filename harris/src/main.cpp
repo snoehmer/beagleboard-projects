@@ -10,6 +10,7 @@
 #include "pure_arm/HarrisCornerDetector.h"
 #include "arm_dsp/arm/HarrisCornerDetector_DSP.h"
 #include "arm_dsp/arm/FeatureDetector_Harris_Std_DSP.h"
+#include "arm_dsp/arm/FeatureDetector_Harris_IntImg_DSP.h"
 #include "pure_arm/FeatureDetector.h"
 #include "pure_arm/FeatureDetector_IntImg.h"
 #include "pure_arm/FeatureDetector_Harris_Std.h"

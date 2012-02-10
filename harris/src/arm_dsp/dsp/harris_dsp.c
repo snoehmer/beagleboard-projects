@@ -64,6 +64,10 @@ int dsp_convolve2d(const short* restrict input, unsigned int height, unsigned in
 int dsp_perform_ncc_std_getncc(void *env, dsp_ncc_std_getncc_params *params, int *ncc);
 int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *params);
 
+int dsp_perform_ncc_intimg_getncc(void *env, dsp_ncc_intimg_getncc_params *params, int *ncc);
+int dsp_perform_ncc_intimg_imagedata(void *env, dsp_ncc_intimg_imagedata_params *params);
+int dsp_perform_ncc_intimg_patchdata(void *env, dsp_ncc_intimg_patchdata_params *params);
+
 
 unsigned int dsp_harris_create(void)
 {
@@ -117,6 +121,42 @@ unsigned int dsp_harris_execute(void *env)
         BCACHE_inv((void*) params, sizeof(dsp_ncc_std_patchdata_params), 1);
 
         msg.arg_1 = dsp_perform_ncc_std_patchdata(env, params);
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
+
+      case DSP_NCC_INTIMG_GETNCC:
+      {
+        dsp_ncc_intimg_getncc_params *params = (dsp_ncc_intimg_getncc_params*) msg.arg_1;
+        BCACHE_inv((void*) params, sizeof(dsp_ncc_intimg_getncc_params), 1);
+
+        msg.arg_1 = dsp_perform_ncc_intimg_getncc(env, params, (int*) &msg.arg_2);
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
+
+      case DSP_NCC_INTIMG_PATCHDATA:
+      {
+        dsp_ncc_intimg_patchdata_params *params = (dsp_ncc_intimg_patchdata_params*) msg.arg_1;
+        BCACHE_inv((void*) params, sizeof(dsp_ncc_intimg_patchdata_params), 1);
+
+        msg.arg_1 = dsp_perform_ncc_intimg_patchdata(env, params);
+
+        NODE_putMsg(env, NULL, &msg, 0);
+
+        break;
+      }
+
+      case DSP_NCC_INTIMG_IMAGEDATA:
+      {
+        dsp_ncc_intimg_imagedata_params *params = (dsp_ncc_intimg_imagedata_params*) msg.arg_1;
+        BCACHE_inv((void*) params, sizeof(dsp_ncc_intimg_imagedata_params), 1);
+
+        msg.arg_1 = dsp_perform_ncc_intimg_imagedata(env, params);
 
         NODE_putMsg(env, NULL, &msg, 0);
 
@@ -683,6 +723,203 @@ int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *param
   BCACHE_wbInv((void*) patchNormSq, patchSize * patchSize * sizeof(int), 1);
   BCACHE_wbInv((void*) patchSqSum, sizeof(int), 1);
 
+
+  return DSP_STATUS_FINISHED;
+}
+
+
+int dsp_perform_ncc_intimg_getncc(void *env, dsp_ncc_intimg_getncc_params *params, int *ncc)
+{
+  int* restrict input = params->input_;
+  int width = params->width_;
+  int height = params->height_;
+
+  int row = params->row_;
+  int col = params->col_;
+
+  int* restrict imageSqSum = params->imageSqSum_;
+
+  int* restrict patchNorm = params->patchNorm_;
+  int patchSqSum = params->patchSqSum_;
+
+  int patchSize = params->patchSize_;
+
+  int irow, icol, prow, pcol;
+
+
+  BCACHE_inv((void*) input, width * height * sizeof(int), 1);
+  BCACHE_inv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) imageSqSum, width * height * sizeof(int), 1);
+
+
+  int sumIP = 0;
+
+  if(imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)] == 0)
+  {
+    ncc = 0;  // completely homogenous area -> we wont find matches here!
+  }
+  else
+  {
+    #pragma MUST_ITERATE(1)
+    for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
+    {
+      #pragma MUST_ITERATE(1)
+      for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
+      {
+        sumIP += _IQmpy(patchNorm[prow * patchSize + pcol], input[irow * width + icol]);
+      }
+    }
+
+    *ncc = _IQdiv(sumIP, (_IQmpy(patchSqSum, imageSqSum[(row - patchSize/2) * (width - patchSize) + (col - patchSize/2)])));
+  }
+
+  return DSP_STATUS_FINISHED;
+}
+
+
+int dsp_perform_ncc_intimg_imagedata(void *env, dsp_ncc_intimg_imagedata_params *params)
+{
+  int* restrict image = params->image_;
+
+  unsigned int width = params->width_;
+  unsigned int height = params->height_;
+
+  int* restrict imageIntegral = params->imageIntegral_;
+  int* restrict imageIntegral2 = params->imageIntegral2_;
+  int* restrict imageAvg = params->imageAvg_;
+  int* restrict imageSqSum = params->imageSqSum_;
+
+  int patchSize = params->patchSize_;
+
+
+  BCACHE_inv((void*) image, width * height * sizeof(int), 1);
+  BCACHE_inv((void*) imageIntegral, (width + 1) * (height + 1) * sizeof(int), 1);
+  BCACHE_inv((void*) imageIntegral2, (width + 1) * (height + 1) * sizeof(int), 1);
+  BCACHE_inv((void*) imageAvg, (width - patchSize) * (height - patchSize) * sizeof(int), 1);
+  BCACHE_inv((void*) imageSqSum, (width - patchSize) * (height - patchSize) * sizeof(int), 1);
+
+
+  unsigned int row, col;
+
+
+  // initialize integral arrays
+  #pragma MUST_ITERATE(1)
+  for(col = 0; col < width + 1; col++)  // fill 1st row with zeros
+  {
+    imageIntegral[0 * (width + 1) + col] = 0;
+    imageIntegral2[0 * (width + 1) + col] = 0;
+  }
+
+  #pragma MUST_ITERATE(1)
+  for(row = 1; row < height + 1; row++)  // fill 1st column with zeros
+  {
+    imageIntegral[row * (width + 1) + 0] = 0;
+    imageIntegral2[row * (width + 1) + 0] = 0;
+  }
+
+
+  // calculate integral arrays
+  #pragma MUST_ITERATE(1)
+  for(row = 0; row < height; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = 0; col < width; col++)
+    {
+      imageIntegral[(row + 1) * (width + 1) + (col + 1)] = image[row * width + col] + imageIntegral[row * (width + 1) + (col + 1)] + imageIntegral[(row + 1) * (width + 1) + col] - imageIntegral[row * (width + 1) + col];
+      imageIntegral2[(row + 1) * (width + 1) + (col + 1)] = _IQmpy(image[row * width + col], image[row * width + col]) + imageIntegral2[row * (width + 1) + (col + 1)] + imageIntegral2[(row + 1) * (width + 1) + col] - imageIntegral2[row * (width + 1) + col];
+    }
+  }
+
+  // calculate sqSum array
+  unsigned int offset = patchSize / 2;
+  unsigned int imageWidth = width - patchSize;
+
+  int A, B;
+
+  int dp = patchSize / 2;  // positive delta
+  int dn = (patchSize - 1) / 2 + 1;  // negative delta
+
+  #pragma MUST_ITERATE(1)
+  for(row = offset; row < height - offset; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = offset; col < width - offset; col++)
+    {
+      A = imageIntegral2[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral2[(row - dn + 1) * (width + 1) + (col - dn + 1)];
+      B = imageIntegral[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral[(row - dn + 1) * (width + 1) + (col - dn + 1)];
+
+      imageSqSum[(row - offset) * imageWidth + (col - offset)] = _IQsqrt(A - _IQdiv(_IQmpy(B, B), _IQmpy(_IQ(patchSize), _IQ(patchSize))));
+      imageAvg[(row - offset) * imageWidth + (col - offset)] = _IQdiv(B, _IQmpy(_IQ(patchSize), _IQ(patchSize)));
+    }
+  }
+
+
+  BCACHE_wbInv((void*) image, width * height * sizeof(int), 1);
+  BCACHE_wbInv((void*) imageIntegral, (width + 1) * (height + 1) * sizeof(int), 1);
+  BCACHE_wbInv((void*) imageIntegral2, (width + 1) * (height + 1) * sizeof(int), 1);
+  BCACHE_wbInv((void*) imageAvg, (width - patchSize) * (height - patchSize) * sizeof(int), 1);
+  BCACHE_wbInv((void*) imageSqSum, (width - patchSize) * (height - patchSize) * sizeof(int), 1);
+
+
+  return DSP_STATUS_FINISHED;
+}
+
+
+int dsp_perform_ncc_intimg_patchdata(void *env, dsp_ncc_intimg_patchdata_params *params)
+{
+  int* restrict patch = params->patch_;
+
+  int* restrict patchAvg = params->patchAvg_;
+  int* restrict patchNorm = params->patchNorm_;
+  int* restrict patchSqSum = params->patchSqSum_;
+
+  int patchSize = params->patchSize_;
+
+
+  BCACHE_inv((void*) patch, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchAvg, sizeof(int), 1);
+  BCACHE_inv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_inv((void*) patchSqSum, sizeof(int), 1);
+
+
+  // calculate average of feature patch
+  unsigned int row, col;
+  int psum = 0;
+
+  #pragma MUST_ITERATE(1)
+  for(row = 0; row < patchSize; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = 0; col < patchSize; col++)
+    {
+      psum += patch[row * patchSize + col];
+    }
+  }
+
+  *patchAvg = _IQdiv(psum, _IQmpy(_IQ(patchSize), _IQ(patchSize)));
+
+
+  // now calculate normalized patch and sqSum
+  int sqSum = 0;
+
+  #pragma MUST_ITERATE(1)
+  for(row = 0; row < patchSize; row++)
+  {
+    #pragma MUST_ITERATE(1)
+    for(col = 0; col < patchSize; col++)
+    {
+      patchNorm[row * patchSize + col] = patch[row * patchSize + col] - *patchAvg;
+
+      sqSum += _IQmpy(patchNorm[row * patchSize + col], patchNorm[row * patchSize + col]);
+    }
+  }
+
+  *patchSqSum = _IQsqrt(sqSum);
+
+
+  BCACHE_wbInv((void*) patchAvg, sizeof(int), 1);
+  BCACHE_wbInv((void*) patchNorm, patchSize * patchSize * sizeof(int), 1);
+  BCACHE_wbInv((void*) patchSqSum, sizeof(int), 1);
 
   return DSP_STATUS_FINISHED;
 }

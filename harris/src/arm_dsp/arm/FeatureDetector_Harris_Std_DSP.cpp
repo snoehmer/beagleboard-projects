@@ -234,9 +234,6 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
   }
 
 
-  startTimer("_ncc_patchdata_single_dsp");
-
-
   // set parameters for standard NCC patchdata calculation
   dsp_ncc_std_patchdata_params *params = (dsp_ncc_std_patchdata_params*) dsp_malloc(sizeof(dsp_ncc_std_patchdata_params));
   if(!params)
@@ -261,9 +258,13 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
   dsp_dmm_buffer_begin(patchSqSum);
 
 
+  startTimer("_ncc_patchdata_single_dsp");
+
   dspNode_->SendMessage(DSP_NCC_STD_PATCHDATA, (uint32_t) dsp_get_mapped_addr(params), 0, 0);
 
   dsp_msg msg = dspNode_->GetMessage();
+
+  stopTimer("_ncc_patchdata_single_dsp");
 
 
   dsp_dmm_buffer_end(patch_dsp);
@@ -285,8 +286,6 @@ PatchData FeatureDetectorHarrisStdDSP::calculatePatchData(unsigned char *patch)
     return pd;
   }
 
-
-  stopTimer("_ncc_patchdata_single_dsp");
 
   dsp_free(patch_dsp);
 

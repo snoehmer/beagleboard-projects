@@ -113,6 +113,7 @@ CPP_SRCS_ARM = \
 ./src/arm_dsp/arm/dspbridge/Dsp.cpp \
 ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp \
 ./src/arm_dsp/arm/FeatureDetector_Harris_Std_DSP.cpp \
+./src/arm_dsp/arm/FeatureDetector_Harris_IntImg_DSP.cpp \
 ./src/main.cpp 
 
 OBJS_ARM = \
@@ -135,6 +136,7 @@ OBJS_ARM = \
 ./bin/Dsp.o \
 ./bin/HarrisCornerDetector_DSP.o \
 ./bin/FeatureDetector_Harris_Std_DSP.o \
+./bin/FeatureDetector_Harris_IntImg_DSP.o \
 ./bin/main.o 
 
 
@@ -268,7 +270,10 @@ buildHarrisCornerDetectorARM: $(OBJS_ARM)
 
 ./bin/FeatureDetector_Harris_Std_DSP.o: ./src/arm_dsp/arm/FeatureDetector_Harris_Std_DSP.cpp ./src/arm_dsp/arm/FeatureDetector_Harris_Std_DSP.h ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp ./src/arm_dsp/arm/HarrisCornerDetector_DSP.h ./src/pure_arm/FeatureDetector_Harris_Std.cpp ./src/pure_arm/FeatureDetector_Harris_Std.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/FixedArithmetic.h
 	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
-	
+
+./bin/FeatureDetector_Harris_IntImg_DSP.o: ./src/arm_dsp/arm/FeatureDetector_Harris_IntImg_DSP.cpp ./src/arm_dsp/arm/FeatureDetector_Harris_IntImg_DSP.h ./src/arm_dsp/arm/HarrisCornerDetector_DSP.cpp ./src/arm_dsp/arm/HarrisCornerDetector_DSP.h ./src/pure_arm/FeatureDetector_Harris_IntImg.cpp ./src/pure_arm/FeatureDetector_Harris_IntImg.h ./src/pure_arm/FeatureDetector.cpp ./src/pure_arm/FeatureDetector.h ./src/pure_arm/ImageBitstream.h ./src/pure_arm/ImageBitstream.cpp ./src/util/FeatureDescriptor.h ./src/util/FeatureDescriptor.cpp ./src/util/FeatureGenerator.h ./src/util/FeatureGenerator.cpp ./src/pure_arm/HarrisCornerDetector.cpp ./src/pure_arm/HarrisCornerDetector.h ./src/pure_arm/NonMaxSuppressor.cpp ./src/pure_arm/NonMaxSuppressor.h ./src/util/HarrisCornerPoint.h ./src/util/HarrisCornerPoint.cpp ./src/pure_arm/FixedArithmetic.h
+	$(QUIET_CC)$(CCC) $(CC_FLAGS) -o"$@" $<
+
 
 .PHONY: deploybeagleboard
 

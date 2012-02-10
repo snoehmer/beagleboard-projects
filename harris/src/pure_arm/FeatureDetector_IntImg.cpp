@@ -24,7 +24,8 @@ FeatureDetectorIntImg::~FeatureDetectorIntImg()
 
 	for(i = 0; i < features_.size(); i++)
 	{
-		delete[] featureData_[i].patchNorm_;
+	  if(featureData_[i].patchNorm_)
+	    delete[] featureData_[i].patchNorm_;
 	}
 
 	featureData_.clear();
@@ -43,7 +44,8 @@ void FeatureDetectorIntImg::setFeatures(vector<FeatureDescriptor> features)
   {
     for(i = 0; i < features_.size(); i++)
     {
-      delete[] featureData_[i].patchNorm_;
+      if(featureData_[i].patchNorm_)
+        delete[] featureData_[i].patchNorm_;
     }
 
     featureData_.clear();
@@ -293,6 +295,8 @@ PatchData FeatureDetectorIntImg::calculatePatchData(unsigned char *patch)
 	pd.patchAvg_ = patchAvg;
 	pd.patchNorm_ = patchNorm;
 	pd.patchSqSum_ = patchSqSum;
+	pd.patchNormDSP_ = 0;
+	pd.patchNormSqDSP_ = 0;
 
 	return pd;
 }
