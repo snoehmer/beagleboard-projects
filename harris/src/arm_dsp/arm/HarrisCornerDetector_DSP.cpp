@@ -497,7 +497,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
 #endif
 
 
-//#ifdef DEBUG_OUTPUT_PICS
+#ifdef DEBUG_OUTPUT_PICS
 	float *outhcr = new float[width_ * height_];
 
 	for(row = 0; row < height_; row++)
@@ -512,7 +512,7 @@ vector<HarrisCornerPoint> HarrisCornerDetectorDSP::performHarris(Fixed **ret_hcr
   tempImg.write("./output/hcrIntern.png");
 
   delete[] outhcr;
-//#endif
+#endif
 
 
 	dsp_free(convX);  //TODO: use for rotation invariance

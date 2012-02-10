@@ -4,15 +4,23 @@
 # also compiles the sources for the DSP
 #
 # possible targets:
-#	arm-slow			builds the pure ARM version without optimizations (very slow)
-#	arm-intimg			builds the pure ARM version with integral image
-#	arm-harris			builds the pure ARM version with Harris-based NCC, but without optimizations
-#	arm-harris-intimg	builds the pure ARM version with Harris-based NCC and with integral image
-#	dsp-slow			builds the ARM+DSP version without optimizations (slow)
-#	dsp-intimg			builds the ARM+DSP version with integral image
-#	dsp-harris			builds the ARM+DSP version with Harris-based NCC, but without optimizations
-#	dsp-harris-intimg	builds the ARM+DSP version with Harris-based NCC and with integral image
-#	dsp-generic			builds the DSP only library
+#	arm-slow				builds the pure ARM version without optimizations (very slow)
+#	arm-intimg				builds the pure ARM version with integral image
+#	arm-harris				builds the pure ARM version with Harris-based NCC, but without optimizations
+#	arm-harris-intimg		builds the pure ARM version with Harris-based NCC and with integral image
+#	arm-dsp-harris			builds the ARM+DSP version with DSP-Harris-based NCC, but without optimizations
+#	arm-dsp-harris-intimg	builds the ARM+DSP version with DSP-Harris-based NCC and with integral image
+#	dsp-harris				builds the ARM+DSP version with DSP-Harris-based DSP-NCC, but without optimizations
+#	dsp-harris-intimg		builds the ARM+DSP version with DSP-Harris-based DSP-NCC and with integral image
+#	dsp-generic				builds the DSP library only
+#	host-slow				builds the x86 version without optimizations (very slow)
+#	host-intimg				builds the x86 version with integral image
+#	host-harris				builds the x86 version with Harris-based NCC, but without optimizations
+#	host-harris-intimg		builds the x86 version with Harris-based NCC and with integral image
+#	deploybeagleboard		deploys all binary files to the BeagleBoard (address has to be set!)
+#	deploybeagleboard-dsp	deploys all binary files and DSP library to the BeagleBoard (address has to be set!)
+#	clean					deletes all binary files
+#	clean-dsp				deletes only the DSP library files
 #
 
 
@@ -150,11 +158,17 @@ DEPLOYDIR = ./bin/deploy
 all: HarrisCornerDetectorHost
 
 # quick targets for ARM platform with DSP support
-arm-dsp-harris: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISSTD -DHARRIS_USE_DSP -DFEATDET_USE_DSP
+arm-dsp-harris: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISSTD -DHARRIS_USE_DSP
 arm-dsp-harris: hcd-arm-dsp
 
-arm-dsp-harris-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISINTIMG -DHARRIS_USE_DSP -DFEATDET_USE_DSP
+arm-dsp-harris-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISINTIMG -DHARRIS_USE_DSP
 arm-dsp-harris-intimg: hcd-arm-dsp
+
+dsp-harris: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISSTD -DHARRIS_USE_DSP -DFEATDET_USE_DSP
+dsp-harris: hcd-arm-dsp
+
+dsp-harris-intimg: CC_FLAGS_ARM += -DFEATDET_USE_NCCHARRISINTIMG -DHARRIS_USE_DSP -DFEATDET_USE_DSP
+dsp-harris-intimg: hcd-arm-dsp
 
 # quick targets for ARM platform without DSP
 arm-slow: CC_FLAGS_ARM += -DFEATDET_USE_NCCSTD
