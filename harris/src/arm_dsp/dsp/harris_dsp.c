@@ -309,10 +309,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
   memset(diffYY, 0, extConvSize * sizeof(short));
   memset(diffXY, 0, extConvSize * sizeof(short));
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = offset; row < offset + height; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = offset; col < offset + width; col++)
     {
       // shift by 13 (instead of 15) to increase resolution with short variable (later normalized anyway)
@@ -352,10 +352,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
 
   int Ixx, Iyy, Ixy, Ixxyy, Ixy2, Ixxpyy, Ixxpyy2, kIxxpyy2;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = offset; row < offset + height; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = offset; col < offset + width; col++)
     {
       Ixx = diffXX[row * extWidth + col];
@@ -392,10 +392,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
 
 
   // calculate squared magnitude
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = offset; row < offset + height; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = offset; col < offset + width; col++)
     {
       nonmaxM2[row * extWidth + col] = _IQsqrt(_IQmpy((int) nonmaxX[row * extWidth + col], (int) nonmaxX[row * extWidth + col]) + _IQmpy((int) nonmaxY[row * extWidth + col], (int) nonmaxY[row * extWidth + col]));
@@ -414,10 +414,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
 
   memset(hcr, 0, extConvSize * sizeof(short));
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = offset + 1; row < offset + height - 1; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = offset + 1; col < offset + width - 1; col++)
     {
       dX = nonmaxX[row * extWidth + col];
@@ -486,7 +486,7 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
   {
     min = max = hcr[0];
 
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(i = 0; i < extWidth * extHeight; i++)
     {
       if(hcr[i] > max) max = hcr[i];
@@ -497,10 +497,10 @@ int dsp_perform_harris(void *env, dsp_harris_params *params)
 
   // =================== perform thresholding and generate cropped output values ====================
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < height; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < width; col++)
     {
       output_diffXX[row * width + col] = diffXX[(row + offset) * extWidth + (col + offset)];
@@ -622,10 +622,10 @@ int dsp_perform_ncc_std_getncc(void *env, dsp_ncc_std_getncc_params *params, int
   // calculate average of image at current patch
   int iavg = 0;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
     {
       iavg += input[irow * width + icol]; // must be scale_uchar'ed!
@@ -642,10 +642,10 @@ int dsp_perform_ncc_std_getncc(void *env, dsp_ncc_std_getncc_params *params, int
   int sumPP = 0;
   int sumII = 0;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
     {
       inorm = input[irow * width + icol] - iavg;
@@ -691,10 +691,10 @@ int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *param
   int row, col;
   int psum = 0;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < patchSize; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < patchSize; col++)
     {
       psum += patch[row * patchSize + col];
@@ -705,10 +705,10 @@ int dsp_perform_ncc_std_patchdata(void *env, dsp_ncc_std_patchdata_params *param
 
 
   // now calculate normalized patch and squared normalized patch
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < patchSize; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < patchSize; col++)
     {
       patchNorm[row * patchSize + col] = patch[row * patchSize + col] - *patchAvg;
@@ -760,10 +760,10 @@ int dsp_perform_ncc_intimg_getncc(void *env, dsp_ncc_intimg_getncc_params *param
   }
   else
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(prow = 0, irow = row - (patchSize - 1)/2; prow < patchSize; prow++, irow++)
     {
-      #pragma MUST_ITERATE(1)
+      #pragma MUST_ITERATE(1,,1)
       for(pcol = 0, icol = col - (patchSize - 1)/2; pcol < patchSize; pcol++, icol++)
       {
         sumIP += _IQmpy(patchNorm[prow * patchSize + pcol], input[irow * width + icol]);
@@ -803,14 +803,14 @@ int dsp_perform_ncc_intimg_imagedata(void *env, dsp_ncc_intimg_imagedata_params 
 
 
   // initialize integral arrays
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(col = 0; col < width + 1; col++)  // fill 1st row with zeros
   {
     imageIntegral[0 * (width + 1) + col] = 0;
     imageIntegral2[0 * (width + 1) + col] = 0;
   }
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 1; row < height + 1; row++)  // fill 1st column with zeros
   {
     imageIntegral[row * (width + 1) + 0] = 0;
@@ -819,10 +819,10 @@ int dsp_perform_ncc_intimg_imagedata(void *env, dsp_ncc_intimg_imagedata_params 
 
 
   // calculate integral arrays
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < height; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < width; col++)
     {
       imageIntegral[(row + 1) * (width + 1) + (col + 1)] = image[row * width + col] + imageIntegral[row * (width + 1) + (col + 1)] + imageIntegral[(row + 1) * (width + 1) + col] - imageIntegral[row * (width + 1) + col];
@@ -839,10 +839,10 @@ int dsp_perform_ncc_intimg_imagedata(void *env, dsp_ncc_intimg_imagedata_params 
   int dp = patchSize / 2;  // positive delta
   int dn = (patchSize - 1) / 2 + 1;  // negative delta
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = offset; row < height - offset; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = offset; col < width - offset; col++)
     {
       A = imageIntegral2[(row + dp + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row - dn + 1) * (width + 1) + (col + dp + 1)] - imageIntegral2[(row + dp + 1) * (width + 1) + (col - dn + 1)] + imageIntegral2[(row - dn + 1) * (width + 1) + (col - dn + 1)];
@@ -886,10 +886,10 @@ int dsp_perform_ncc_intimg_patchdata(void *env, dsp_ncc_intimg_patchdata_params 
   unsigned int row, col;
   int psum = 0;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < patchSize; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < patchSize; col++)
     {
       psum += patch[row * patchSize + col];
@@ -902,10 +902,10 @@ int dsp_perform_ncc_intimg_patchdata(void *env, dsp_ncc_intimg_patchdata_params 
   // now calculate normalized patch and sqSum
   int sqSum = 0;
 
-  #pragma MUST_ITERATE(1)
+  #pragma MUST_ITERATE(1,,1)
   for(row = 0; row < patchSize; row++)
   {
-    #pragma MUST_ITERATE(1)
+    #pragma MUST_ITERATE(1,,1)
     for(col = 0; col < patchSize; col++)
     {
       patchNorm[row * patchSize + col] = patch[row * patchSize + col] - *patchAvg;

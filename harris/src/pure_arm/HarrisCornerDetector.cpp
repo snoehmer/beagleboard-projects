@@ -5,7 +5,7 @@
  *      Author: sn
  */
 
-//#define DEBUG_OUTPUT_PICS
+#define DEBUG_OUTPUT_PICS
 
 #include "HarrisCornerDetector.h"
 #include "../util/HarrisCornerPoint.h"
@@ -212,12 +212,30 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 	stopTimer("_harris_conv_der_arm");
 
 #ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
+	float *diffXXout = new float[width_ * height_];
+	float *diffYYout = new float[width_ * height_];
+  float *diffXYout = new float[width_ * height_];
+
+  for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      diffXXout[row * width_ + col] = diffXX[row * width_ + col].toFloat() * 2;
+      diffYYout[row * width_ + col] = diffYY[row * width_ + col].toFloat() * 2;
+      diffXYout[row * width_ + col] = diffXY[row * width_ + col].toFloat() * 2;
+    }
+  }
+
+	tempImg.read(width_, height_, "I", FloatPixel, diffXXout);
 	tempImg.write("./output/diffXX.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
+	tempImg.read(width_, height_, "I", FloatPixel, diffYYout);
 	tempImg.write("./output/diffYY.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
+	tempImg.read(width_, height_, "I", FloatPixel, diffXYout);
 	tempImg.write("./output/diffXY.png");
+
+	delete[] diffXXout;
+	delete[] diffYYout;
+  delete[] diffXYout;
 #endif
 
 
@@ -269,12 +287,30 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 	delete[] extDiffXY;
 
 #ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, diffXX);
-	tempImg.write("./output/diffXX-gauss.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffYY);
-	tempImg.write("./output/diffYY-gauss.png");
-	tempImg.read(width_, height_, "I", FloatPixel, diffXY);
-	tempImg.write("./output/diffXY-gauss.png");
+	diffXXout = new float[width_ * height_];
+  diffYYout = new float[width_ * height_];
+  diffXYout = new float[width_ * height_];
+
+  for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      diffXXout[row * width_ + col] = diffXX[row * width_ + col].toFloat() * 3;
+      diffYYout[row * width_ + col] = diffYY[row * width_ + col].toFloat() * 3;
+      diffXYout[row * width_ + col] = diffXY[row * width_ + col].toFloat() * 3;
+    }
+  }
+
+  tempImg.read(width_, height_, "I", FloatPixel, diffXXout);
+  tempImg.write("./output/diffXX-gauss.png");
+  tempImg.read(width_, height_, "I", FloatPixel, diffYYout);
+  tempImg.write("./output/diffYY-gauss.png");
+  tempImg.read(width_, height_, "I", FloatPixel, diffXYout);
+  tempImg.write("./output/diffXY-gauss.png");
+
+  delete[] diffXXout;
+  delete[] diffYYout;
+  delete[] diffXYout;
 #endif
 
 
@@ -307,8 +343,20 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 	delete[] diffXY;
 
 #ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, hcrIntern);
+	diffXXout = new float[width_ * height_];
+
+	for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      diffXXout[row * width_ + col] = hcrIntern[row * width_ + col].toFloat() * 200;
+    }
+  }
+
+	tempImg.read(width_, height_, "I", FloatPixel, diffXXout);
 	tempImg.write("./output/hcrIntern.png");
+
+	delete[] diffXXout;
 #endif
 
 
@@ -323,8 +371,20 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 	delete[] hcrIntern;
 
 #ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
-	tempImg.write("./output/hcrNonMax.png");
+	diffXXout = new float[width_ * height_];
+
+  for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      diffXXout[row * width_ + col] = hcrNonMax[row * width_ + col].toFloat() * 50;
+    }
+  }
+
+  tempImg.read(width_, height_, "I", FloatPixel, diffXXout);
+  tempImg.write("./output/hcrNonMax.png");
+
+  delete[] diffXXout;
 #endif
 
 
@@ -334,8 +394,20 @@ vector<HarrisCornerPoint> HarrisCornerDetector::performHarris(Fixed **hcr)
 	vector<HarrisCornerPoint> cornerPoints = normalizeAndThreshold(hcrNonMax, width_ * height_, 1.0f, threshold_);
 
 #ifdef DEBUG_OUTPUT_PICS
-	tempImg.read(width_, height_, "I", FloatPixel, hcrNonMax);
-	tempImg.write("./output/hcrNonMax-tresh.png");
+	diffXXout = new float[width_ * height_];
+
+  for(row = 0; row < height_; row++)
+  {
+    for(col = 0; col < width_; col++)
+    {
+      diffXXout[row * width_ + col] = hcrNonMax[row * width_ + col].toFloat();
+    }
+  }
+
+  tempImg.read(width_, height_, "I", FloatPixel, diffXXout);
+  tempImg.write("./output/hcrNonMax-tresh.png");
+
+  delete[] diffXXout;
 #endif
 
 
